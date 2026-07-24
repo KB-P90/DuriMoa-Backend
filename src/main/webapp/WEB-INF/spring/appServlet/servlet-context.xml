@@ -11,7 +11,7 @@
     <mvc:annotation-driven />
 
     <!-- Handles HTTP GET requests for /resources/** -->
-    <mvc:resources mapping="/resources/**" location="/resources/" />
+<!--    <mvc:resources mapping="/resources/**" location="/resources/" />-->
     <mvc:resources mapping="swagger-ui.html" location="classpath:/META-INF/resources/" />
     <mvc:resources mapping="/webjars/**" location="classpath:/META-INF/resources/webjars/" />
 
