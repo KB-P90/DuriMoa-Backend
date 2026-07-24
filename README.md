@@ -2,38 +2,17 @@
 
 KB 두리모아 서비스 백엔드 서버입니다.
 
-Spring Legacy 기반의 MVC 구조로 구현하며,
-MyBatis를 사용하여 데이터베이스에 접근합니다.
 
-## 🛠 기술 스택
+## 🛠 기술스택
 
-### Backend
-- Java 17
-- Spring Framework
-- Spring MVC
-- MyBatis
-- Spring Security
-- Maven
+| 구분 | 기술 |
+|------|------|
+| **Backend** | Java 17, Spring Framework, Spring MVC, MyBatis, Spring Security, Maven |
+| **Database** | MySQL, Redis |
+| **Server** | Apache Tomcat |
+| **API Documentation** | Swagger |
+| **Test** | JUnit, Mockito |
 
-### Database
-- MySQL
-- Redis
-
-### Server
-- Apache Tomcat
-
-### API Documentation
-- Swagger
-
-### Test
-- JUnit
-- Mockito
-
-### Collaboration
-- GitHub
-- Notion
-- Figma
-- Postman
 
 ## 📂 프로젝트 구조
 
@@ -125,3 +104,56 @@ src/
 - 삭제: `deleteMember`
 - 존재 여부: `existsMemberByEmail`
 - 개수 조회: `countMembers`
+
+## 👥 팀원 및 역할분담
+
+<div align="center">
+<table>
+  <tr align="center">
+    <td width="180">
+      <a href="https://github.com/HwangSeo">
+        <img src="https://avatars.githubusercontent.com/HwangSeo" width="100" height="100"/><br/>
+        <b>황서진</b>
+      </a><br/>
+      월별 지출 관리, 온보딩
+    </td>
+    <td width="180">
+      <a href="https://github.com/happysongtan">
+        <img src="https://avatars.githubusercontent.com/happysongtan" width="100" height="100"/><br/>
+        <b>강태규</b>
+      </a><br/>
+      알림, 공동 예산 관리
+    </td>
+    <td width="180">
+      <a href="https://github.com/1juyoung">
+        <img src="https://avatars.githubusercontent.com/1juyoung" width="100" height="100"/><br/>
+        <b>김주영</b>
+      </a><br/>
+      마이페이지 
+    </td>
+  </tr>
+  <tr align="center">
+    <td width="180">
+      <a href="https://github.com/kht9938">
+        <img src="https://avatars.githubusercontent.com/kht9938" width="100" height="100"/><br/>
+        <b>김현태</b>
+      </a><br/>
+      로그인/회원가입, 결혼 목표 설정 
+    </td>
+    <td width="180">
+      <a href="https://github.com/parkgijumg-hue">
+        <img src="https://avatars.githubusercontent.com/parkgijumg-hue" width="100" height="100"/><br/>
+        <b>박기정</b>
+      </a><br/>
+      홈, 카드 전략 추천 
+    </td>
+    <td width="180">
+      <a href="https://github.com/KoHo512">
+        <img src="https://avatars.githubusercontent.com/KoHo512" width="100" height="100"/><br/>
+        <b>정여원</b>
+      </a><br/>
+      캘린더
+    </td>
+  </tr>
+</table>
+</div>
