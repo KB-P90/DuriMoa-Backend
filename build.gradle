@@ -1,0 +1,104 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group = 'com.project'
+version = '1.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    springVersion = '5.3.37'
+    springSecurityVersion = '5.8.13'
+    mybatisVersion = '3.5.15'
+    mybatisSpringVersion = '2.1.2'
+    lombokVersion = '1.18.30'
+    junitVersion = '5.10.2'
+    jacksonVersion = '2.15.2'
+    log4jVersion = '2.20.0'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    // Spring Core & Web
+    implementation("org.springframework:spring-context:${springVersion}") {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    implementation "org.springframework:spring-webmvc:${springVersion}"
+    implementation "org.springframework:spring-tx:${springVersion}"
+    implementation "org.springframework:spring-jdbc:${springVersion}"
+    implementation 'javax.inject:javax.inject:1'
+
+    // Spring Security
+    implementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-config:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-core:${springSecurityVersion}"
+
+    // JWT (JSON Web Token)
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Database (MySQL, HikariCP, MyBatis)
+    implementation 'com.mysql:mysql-connector-j:8.3.0'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+    implementation "org.mybatis:mybatis:${mybatisVersion}"
+    implementation "org.mybatis:mybatis-spring:${mybatisSpringVersion}"
+
+    // Redis
+    implementation 'org.springframework.data:spring-data-redis:2.7.18'
+    implementation 'io.lettuce:lettuce-core:6.2.7.RELEASE'
+
+    // Swagger (Springfox)
+    implementation 'io.springfox:springfox-swagger2:2.9.2'
+    implementation 'io.springfox:springfox-swagger-ui:2.9.2'
+
+    // JSP / Servlet
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
+    compileOnly 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.3'
+    implementation 'javax.servlet:jstl:1.2'
+
+    // AOP
+    implementation 'org.aspectj:aspectjrt:1.9.20'
+    implementation 'org.aspectj:aspectjweaver:1.9.20'
+
+    // Logging (Log4j2 & log4jdbc)
+    implementation "org.apache.logging.log4j:log4j-api:${log4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
+    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+
+    // Jackson (JSON handling)
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+
+    // XML parsing support
+    implementation 'xerces:xercesImpl:2.12.2'
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    // Testing
+    testImplementation "org.springframework:spring-test:${springVersion}"
+    testImplementation "org.springframework.security:spring-security-test:${springSecurityVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+}
+
+test {
+    useJUnitPlatform()
+}

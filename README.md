@@ -5,13 +5,13 @@ KB 두리모아 서비스 백엔드 서버입니다.
 
 ## 🛠 기술스택
 
-| 구분 | 기술 |
-|------|------|
-| **Backend** | Java 17, Spring Framework, Spring MVC, MyBatis, Spring Security, Maven |
-| **Database** | MySQL, Redis |
-| **Server** | Apache Tomcat |
-| **API Documentation** | Swagger |
-| **Test** | JUnit, Mockito |
+| 구분 | 기술                                                                  |
+|------|---------------------------------------------------------------------|
+| **Backend** | Java 17, Spring Framework, Spring MVC, MyBatis, Spring Security, Gradle |
+| **Database** | MySQL, Redis                                                        |
+| **Server** | Apache Tomcat                                                       |
+| **API Documentation** | Swagger                                                             |
+| **Test** | JUnit, Mockito                                                      |
 
 
 ## 📂 프로젝트 구조
@@ -59,16 +59,16 @@ src/
     
 ## ⚙️ 주요 설정 파일
 
-| 파일 | 설명 |
-|---|---|
-| `pom.xml` | 의존성 및 빌드 설정 |
-| `web.xml` | DispatcherServlet, Filter, Listener 설정 |
-| `root-context.xml` | DB, MyBatis, Service, 공통 Bean 설정 |
+| 파일                    | 설명 |
+|-----------------------|---|
+| `build.gradle`        | 의존성 및 빌드 설정 |
+| `web.xml`             | DispatcherServlet, Filter, Listener 설정 |
+| `root-context.xml`    | DB, MyBatis, Service, 공통 Bean 설정 |
 | `servlet-context.xml` | Controller, ViewResolver, 정적 리소스 설정 |
 | `database.properties` | 데이터베이스 접속 정보 |
-| `mybatis-config.xml` | MyBatis 공통 설정 |
-| `Mapper.xml` | SQL 작성 및 Mapper 메서드 연결 |
-| `log4j2.xml` | 애플리케이션 로그 설정 |
+| `mybatis-config.xml`  | MyBatis 공통 설정 |
+| `Mapper.xml`          | SQL 작성 및 Mapper 메서드 연결 |
+| `log4j2.xml`          | 애플리케이션 로그 설정 |
 
 
 ## 🗃 MyBatis 작성 규칙
