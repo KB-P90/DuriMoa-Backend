@@ -1,4 +1,4 @@
 package com.project.domain.calendar.mapper;
 
-public class CalendarMapper {
+public interface CalendarMapper {
 }
