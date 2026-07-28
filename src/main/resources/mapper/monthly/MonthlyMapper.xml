@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.monthly.mapper.MonthlyMapper">
+
+    <resultMap id="ExpenseCategoryResultMap" type="com.project.domain.monthly.dto.ExpenseCategoryDTO">
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="amount" column="amount"/>
+        <result property="comparisonRate" column="comparison_rate"/>
+        <result property="expenseRate" column="expense_rate"/>
+    </resultMap>
+
+    <select id="selectMonthlyExpenseCategories" resultMap="ExpenseCategoryResultMap">
+        SELECT 
+            MIN(curr.id) AS category_id,
+            curr.category AS category_code,
+            SUM(curr.amount) AS amount,
+            CASE 
+                WHEN prev.prev_amount IS NULL OR prev.prev_amount = 0 THEN NULL
+                ELSE CAST(ROUND(((SUM(curr.amount) - prev.prev_amount) * 100.0) / prev.prev_amount) AS SIGNED)
+            END AS comparison_rate,
+            CAST(ROUND((SUM(curr.amount) * 100.0) / NULLIF(total.total_amount, 0)) AS SIGNED) AS expense_rate
+        FROM service_record curr
+        CROSS JOIN (
+            SELECT SUM(amount) AS total_amount
+            FROM service_record
+            WHERE YEAR(record_date) = #{year} AND MONTH(record_date) = #{month}
+        ) total
+        LEFT JOIN (
+            SELECT category, SUM(amount) AS prev_amount
+            FROM service_record
+            WHERE record_date &gt;= DATE_SUB(STR_TO_DATE(CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH)
+              AND record_date &lt; STR_TO_DATE(CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'), '%Y-%m-%d')
+            GROUP BY category
+        ) prev ON curr.category = prev.category
+        WHERE YEAR(curr.record_date) = #{year}
+          AND MONTH(curr.record_date) = #{month}
+        GROUP BY curr.category, prev.prev_amount, total.total_amount
+    </select>
+
+</mapper>
