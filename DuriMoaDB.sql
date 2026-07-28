@@ -10,7 +10,12 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `record`;
 DROP TABLE IF EXISTS `goal_item`;
 DROP TABLE IF EXISTS `goal`;
+DROP TABLE IF EXISTS `card`;
+DROP TABLE IF EXISTS `card_record`;
 DROP TABLE IF EXISTS `account`;
+DROP TABLE IF EXISTS `account_record`;
+DROP TABLE IF EXISTS `service_record`;
+DROP TABLE IF EXISTS `last_update`;
 DROP TABLE IF EXISTS `saving_missions`;
 DROP TABLE IF EXISTS `notification`;
 DROP TABLE IF EXISTS `notification_setting`;
@@ -200,33 +205,73 @@ CREATE TABLE `card_product` (
                                     CHECK (`annual_fee` >= 0)
 );
 
--- 사용자 계좌/카드 정보
+-- 사용자 계좌 정보
 CREATE TABLE `account` (
                            `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '계좌/카드 정보 ID',
                            `user_id`          BIGINT       NOT NULL COMMENT '사용자 ID',
-                           `card_product_id`  BIGINT       NULL COMMENT '카드 상품 ID; 계좌이면 NULL',
-                           `type`             VARCHAR(10)  NOT NULL COMMENT 'CARD, ACCOUNT',
                            `company`          VARCHAR(50)  NOT NULL COMMENT '회사/금융기관',
-                           `number`           BIGINT       NOT NULL COMMENT '카드/계좌 번호; ERD 타입 그대로 반영',
-                           `card_name`        VARCHAR(100) NULL COMMENT '카드/계좌 이름',
-                           `connected_id`     VARCHAR(255) NULL COMMENT '커넥터 ID',
+                           `number`           BIGINT       NOT NULL COMMENT '계좌 번호',
+                           `card_name`        VARCHAR(100) NULL COMMENT '계좌 이름',
+                           `connected_id`     VARCHAR(255) NULL COMMENT '커넥티드 ID',
                            `account_id`       VARCHAR(50)  NULL COMMENT '외부 계좌 식별자',
                            `account_password` VARCHAR(50)  NULL COMMENT '외부 계좌 비밀번호; 실서비스에서는 저장 금지',
                            `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                            PRIMARY KEY (`id`),
                            KEY `idx_account_user_id` (`user_id`),
-                           KEY `idx_account_card_product_id` (`card_product_id`),
                            CONSTRAINT `fk_account_user`
                                FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+                                   ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- 사용자 카드 정보
+CREATE TABLE `card` (
+                           `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '계좌/카드 정보 ID',
+                           `user_id`          BIGINT       NOT NULL COMMENT '사용자 ID',
+                           `card_product_id`  BIGINT       NULL COMMENT '카드 상품 ID',
+                           `company`          VARCHAR(50)  NOT NULL COMMENT '회사/금융기관',
+                           `number`           BIGINT       NOT NULL COMMENT '카드 번호; ERD 타입 그대로 반영',
+                           `card_name`        VARCHAR(100) NULL COMMENT '카드 이름',
+                           `connected_id`     VARCHAR(255) NULL COMMENT '커넥티드 ID',
+                           `card_id`       VARCHAR(50)  NULL COMMENT '외부 카드 식별자',
+                           `card_password` VARCHAR(50)  NULL COMMENT '외부 카드 비밀번호; 실서비스에서는 저장 금지',
+                           `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                           PRIMARY KEY (`id`),
+                           KEY `idx_card_user_id` (`user_id`),
+                           KEY `idx_card_product_id` (`card_product_id`),
+                           CONSTRAINT `fk_card_user`
+                               FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
                                    ON UPDATE CASCADE ON DELETE CASCADE,
-                           CONSTRAINT `fk_account_card_product`
+                           CONSTRAINT `fk_card_product`
                                FOREIGN KEY (`card_product_id`) REFERENCES `card_product` (`id`)
                                    ON UPDATE CASCADE ON DELETE SET NULL
 );
 
--- 입출금/저축 기록
-CREATE TABLE `record` (
+-- 카드 원본 거래 내역
+CREATE TABLE `card_record` (
+                          `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
+                          `card_id`  BIGINT       NOT NULL COMMENT '카드 정보 ID',
+                          `type`        VARCHAR(10)  NOT NULL COMMENT 'INCOME, EXPENSE, SAVING',
+                          `category`    VARCHAR(10)  NOT NULL COMMENT '결혼비용, 개인소비 등',
+                          `title`       VARCHAR(100) NOT NULL COMMENT '제목',
+                          `amount`      BIGINT       NOT NULL COMMENT '금액',
+                          `record_date` DATE         NOT NULL COMMENT '거래 일자',
+                          `memo`        TEXT         NULL COMMENT '메모',
+                          `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                          PRIMARY KEY (`id`),
+                          KEY `idx_record_card_date` (`card_id`, `record_date`),
+                          KEY `idx_record_type_date` (`type`, `record_date`),
+                          CONSTRAINT `fk_record_card`
+                              FOREIGN KEY (`card_id`) REFERENCES `card` (`id`)
+                                  ON UPDATE CASCADE ON DELETE CASCADE,
+                          CONSTRAINT `chk_card_record_amount`
+                              CHECK (`amount` >= 0)
+);
+
+-- 계좌 원본 거래 내역
+CREATE TABLE `account_record` (
                           `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
                           `account_id`  BIGINT       NOT NULL COMMENT '계좌/카드 정보 ID',
                           `type`        VARCHAR(10)  NOT NULL COMMENT 'INCOME, EXPENSE, SAVING',
@@ -235,7 +280,6 @@ CREATE TABLE `record` (
                           `amount`      BIGINT       NOT NULL COMMENT '금액',
                           `record_date` DATE         NOT NULL COMMENT '거래 일자',
                           `memo`        TEXT         NULL COMMENT '메모',
-                          `is_input`    BOOLEAN      NOT NULL DEFAULT FALSE COMMENT 'TRUE: 개인 입력, FALSE: 마이데이터',
                           `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                           PRIMARY KEY (`id`),
@@ -244,8 +288,43 @@ CREATE TABLE `record` (
                           CONSTRAINT `fk_record_account`
                               FOREIGN KEY (`account_id`) REFERENCES `account` (`id`)
                                   ON UPDATE CASCADE ON DELETE CASCADE,
-                          CONSTRAINT `chk_record_amount`
+                          CONSTRAINT `chk_account_record_amount`
                               CHECK (`amount` >= 0)
+);
+
+-- 서비스 거래 내역
+CREATE TABLE `service_record` (
+                          `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
+                          `user_id`     BIGINT       NOT NULL COMMENT '사용자 ID',
+                          `category`    VARCHAR(10)  NOT NULL COMMENT '결혼비용, 개인소비 등',
+                          `changed_category`    VARCHAR(10)  NOT NULL COMMENT '변경된 카테고리',
+                          `title`       VARCHAR(100) NOT NULL COMMENT '제목',
+                          `amount`      BIGINT       NOT NULL COMMENT '금액',
+                          `record_date` DATE         NOT NULL COMMENT '거래 일자',
+                          `memo`        TEXT         NULL COMMENT '메모',
+                          `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                          `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                          PRIMARY KEY (`id`),
+                          KEY `idx_account_user_id` (`user_id`),
+                          CONSTRAINT `fk_service_record_user`
+                              FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+                                  ON UPDATE CASCADE ON DELETE CASCADE,
+                          CONSTRAINT `chk_service_record_amount`
+                              CHECK (`amount` >= 0)
+);
+
+-- 마지막 갱신
+CREATE TABLE `last_update` (
+                                  `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
+                                  `user_id`     BIGINT       NOT NULL COMMENT '사용자 ID',
+                                  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                  PRIMARY KEY (`id`),
+                                  KEY `idx_account_user_id` (`user_id`),
+                                  CONSTRAINT `fk_last_update_user`
+                                      FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+                                          ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 -- 절약 미션
