@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.strategy.card.mapper.CardStrategyMapper">
+
+    <select id="selectActiveCoupleMembers" resultType="com.project.domain.strategy.card.model.CardOwnerRecord">
+        SELECT
+            c.id AS couple_id,
+            u.id AS user_id,
+            u.name AS owner_name,
+            u.role AS owner_role
+        FROM couple c
+        INNER JOIN `user` u
+            ON u.id IN (c.groom_id, c.bride_id)
+        WHERE c.status = 'CONNECTED'
+          AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
+          AND u.is_deleted = FALSE
+        ORDER BY
+            CASE WHEN u.id = #{userId} THEN 0 ELSE 1 END,
+            u.id ASC
+    </select>
+
+    <select id="selectUserCardsByUserIds" resultType="com.project.domain.strategy.card.model.UserCardRecord">
+        SELECT
+            a.id AS user_card_key,
+            a.user_id AS user_id,
+            u.name AS owner_name,
+            u.role AS owner_role,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            COALESCE(a.card_name, cp.name) AS card_name,
+            cp.annual_fee AS annual_fee,
+            cp.image AS image,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            cp.updated_at AS condition_checked_at
+        FROM account a
+        INNER JOIN `user` u
+            ON u.id = a.user_id
+        INNER JOIN card_product cp
+            ON cp.id = a.card_product_id
+        WHERE a.type = 'CARD'
+          AND a.card_product_id IS NOT NULL
+          AND a.user_id IN
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+        ORDER BY
+            a.user_id ASC,
+            cp.company ASC,
+            COALESCE(a.card_name, cp.name) ASC,
+            a.id ASC
+    </select>
+
+    <select id="selectCurrentMonthPerformances" resultType="com.project.domain.strategy.card.model.CardPerformanceRecord">
+        SELECT
+            a.id AS user_card_key,
+            GREATEST(
+                COALESCE(SUM(
+                    CASE
+                        WHEN r.type = 'EXPENSE' THEN r.amount
+                        WHEN r.type = 'INCOME' THEN -r.amount
+                        ELSE 0
+                    END
+                ), 0),
+                0
+            ) AS recognized_performance_amount
+        FROM account a
+        LEFT JOIN record r
+            ON r.account_id = a.id
+           AND r.record_date &gt;= #{startDate}
+           AND r.record_date &lt;= #{endDate}
+           AND r.type IN ('EXPENSE', 'INCOME')
+        WHERE a.id IN
+        <foreach collection="userCardKeys" item="userCardKey" open="(" separator="," close=")">
+            #{userCardKey}
+        </foreach>
+        GROUP BY a.id
+    </select>
+
+    <select id="selectCardDetailByUserCardKey" resultType="com.project.domain.strategy.card.model.CardProductRecord">
+        SELECT
+            a.id AS user_card_key,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            COALESCE(a.card_name, cp.name) AS card_name,
+            cp.image AS image,
+            cp.annual_fee AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            cp.updated_at AS condition_checked_at
+        FROM account a
+        INNER JOIN card_product cp
+            ON cp.id = a.card_product_id
+        WHERE a.id = #{userCardKey}
+          AND a.type = 'CARD'
+          AND a.card_product_id IS NOT NULL
+    </select>
+
+    <select id="existsCardAccessInActiveCouple" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM account a
+        INNER JOIN couple c
+            ON c.status = 'CONNECTED'
+           AND (a.user_id = c.groom_id OR a.user_id = c.bride_id)
+        WHERE a.id = #{userCardKey}
+          AND a.type = 'CARD'
+          AND a.card_product_id IS NOT NULL
+          AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
+    </select>
+
+    <select id="selectCardProductIdByCompanyAndName" resultType="java.lang.Long">
+        SELECT
+            cp.id
+        FROM card_product cp
+        WHERE cp.company = #{company}
+          AND cp.name = #{name}
+        ORDER BY cp.id ASC
+        LIMIT 1
+    </select>
+
+    <insert id="insertCardProduct">
+        INSERT INTO card_product (
+            company,
+            name,
+            annual_fee,
+            image,
+            benefit,
+            `condition`
+        ) VALUES (
+            #{source.company},
+            #{source.name},
+            #{source.annualFee},
+            #{source.image},
+            #{source.benefit},
+            #{source.conditionText}
+        )
+    </insert>
+
+    <update id="updateCardProductByCompanyAndName">
+        UPDATE card_product
+        SET annual_fee = #{source.annualFee},
+            image = #{source.image},
+            benefit = #{source.benefit},
+            `condition` = #{source.conditionText}
+        WHERE company = #{source.company}
+          AND name = #{source.name}
+    </update>
+</mapper>
