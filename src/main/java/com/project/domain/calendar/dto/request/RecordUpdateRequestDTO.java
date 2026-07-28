@@ -1,6 +1,5 @@
-package com.project.domain.calendar.dto;
+package com.project.domain.calendar.dto.request;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;

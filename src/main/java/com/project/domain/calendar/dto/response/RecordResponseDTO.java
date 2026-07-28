@@ -1,6 +1,5 @@
-package com.project.domain.calendar.dto;
+package com.project.domain.calendar.dto.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,5 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 //@AllArgsConstructor
 @Builder
-public class RecordCreateRequestDTO {
+public class RecordResponseDTO {
 }
