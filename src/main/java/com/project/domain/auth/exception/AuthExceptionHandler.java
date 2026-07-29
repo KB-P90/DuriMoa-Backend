@@ -1,16 +1,15 @@
-package com.project.common.exception;
+package com.project.domain.auth.exception;
 
 import com.project.common.response.ApiResponse;
-import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
-import com.project.domain.auth.exception.PhoneDuplicateException;
+import com.project.domain.auth.controller.AuthController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+@RestControllerAdvice(assignableTypes = AuthController.class)
+public class AuthExceptionHandler {
 
     @ExceptionHandler(PhoneDuplicateException.class)
     public ResponseEntity<ApiResponse<Void>> handlePhoneDuplicate(

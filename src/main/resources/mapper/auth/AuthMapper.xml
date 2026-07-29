@@ -12,9 +12,7 @@
         <result property="role" column="role"/>
         <result property="provider" column="provider"/>
         <result property="profileImage" column="profile_image"/>
-        <result property="createdAt"
-                column="created_at"
-                typeHandler="com.project.common.persistence.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
     </resultMap>
 
     <select id="existsUserByPhone" resultType="boolean">
