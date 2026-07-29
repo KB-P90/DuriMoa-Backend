@@ -3,7 +3,7 @@ package com.project.domain.user.service;
 import com.project.domain.user.dto.UserProfileDto;
 
 public interface UserService {
-    public UserProfileDto get(Long no);
+    public UserProfileDto getProfile(Long no);
 
-    public UserProfileDto update(UserProfileDto profile);
+    public UserProfileDto updateProfile(UserProfileDto profile);
 }

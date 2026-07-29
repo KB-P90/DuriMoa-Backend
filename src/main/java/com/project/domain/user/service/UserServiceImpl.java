@@ -18,7 +18,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public UserProfileDto get(Long no) {
+    public UserProfileDto getProfile(Long no) {
         UserProfileDto profile = userMapper.get(no);
         if (profile == null) {
             throw new UsernameNotFoundException("존재하지 않는 회원입니다." + no);
@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileDto update(UserProfileDto profile) {
+    public UserProfileDto updateProfile(UserProfileDto profile) {
 
         if (profile.getId() == null) {
             throw new IllegalArgumentException("유저 id는 필수입니다.");

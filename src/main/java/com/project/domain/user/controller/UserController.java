@@ -8,8 +8,6 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @Log4j2
@@ -25,7 +23,7 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(
 
-            @AuthenticationPrincipal UserDetails userDetail,
+            // @AuthenticationPrincipal UserDetails userDetail,
 
             @RequestBody(required = false) Long userIdFromBody) {
 
@@ -35,15 +33,14 @@ public class UserController {
 
 //        if (userDetail.getUsername() != null) {
 //            log.warn("프로필 조회 실패 - 존재하지 않는 회원");
-//            userId = userIdFromBody;
 //
-//        } else {
+//        }
 
         // 해당 부분도 추후 변경 예정
         userId = userIdFromBody == null ? userId : userIdFromBody;
 
 
-        UserProfileDto profile = userService.get(userId);
+        UserProfileDto profile = userService.getProfile(userId);
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
@@ -55,7 +52,7 @@ public class UserController {
     @PutMapping("/profile")
     @ApiOperation(value = "사용자 정보 수정")
     public ResponseEntity<ApiResponse<UserProfileDto>> update(@RequestBody UserProfileDto profile) {
-        UserProfileDto updated = userService.update(profile);
+        UserProfileDto updated = userService.updateProfile(profile);
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
