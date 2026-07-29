@@ -13,6 +13,12 @@ public enum ExpenseCategory {
     SUBSCRIPTION("구독 서비스"),
     CULTURE("문화/여가"),
     BEAUTY("미용/패션"),
+    WEDDINGHALL("예식장"),
+    STUDIO("스튜디오"),
+    MAKEUP("메이크업"),
+    DRESS("드레스"),
+    JEWELRY("예물"),
+    EMERGENCY("예비비"),
     ETC("기타");
 
     private final String categoryName;
