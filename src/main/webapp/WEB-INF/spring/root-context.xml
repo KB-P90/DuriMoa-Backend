@@ -50,7 +50,8 @@
     <tx:annotation-driven transaction-manager="transactionManager"/>
 
     <!-- Mapper Scanner -->
-    <mybatis-spring:scan base-package="com.project.domain"/>
+    <mybatis-spring:scan base-package="com.project.domain"
+                        annotation="org.apache.ibatis.annotations.Mapper"/>
 
     <!-- Component Scan (Exclude Controller) -->
     <context:component-scan base-package="com.project">
