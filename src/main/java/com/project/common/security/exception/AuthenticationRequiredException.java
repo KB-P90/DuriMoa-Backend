@@ -1,5 +1,6 @@
-package com.project.common.exception;
+package com.project.common.security.exception;
 
+import com.project.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 
 public class AuthenticationRequiredException extends BusinessException {

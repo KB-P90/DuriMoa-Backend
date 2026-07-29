@@ -1,11 +1,11 @@
 package com.project.domain.progress.service;
 
-import com.project.common.exception.SavingRecordNotFoundException;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.service.CoupleService;
 import com.project.domain.progress.dto.CoupleSavingSummaryDTO;
 import com.project.domain.progress.dto.MonthlySavingDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
+import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.mapper.ProgressMapper;
 import java.util.Collections;
 import java.util.List;

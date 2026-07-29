@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.project.common.exception.GlobalExceptionHandler;
-import com.project.common.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.dto.ProgressResponseDTO;
+import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.service.ProgressService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

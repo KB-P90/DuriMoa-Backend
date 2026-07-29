@@ -1,6 +1,6 @@
 package com.project.common.security;
 
-import com.project.common.exception.AuthenticationRequiredException;
+import com.project.common.security.exception.AuthenticationRequiredException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

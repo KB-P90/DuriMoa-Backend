@@ -1,7 +1,8 @@
 package com.project.domain.couple.service;
 
-import com.project.common.exception.CoupleNotConnectedException;
-import com.project.common.exception.CoupleNotFoundException;
+import com.project.domain.couple.exception.CoupleNotConnectedException;
+import com.project.domain.couple.exception.CoupleNotFoundException;
+import com.project.domain.member.exception.UserNotFoundException;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.mapper.CoupleMapper;
 import com.project.domain.member.service.MemberService;
@@ -60,7 +61,7 @@ class CoupleServiceImplTest {
 
     @Test
     void rejectsNullUserId() {
-        assertThrows(com.project.common.exception.UserNotFoundException.class,
+        assertThrows(UserNotFoundException.class,
                 () -> coupleService.getConnectedCoupleByUserId(null));
     }
 
@@ -68,7 +69,7 @@ class CoupleServiceImplTest {
     void rejectsDeletedOrUnknownUser() {
         when(memberService.existsMemberById(10L)).thenReturn(false);
 
-        assertThrows(com.project.common.exception.UserNotFoundException.class,
+        assertThrows(UserNotFoundException.class,
                 () -> coupleService.getConnectedCoupleByUserId(10L));
     }
 }

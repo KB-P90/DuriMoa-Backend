@@ -1,6 +1,6 @@
 package com.project.common.security;
 
-import com.project.common.exception.AuthenticationRequiredException;
+import com.project.common.security.exception.AuthenticationRequiredException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

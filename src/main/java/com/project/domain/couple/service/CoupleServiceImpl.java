@@ -1,9 +1,9 @@
 package com.project.domain.couple.service;
 
-import com.project.common.exception.CoupleAccessDeniedException;
-import com.project.common.exception.CoupleNotConnectedException;
-import com.project.common.exception.CoupleNotFoundException;
-import com.project.common.exception.UserNotFoundException;
+import com.project.domain.couple.exception.CoupleAccessDeniedException;
+import com.project.domain.couple.exception.CoupleNotConnectedException;
+import com.project.domain.couple.exception.CoupleNotFoundException;
+import com.project.domain.member.exception.UserNotFoundException;
 import com.project.common.security.CurrentUserProvider;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.mapper.CoupleMapper;

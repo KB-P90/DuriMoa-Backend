@@ -1,5 +1,6 @@
-package com.project.common.exception;
+package com.project.domain.progress.exception;
 
+import com.project.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 
 public class SavingRecordNotFoundException extends BusinessException {

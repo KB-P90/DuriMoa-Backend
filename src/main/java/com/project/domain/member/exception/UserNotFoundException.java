@@ -1,5 +1,6 @@
-package com.project.common.exception;
+package com.project.domain.member.exception;
 
+import com.project.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 
 public class UserNotFoundException extends BusinessException {
