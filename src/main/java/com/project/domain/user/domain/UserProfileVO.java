@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 public class UserProfileVO {
     private Long id;
     private String phone;
+    private String password;
     private String name;
     private String role;
     private byte[] profileImage;
-    private String provider;
     private Integer isShared;
 }
