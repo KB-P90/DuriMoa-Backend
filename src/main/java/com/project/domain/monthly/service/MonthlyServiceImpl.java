@@ -1,5 +1,6 @@
 package com.project.domain.monthly.service;
 
+import com.project.common.enums.MissionStatus;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
@@ -128,7 +129,7 @@ public class MonthlyServiceImpl implements MonthlyService {
                     .categoryCode(categoryCode)
                     .title(missionInfo.getTitle())
                     .expectedSavingAmount(missionInfo.getExpectedSavingAmount())
-                    .status("도전하기")
+                    .status(MissionStatus.CHALLENGE.getStatus())
                     .createdAt(targetCreatedAt)
                     .build();
 
