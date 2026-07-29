@@ -1,7 +1,12 @@
 package com.project.domain.auth.service;
 
+import com.project.common.security.JwtTokenProvider;
+import com.project.domain.auth.dto.LoginRequestDTO;
+import com.project.domain.auth.dto.LoginResponseDTO;
+import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
+import com.project.domain.auth.exception.InvalidLoginCredentialsException;
 import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
 import com.project.domain.auth.exception.PhoneDuplicateException;
 import com.project.domain.auth.mapper.AuthMapper;
@@ -31,11 +36,14 @@ class AuthServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authMapper, passwordEncoder);
+        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider);
     }
 
     @Test
@@ -78,6 +86,56 @@ class AuthServiceImplTest {
         verify(authMapper, never()).existsUserByPhone(anyString());
     }
 
+    @Test
+    void loginReturnsAccessTokenAndUserWhenCredentialsAreValid() throws Exception {
+        LoginRequestDTO request = createLoginRequest("010-1234-5678", "password123");
+        LoginUserDTO loginUser = new LoginUserDTO(
+                1L,
+                "01012345678",
+                "encodedPassword",
+                "홍길동",
+                "G",
+                null,
+                "LOCAL");
+        when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(loginUser);
+        when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
+        when(jwtTokenProvider.createAccessToken(1L, "G")).thenReturn("accessToken");
+
+        LoginResponseDTO response = authService.login(request);
+
+        assertEquals("accessToken", response.getAccessToken());
+        assertEquals(1L, response.getUser().getUserId());
+        assertEquals("01012345678", response.getUser().getPhone());
+        assertEquals("LOCAL", response.getUser().getProvider());
+    }
+
+    @Test
+    void loginRejectsUnknownPhone() throws Exception {
+        LoginRequestDTO request = createLoginRequest("01012345678", "password123");
+        when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(null);
+
+        assertThrows(InvalidLoginCredentialsException.class, () -> authService.login(request));
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void loginRejectsIncorrectPassword() throws Exception {
+        LoginRequestDTO request = createLoginRequest("01012345678", "wrongPassword");
+        LoginUserDTO loginUser = new LoginUserDTO(
+                1L,
+                "01012345678",
+                "encodedPassword",
+                "홍길동",
+                "G",
+                null,
+                "LOCAL");
+        when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(loginUser);
+        when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+
+        assertThrows(InvalidLoginCredentialsException.class, () -> authService.login(request));
+        verify(jwtTokenProvider, never()).createAccessToken(1L, "G");
+    }
+
     private SignupRequestDTO createRequest(
             String phone,
             String password,
@@ -90,6 +148,13 @@ class AuthServiceImplTest {
         setField(request, "passwordConfirm", passwordConfirm);
         setField(request, "name", name);
         setField(request, "role", role);
+        return request;
+    }
+
+    private LoginRequestDTO createLoginRequest(String phone, String password) throws Exception {
+        LoginRequestDTO request = new LoginRequestDTO();
+        setField(request, "phone", phone);
+        setField(request, "password", password);
         return request;
     }
 

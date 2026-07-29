@@ -1,6 +1,7 @@
 package com.project.domain.auth.mapper;
 
 import com.project.domain.auth.dto.SignupResponseDTO;
+import com.project.domain.auth.dto.LoginUserDTO;
 import org.apache.ibatis.annotations.Param;
 
 public interface AuthMapper {
@@ -14,4 +15,6 @@ public interface AuthMapper {
             @Param("role") String role);
 
     SignupResponseDTO findSignedUpUserByPhone(@Param("phone") String phone);
+
+    LoginUserDTO findLoginUserByPhone(@Param("phone") String phone);
 }

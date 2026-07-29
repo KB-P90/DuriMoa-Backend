@@ -15,6 +15,17 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <resultMap id="loginUserMap"
+               type="com.project.domain.auth.dto.LoginUserDTO">
+        <id property="userId" column="user_id"/>
+        <result property="phone" column="phone"/>
+        <result property="password" column="password"/>
+        <result property="name" column="name"/>
+        <result property="role" column="role"/>
+        <result property="profileImage" column="profile_image"/>
+        <result property="provider" column="provider"/>
+    </resultMap>
+
     <select id="existsUserByPhone" resultType="boolean">
         SELECT EXISTS (
             SELECT 1
@@ -50,6 +61,21 @@
             created_at
         FROM `user`
         WHERE phone = #{phone}
+    </select>
+
+    <select id="findLoginUserByPhone" resultMap="loginUserMap">
+        SELECT
+            id AS user_id,
+            phone,
+            password,
+            name,
+            role,
+            profile_image,
+            provider
+        FROM `user`
+        WHERE phone = #{phone}
+          AND is_deleted = FALSE
+          AND provider = 'LOCAL'
     </select>
 
 </mapper>
