@@ -1,4 +1,4 @@
-package com.project.domain.member.controller;
+package com.project.domain.user.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
