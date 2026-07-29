@@ -3,35 +3,45 @@ package com.project.domain.user.controller;
 import com.project.common.response.ApiResponse;
 import com.project.domain.user.dto.UserProfileDto;
 import com.project.domain.user.service.UserService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @Log4j2
-@Controller
+@RestController
 @RequiredArgsConstructor
 @RequestMapping("/user")
+@Api(tags = "User", description = "유저 API")
 public class UserController {
 
     private final UserService userService;
 
+    @ApiOperation(value = "마이페이지용 사용자 정보 조회", notes = "현재 쿠키 전달 받는 로직 부재로 body에 사용자 id 값만 전달 부탁드립니다.")
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(
-            @CookieValue(value = "accessToken", required = false) String accessToken,
+
+            @AuthenticationPrincipal UserDetails userDetail,
+
             @RequestBody(required = false) Long userIdFromBody) {
 
-        Long userId;
-        if (accessToken != null) {
-            log.warn("프로필 조회 실패 - 존재하지 않는 회원");
-            userId = userIdFromBody;
 
-            // userId = getUserIdFromToken(accessToken);
-        } else {
-            // TODO: 인증(JWT) 완성되면 이 else 블록 삭제
-            userId = userIdFromBody;
-        }
+        // 추후 시큐리티에서 userid 가져올것
+        Long userId = 1l;
+
+//        if (userDetail.getUsername() != null) {
+//            log.warn("프로필 조회 실패 - 존재하지 않는 회원");
+//            userId = userIdFromBody;
+//
+//        } else {
+
+        // 해당 부분도 추후 변경 예정
+        userId = userIdFromBody == null ? userId : userIdFromBody;
+
 
         UserProfileDto profile = userService.get(userId);
         return ResponseEntity.ok(ApiResponse.success(profile));
@@ -43,6 +53,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
+    @ApiOperation(value = "사용자 정보 수정")
     public ResponseEntity<ApiResponse<UserProfileDto>> update(@RequestBody UserProfileDto profile) {
         UserProfileDto updated = userService.update(profile);
         return ResponseEntity.ok(ApiResponse.success(updated));
