@@ -2,6 +2,8 @@ package com.project.domain.monthly.service;
 
 import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.MissionStatus;
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
@@ -76,7 +78,10 @@ public class MonthlyServiceImpl implements MonthlyService {
     @Override
     @Transactional
     public void startSavingMission(Long userId, Long missionId, SavingMissionChallengeRequestDTO requestDTO) {
-        monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
+        int updatedRows = monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
+        if (updatedRows == 0) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "해당 절약 미션을 찾을 수 없거나 이미 도전 중인 미션입니다.");
+        }
     }
 
     @Override
@@ -85,6 +90,10 @@ public class MonthlyServiceImpl implements MonthlyService {
         Long userId = requestDTO.getUserId();
         Integer targetYear = requestDTO.getTargetYear();
         Integer targetMonth = requestDTO.getTargetMonth();
+
+        if (targetYear == null || targetMonth == null || targetMonth < 1 || targetMonth > 12) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "대상 연도 및 월 정보가 올바르지 않습니다.");
+        }
 
         YearMonth targetYM = YearMonth.of(targetYear, targetMonth);
         YearMonth analysisYM = targetYM.minusMonths(1);
