@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.auth.mapper.AuthMapper">
+
+    <resultMap id="signupResponseMap"
+               type="com.project.domain.auth.dto.SignupResponseDTO">
+        <id property="userId" column="user_id"/>
+        <result property="phone" column="phone"/>
+        <result property="name" column="name"/>
+        <result property="role" column="role"/>
+        <result property="provider" column="provider"/>
+        <result property="profileImage" column="profile_image"/>
+        <result property="createdAt"
+                column="created_at"
+                typeHandler="com.project.common.persistence.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <select id="existsUserByPhone" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM `user`
+            WHERE phone = #{phone}
+        )
+    </select>
+
+    <insert id="insertUser">
+        INSERT INTO `user` (
+            phone,
+            password,
+            name,
+            role,
+            provider
+        ) VALUES (
+            #{phone},
+            #{password},
+            #{name},
+            #{role},
+            'LOCAL'
+        )
+    </insert>
+
+    <select id="findSignedUpUserByPhone" resultMap="signupResponseMap">
+        SELECT
+            id AS user_id,
+            phone,
+            name,
+            role,
+            provider,
+            profile_image,
+            created_at
+        FROM `user`
+        WHERE phone = #{phone}
+    </select>
+
+</mapper>
