@@ -12,7 +12,6 @@ import com.project.domain.strategy.card.model.UserCardRecord;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
@@ -77,7 +76,7 @@ class CardStrategyServiceImplTest {
 
         UserCardRecord freshCard = userCard(10L, 1L, "김민준", "KB국민", "KB 웨딩", "0.01", null, 0L);
         UserCardRecord staleCard = userCard(11L, 1L, "김민준", "신한", "신한 고혜택", "0.10", null, 0L);
-        staleCard.setConditionCheckedAt(LocalDateTime.of(2025, 12, 1, 0, 0));
+        staleCard.setConditionCheckedAt("2025-12-01 00:00:00");
 
         Mockito.when(mapper.selectActiveCoupleMembers(1L))
                 .thenReturn(Collections.singletonList(owner(1L, "김민준", "G")));
@@ -173,7 +172,7 @@ class CardStrategyServiceImplTest {
                 + ",\"minimum_monthly_spend\":" + minimumSpend
                 + ",\"benefit_thresholds\":[300000,600000]}]}");
         card.setConditionText("전월 30만원 이상");
-        card.setConditionCheckedAt(LocalDateTime.of(2026, 7, 1, 0, 0));
+        card.setConditionCheckedAt("2026-07-01 00:00:00");
         return card;
     }
 
@@ -197,7 +196,7 @@ class CardStrategyServiceImplTest {
         cardDetail.setBenefit("{\"benefits\":[{\"benefit_name\":\"웨딩\",\"benefit_rate\":0.02,"
                 + "\"monthly_limit_amount\":10000,\"minimum_monthly_spend\":300000}]}");
         cardDetail.setConditionText("전월 30만원 이상");
-        cardDetail.setConditionCheckedAt(LocalDateTime.of(2026, 7, 1, 0, 0));
+        cardDetail.setConditionCheckedAt("2026-07-01 00:00:00");
         return cardDetail;
     }
 }

@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -143,9 +144,11 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 cardDetail.getConditionText()
         );
         // 상세 응답에서 보여줄 카드 상품 추천 가능 상태입니다.
+        // 판매·추천 가능 상태 판단에 사용하는 상품 조건 확인 시점입니다.
+        LocalDateTime conditionCheckedAt = parseConditionCheckedAt(cardDetail.getConditionCheckedAt());
         CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decide(
                 LocalDate.now(clock),
-                cardDetail.getConditionCheckedAt(),
+                conditionCheckedAt,
                 CardBenefitCatalog.hasCalculableBenefit(benefitRules)
         );
 
@@ -158,7 +161,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .annualFee(cardDetail.getAnnualFee())
                 .benefits(toBenefitResponses(benefitRules))
                 .condition(cardDetail.getConditionText())
-                .conditionCheckedAt(formatDateTime(cardDetail.getConditionCheckedAt()))
+                .conditionCheckedAt(formatDateTime(conditionCheckedAt))
                 .officialUrl(null)
                 .saleStatus(UNKNOWN_SALE_STATUS)
                 .recommendableStatus(recommendStatus.getCode())
@@ -237,9 +240,11 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 benefitRules
         );
         // 상품 확인일과 혜택 데이터 기준 추천 가능 상태입니다.
+        // 판매·추천 가능 상태 판단에 사용하는 상품 조건 확인 시점입니다.
+        LocalDateTime conditionCheckedAt = parseConditionCheckedAt(card.getConditionCheckedAt());
         CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decide(
                 today,
-                card.getConditionCheckedAt(),
+                conditionCheckedAt,
                 CardBenefitCatalog.hasCalculableBenefit(benefitRules)
         );
         // 추천 대상에서 제외된 상품은 순위 계산 혜택을 0원으로 처리합니다.
@@ -270,7 +275,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .recommendable(recommendStatus.isRecommendable())
                 .recommendableStatus(recommendStatus.getCode())
                 .recommendationNotice(recommendStatus.isRecommendable() ? BENEFIT_NOTICE : recommendStatus.getNotice())
-                .conditionCheckedAt(formatDateTime(card.getConditionCheckedAt()))
+                .conditionCheckedAt(formatDateTime(conditionCheckedAt))
                 .build();
     }
 
@@ -376,6 +381,18 @@ public class CardStrategyServiceImpl implements CardStrategyService {
             return null;
         }
         return dateTime.format(CONDITION_CHECKED_AT_FORMATTER);
+    }
+
+    // DB에서 문자열로 받은 조건 확인 시점을 계산용 날짜로 변환합니다.
+    private LocalDateTime parseConditionCheckedAt(String conditionCheckedAt) {
+        if (conditionCheckedAt == null || conditionCheckedAt.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(conditionCheckedAt.trim(), CONDITION_CHECKED_AT_FORMATTER);
+        } catch (DateTimeParseException exception) {
+            return null;
+        }
     }
 
     // 비어 있는 금액 값을 0으로 바꿉니다.

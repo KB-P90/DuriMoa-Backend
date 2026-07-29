@@ -1,6 +1,5 @@
 package com.project.domain.strategy.card.model;
 
-import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -41,6 +40,6 @@ public class UserCardRecord {
     // 전월 실적 등 카드 이용 조건 문구입니다.
     private String conditionText;
 
-    // 카드 상품 정보가 마지막으로 확인된 시점입니다.
-    private LocalDateTime conditionCheckedAt;
+    // 카드 상품 정보가 마지막으로 확인된 시점 문자열입니다.
+    private String conditionCheckedAt;
 }

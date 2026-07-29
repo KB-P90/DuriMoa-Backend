@@ -34,7 +34,7 @@
             cp.image AS image,
             JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
             cp.`condition` AS condition_text,
-            cp.updated_at AS condition_checked_at
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         INNER JOIN `user` u
             ON u.id = c.user_id
@@ -88,7 +88,7 @@
             cp.annual_fee AS annual_fee,
             JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
             cp.`condition` AS condition_text,
-            cp.updated_at AS condition_checked_at
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         INNER JOIN card_product cp
             ON cp.id = c.card_product_id
