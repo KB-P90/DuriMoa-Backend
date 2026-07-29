@@ -1,6 +1,7 @@
 package com.project.domain.calendar.mapper;
 
 import com.project.domain.calendar.dto.response.CalendarDayDTO;
+import com.project.domain.calendar.dto.response.DailyRecordDTO;
 import com.project.domain.calendar.dto.response.MonthlyPersonalSummaryDTO;
 import com.project.domain.calendar.dto.response.MonthlyWeddingSummaryDTO;
 import org.apache.ibatis.annotations.Mapper;
@@ -36,4 +37,10 @@ public interface CalendarMapper {
             @Param("end") LocalDate end,
             @Param("categories") List<String> categories
     );
+
+    List<DailyRecordDTO> selectDailyPersonal(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date
+    );
+
 }

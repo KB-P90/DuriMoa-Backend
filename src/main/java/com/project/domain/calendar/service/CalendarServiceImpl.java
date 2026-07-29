@@ -94,4 +94,22 @@ public class CalendarServiceImpl implements CalendarService {
 
         return calendar;
     }
+
+    @Override
+    public DailyResponseDTO getDaily(Long userId, LocalDate date, CalendarType type) {
+        return switch(type) {
+            case PERSONAL -> getDailyPersonal(userId, date);
+            case WEDDING -> getDailyWedding(userId, date);
+        };
+    }
+
+    private DailyResponseDTO getDailyPersonal(Long userId, LocalDate date) {
+        List<DailyRecordDTO> records = mapper.selectDailyPersonal(userId, date);
+
+        return new DailyResponseDTO(date, records.size(), records);
+    }
+
+    private DailyResponseDTO getDailyWedding(Long userId, LocalDate date) {
+        return null;
+    }
 }

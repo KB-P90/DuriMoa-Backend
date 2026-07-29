@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/api/records")
@@ -22,11 +24,11 @@ import java.time.format.DateTimeParseException;
 public class CalendarController {
     private final CalendarService service;
 
-    @GetMapping()
+    @GetMapping("/monthly")
     public ResponseEntity<ApiResponse<?>> getMonthlyRecord(
             @RequestParam String month,
             @RequestParam String type
-            ) {
+    ) {
         // TODO 로그인 구현 후 Security에서 가져오기
         Long userId = 1L;
 
@@ -36,12 +38,35 @@ public class CalendarController {
         try {
             yearMonth = YearMonth.parse(month);
             calendarType = CalendarType.valueOf(type.toUpperCase());
-        } catch (DateTimeParseException  e) {
+        } catch (DateTimeParseException e) {
             throw new BadRequestException("month는 yyyy-MM 형식이어야 합니다.");
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("type은 personal과 wedding 중 하나여야 합니다.");
         }
 
         return ResponseEntity.ok(ApiResponse.success(service.getMonthly(userId, yearMonth, calendarType)));
+    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<ApiResponse<?>> getDailyRecord(
+            @RequestParam String date,
+            @RequestParam String type
+    ) {
+        // TODO 로그인 구현 후 Security에서 가져오기
+        Long userId = 1L;
+
+        LocalDate localDate;
+        CalendarType calendarType;
+
+        try {
+            localDate = LocalDate.parse(date);
+            calendarType = CalendarType.valueOf(type.toUpperCase());
+        } catch (DateTimeParseException e) {
+            throw new BadRequestException("date는 yyyy-MM-dd 형식이어야 합니다.");
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("type은 personal과 wedding 중 하나여야 합니다.");
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(service.getDaily(userId, localDate, calendarType)));
     }
 }
