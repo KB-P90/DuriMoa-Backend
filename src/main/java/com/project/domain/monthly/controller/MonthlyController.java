@@ -2,6 +2,7 @@ package com.project.domain.monthly.controller;
 
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 import com.project.domain.monthly.service.MonthlyService;
 import io.swagger.annotations.Api;
@@ -10,6 +11,9 @@ import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,7 +35,7 @@ public class MonthlyController {
     @GetMapping("/monthly")
     public ResponseEntity<ApiResponse<MonthlyExpenseResponseDTO>> getMonthlyCategoryExpenses(
             // TODO: 추후 JWT 로그인 구현 완료 시 SecurityContext에서 userId를 추출하도록 변경 및 userId @RequestParam 삭제 예정
-            @ApiParam(value = "사용자 ID (임시: JWT 적용 전)", example = "1")
+            @ApiParam(value = "사용자 ID", example = "1")
             @RequestParam(value = "userId", required = false) Long userId,
             @ApiParam(value = "조회 연도", example = "2026")
             @RequestParam(value = "year", required = false) Integer year,
@@ -59,7 +63,7 @@ public class MonthlyController {
     @GetMapping("/saving-missions")
     public ResponseEntity<ApiResponse<SavingMissionResponseDTO>> getMonthlySavingMissions(
             // TODO: 추후 JWT 로그인 구현 완료 시 SecurityContext에서 userId를 추출하도록 변경 및 userId @RequestParam 삭제 예정
-            @ApiParam(value = "사용자 ID (임시: JWT 적용 전)", example = "1")
+            @ApiParam(value = "사용자 ID", example = "1")
             @RequestParam(value = "userId", required = false) Long userId,
             @ApiParam(value = "조회 연도", example = "2026")
             @RequestParam(value = "year", required = false) Integer year,
@@ -78,5 +82,26 @@ public class MonthlyController {
 
         SavingMissionResponseDTO response = monthlyService.getMonthlySavingMissions(userId, year, month);
         return ResponseEntity.ok(ApiResponse.success("월별 절약 미션 목록을 조회했습니다.", response));
+    }
+
+    @ApiOperation(
+            value = "절약 미션 도전",
+            notes = "미션 ID와 년월(yearMonth)을 입력받아 절약 미션 상태를 '도전하기'에서 '도전중'으로 변경합니다."
+    )
+    @PostMapping("/saving-missions/{missionId}")
+    public ResponseEntity<ApiResponse<Void>> startSavingMission(
+            // TODO: 추후 JWT 로그인 구현 완료 시 SecurityContext에서 userId를 추출하도록 변경 및 userId @RequestParam 삭제 예정
+            @ApiParam(value = "사용자 ID", example = "1")
+            @RequestParam(value = "userId", required = false) Long userId,
+            @ApiParam(value = "절약 미션 ID", example = "101", required = true)
+            @PathVariable("missionId") Long missionId,
+            @RequestBody SavingMissionChallengeRequestDTO requestDTO
+    ) {
+        if (userId == null) {
+            userId = 1L; // 임시 기본값 (JWT 로그인 적용 전 테스트용)
+        }
+
+        monthlyService.startSavingMission(userId, missionId, requestDTO);
+        return ResponseEntity.ok(ApiResponse.success("절약 미션 도전을 시작했습니다.", null));
     }
 }

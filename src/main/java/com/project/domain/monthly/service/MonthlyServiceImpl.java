@@ -2,6 +2,7 @@ package com.project.domain.monthly.service;
 
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
@@ -54,5 +55,11 @@ public class MonthlyServiceImpl implements MonthlyService {
                 .totalExpectedSavingAmount(totalExpectedSavingAmount)
                 .missions(missions)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void startSavingMission(Long userId, Long missionId, SavingMissionChallengeRequestDTO requestDTO) {
+        monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
     }
 }

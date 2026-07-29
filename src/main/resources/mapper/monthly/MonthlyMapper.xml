@@ -111,4 +111,12 @@
         ORDER BY id ASC
     </select>
 
+    <update id="updateSavingMissionStatusToInProgress">
+        UPDATE saving_missions
+        SET status = '도전중'
+        WHERE id = #{missionId}
+          AND user_id = #{userId}
+          AND status = '도전하기'
+    </update>
+
 </mapper>

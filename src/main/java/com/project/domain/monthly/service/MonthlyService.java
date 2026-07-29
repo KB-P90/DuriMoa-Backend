@@ -1,6 +1,7 @@
 package com.project.domain.monthly.service;
 
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 
 public interface MonthlyService {
@@ -24,4 +25,13 @@ public interface MonthlyService {
      * @return SavingMissionResponseDTO
      */
     SavingMissionResponseDTO getMonthlySavingMissions(Long userId, Integer year, Integer month);
+
+    /**
+     * 절약 미션 상태를 '도전하기'에서 '도전중'으로 변경합니다.
+     *
+     * @param userId 사용자 ID
+     * @param missionId 미션 ID
+     * @param requestDTO 미션 도전 요청 DTO
+     */
+    void startSavingMission(Long userId, Long missionId, SavingMissionChallengeRequestDTO requestDTO);
 }
