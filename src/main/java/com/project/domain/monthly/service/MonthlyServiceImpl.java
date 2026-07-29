@@ -2,6 +2,8 @@ package com.project.domain.monthly.service;
 
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.SavingMissionDTO;
+import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,28 @@ public class MonthlyServiceImpl implements MonthlyService {
         return MonthlyExpenseResponseDTO.builder()
                 .year(year)
                 .expenseCategories(categories)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SavingMissionResponseDTO getMonthlySavingMissions(Long userId, Integer year, Integer month) {
+        List<SavingMissionDTO> missions = monthlyMapper.selectMonthlySavingMissions(userId, year, month);
+
+        if (missions == null) {
+            missions = Collections.emptyList();
+        }
+
+        long totalExpectedSavingAmount = missions.stream()
+                .mapToLong(m -> m.getExpectedSavingAmount() != null ? m.getExpectedSavingAmount() : 0L)
+                .sum();
+
+        String yearMonth = String.format("%04d-%02d", year, month);
+
+        return SavingMissionResponseDTO.builder()
+                .yearMonth(yearMonth)
+                .totalExpectedSavingAmount(totalExpectedSavingAmount)
+                .missions(missions)
                 .build();
     }
 }

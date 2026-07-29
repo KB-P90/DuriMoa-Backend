@@ -84,4 +84,31 @@
 
     </select>
 
+    <resultMap id="SavingMissionResultMap" type="com.project.domain.monthly.dto.SavingMissionDTO">
+        <result property="missionId" column="mission_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="title" column="title"/>
+        <result property="expectedSavingAmount" column="expected_saving_amount"/>
+        <result property="isSelectable" column="is_selectable"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectMonthlySavingMissions" resultMap="SavingMissionResultMap">
+        SELECT
+            id AS mission_id,
+            category AS category_code,
+            title,
+            expected_saving AS expected_saving_amount,
+            status,
+            CASE
+                WHEN status = '도전하기' THEN true
+                ELSE false
+            END AS is_selectable
+        FROM saving_missions
+        WHERE user_id = #{userId}
+          AND YEAR(created_at) = #{year}
+          AND MONTH(created_at) = #{month}
+        ORDER BY id ASC
+    </select>
+
 </mapper>
