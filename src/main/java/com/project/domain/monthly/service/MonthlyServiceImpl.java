@@ -1,5 +1,6 @@
 package com.project.domain.monthly.service;
 
+import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.MissionStatus;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
@@ -159,7 +160,7 @@ public class MonthlyServiceImpl implements MonthlyService {
 
     private GeneratedMissionInfoVO createMission(String categoryCode, Long totalAmount, Integer txCount) {
         if (categoryCode == null) {
-            categoryCode = "ETC";
+            categoryCode = ExpenseCategory.ETC.name();
         }
         if (totalAmount == null) {
             totalAmount = 0L;
@@ -173,7 +174,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         long expectedSavingAmount;
 
         // 1. 구독/정기 지출 카테고리 (SUBSCRIPTION)
-        if ("SUBSCRIPTION".equals(code)) {
+        if (ExpenseCategory.SUBSCRIPTION.name().equals(code)) {
             title = "사용하지 않는 구독 정리하기";
             expectedSavingAmount = totalAmount;
         }
@@ -186,11 +187,11 @@ public class MonthlyServiceImpl implements MonthlyService {
 
             expectedSavingAmount = Math.max(10000L, Math.round(rawSaving / 10000.0) * 10000L);
 
-            if ("CAFE".equals(code) && txCount <= 5) {
+            if (ExpenseCategory.CAFE.name().equals(code) && txCount <= 5) {
                 int weeklyCount = Math.max(1, txCount);
                 int targetWeekly = Math.max(1, weeklyCount / 2);
                 title = String.format("주 %d회에서 주 %d회로 줄이기", weeklyCount, targetWeekly);
-            } else if ("DELIVERY".equals(code)) {
+            } else if (ExpenseCategory.DELIVERY.name().equals(code)) {
                 title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
             } else {
                 title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
@@ -198,7 +199,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         }
         // 3. 단건 지출이거나 횟수가 1회인 경우
         else {
-            if ("SHOPPING".equals(code)) {
+            if (ExpenseCategory.SHOPPING.name().equals(code)) {
                 title = "계획 없는 쇼핑 줄이기";
             } else {
                 title = "불필요한 지출 줄이기";
