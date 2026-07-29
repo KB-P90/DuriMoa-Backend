@@ -1,6 +1,8 @@
 package com.project.domain.auth.controller;
 
 import com.project.common.response.ApiResponse;
+import com.project.domain.auth.dto.LoginRequestDTO;
+import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.service.AuthService;
@@ -31,5 +33,13 @@ public class AuthController {
         SignupResponseDTO response = authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회원가입이 완료되었습니다.", response));
+    }
+
+    @ApiOperation(value = "로그인", notes = "휴대폰 번호와 비밀번호를 검증하고 Access Token을 발급합니다.")
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> login(
+            @Valid @RequestBody LoginRequestDTO request) {
+        LoginResponseDTO response = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success("로그인이 완료되었습니다.", response));
     }
 }

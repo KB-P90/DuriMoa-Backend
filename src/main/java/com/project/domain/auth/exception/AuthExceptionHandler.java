@@ -24,6 +24,13 @@ public class AuthExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
     }
 
+    @ExceptionHandler(InvalidLoginCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidLoginCredentials(
+            InvalidLoginCredentialsException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(exception.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             MethodArgumentNotValidException exception) {
