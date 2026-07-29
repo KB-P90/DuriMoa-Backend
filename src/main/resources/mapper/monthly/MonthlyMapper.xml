@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.monthly.mapper.MonthlyMapper">
+
+    <resultMap id="ExpenseCategoryResultMap" type="com.project.domain.monthly.dto.ExpenseCategoryDTO">
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="amount" column="amount"/>
+        <result property="comparisonRate" column="comparison_rate"/>
+        <result property="expenseRate" column="expense_rate"/>
+    </resultMap>
+
+    <select id="selectMonthlyExpenseCategories"
+            resultMap="ExpenseCategoryResultMap">
+
+        SELECT
+        ROW_NUMBER() OVER (
+        ORDER BY SUM(curr.amount) DESC
+        ) AS category_id,
+
+        curr.category AS category_code,
+        SUM(curr.amount) AS amount,
+
+        <!--
+        TODO: expense_avg 테이블 생성 후 아래 계산식으로 교체
+
+        CASE
+            WHEN avg_expense.avg_amount IS NULL
+                 OR avg_expense.avg_amount = 0
+            THEN NULL
+            ELSE CAST(
+                ROUND(
+                    (SUM(curr.amount) - avg_expense.avg_amount)
+                    * 100.0 / avg_expense.avg_amount
+                ) AS SIGNED
+            )
+        END AS comparison_rate,
+        -->
+
+        <!-- 임시 테스트 데이터: 평균보다 10% 많이 지출 -->
+        CAST(10 AS SIGNED) AS comparison_rate,
+
+        CAST(
+        ROUND(
+        SUM(curr.amount) * 100.0
+        / NULLIF(total.total_amount, 0)
+        ) AS SIGNED
+        ) AS expense_rate
+
+        FROM service_record curr
+
+        CROSS JOIN (
+        SELECT SUM(amount) AS total_amount
+        FROM service_record
+        WHERE user_id = #{userId}
+        AND type = 'EXPENSE'
+        AND YEAR(record_date) = #{year}
+        AND MONTH(record_date) = #{month}
+        ) total
+
+        <!--
+        TODO: expense_avg 테이블 생성 후 주석 해제
+
+        LEFT JOIN expense_avg avg_expense
+            ON curr.category = avg_expense.category
+        -->
+
+        WHERE curr.user_id = #{userId}
+        AND curr.type = 'EXPENSE'
+        AND YEAR(curr.record_date) = #{year}
+        AND MONTH(curr.record_date) = #{month}
+
+        GROUP BY
+        curr.category,
+        total.total_amount
+
+        <!--
+        TODO: expense_avg 테이블 생성 후 GROUP BY에 추가
+            , avg_expense.avg_amount
+        -->
+
+        ORDER BY SUM(curr.amount) DESC
+
+    </select>
+
+    <resultMap id="SavingMissionResultMap" type="com.project.domain.monthly.dto.SavingMissionDTO">
+        <result property="missionId" column="mission_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="title" column="title"/>
+        <result property="expectedSavingAmount" column="expected_saving_amount"/>
+        <result property="isSelectable" column="is_selectable"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectMonthlySavingMissions" resultMap="SavingMissionResultMap">
+        SELECT
+            id AS mission_id,
+            category AS category_code,
+            title,
+            expected_saving AS expected_saving_amount,
+            status,
+            CASE
+                WHEN status = '도전하기' THEN true
+                ELSE false
+            END AS is_selectable
+        FROM saving_missions
+        WHERE user_id = #{userId}
+          AND YEAR(created_at) = #{year}
+          AND MONTH(created_at) = #{month}
+        ORDER BY id ASC
+    </select>
+
+    <update id="updateSavingMissionStatusToInProgress">
+        UPDATE saving_missions
+        SET status = '도전중'
+        WHERE id = #{missionId}
+          AND user_id = #{userId}
+          AND status = '도전하기'
+    </update>
+
+    <resultMap id="CategoryExpenseAnalysisResultMap" type="com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO">
+        <result property="categoryCode" column="category_code"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="txCount" column="tx_count"/>
+    </resultMap>
+
+    <select id="selectCategoryExpenseAnalysis" resultMap="CategoryExpenseAnalysisResultMap">
+        SELECT
+            category AS category_code,
+            SUM(amount) AS total_amount,
+            COUNT(id) AS tx_count
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND type = 'EXPENSE'
+          AND record_date &gt;= #{startDate}
+          AND record_date &lt; #{endDate}
+        GROUP BY category
+        ORDER BY total_amount DESC
+    </select>
+
+    <insert id="insertSavingMission" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO saving_missions (
+            user_id,
+            category,
+            title,
+            expected_saving,
+            status,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{categoryCode},
+            #{title},
+            #{expectedSavingAmount},
+            #{status},
+            #{createdAt}
+        )
+    </insert>
+
+</mapper>
