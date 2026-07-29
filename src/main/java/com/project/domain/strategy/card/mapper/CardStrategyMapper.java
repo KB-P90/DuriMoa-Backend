@@ -1,10 +1,10 @@
 package com.project.domain.strategy.card.mapper;
 
-import com.project.domain.strategy.card.model.CardOwnerRecord;
-import com.project.domain.strategy.card.model.CardPerformanceRecord;
-import com.project.domain.strategy.card.model.CardProductRecord;
-import com.project.domain.strategy.card.model.CardProductSource;
-import com.project.domain.strategy.card.model.UserCardRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardOwnerRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardPerformanceRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductSource;
+import com.project.domain.strategy.card.model.CardStrategyRecord.UserCardRecord;
 import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;

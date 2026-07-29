@@ -2,13 +2,13 @@ package com.project.domain.strategy.card.service;
 
 import com.project.domain.strategy.card.dto.CardDetailResponseDTO;
 import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO;
-import com.project.domain.strategy.card.exception.CardAccessDeniedException;
+import com.project.domain.strategy.card.exception.CardStrategyException.CardAccessDeniedException;
 import com.project.domain.strategy.card.mapper.CardStrategyMapper;
 import com.project.domain.strategy.card.model.CardBenefitCalculator;
-import com.project.domain.strategy.card.model.CardOwnerRecord;
-import com.project.domain.strategy.card.model.CardPerformanceRecord;
-import com.project.domain.strategy.card.model.CardProductRecord;
-import com.project.domain.strategy.card.model.UserCardRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardOwnerRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardPerformanceRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductRecord;
+import com.project.domain.strategy.card.model.CardStrategyRecord.UserCardRecord;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

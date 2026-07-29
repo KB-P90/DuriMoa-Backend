@@ -1,6 +1,6 @@
 package com.project.domain.strategy.card.model;
 
-import com.project.domain.strategy.card.exception.InvalidCardPaymentAmountException;
+import com.project.domain.strategy.card.exception.CardStrategyException.InvalidCardPaymentAmountException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
