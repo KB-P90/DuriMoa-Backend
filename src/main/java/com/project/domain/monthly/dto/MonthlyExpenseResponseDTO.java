@@ -19,6 +19,9 @@ public class MonthlyExpenseResponseDTO {
     @ApiModelProperty(value = "조회 연도", example = "2026")
     private Integer year;
 
+    @ApiModelProperty(value = "조회 월", example = "7")
+    private Integer month;
+
     @ApiModelProperty(value = "카테고리별 지출 목록")
     private List<ExpenseCategoryDTO> expenseCategories;
 }

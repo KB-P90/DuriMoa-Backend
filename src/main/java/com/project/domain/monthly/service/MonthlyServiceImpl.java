@@ -46,6 +46,7 @@ public class MonthlyServiceImpl implements MonthlyService {
 
         return MonthlyExpenseResponseDTO.builder()
                 .year(year)
+                .month(month)
                 .expenseCategories(categories)
                 .build();
     }
