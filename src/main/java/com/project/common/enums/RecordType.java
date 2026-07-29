@@ -1,4 +1,4 @@
-package com.project.domain.calendar.domain;
+package com.project.common.enums;
 
 public enum RecordType {
     INCOME,

@@ -3,6 +3,7 @@ package com.project.domain.calendar.service;
 import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.IncomeCategory;
 import com.project.common.enums.SavingCategory;
+import com.project.common.util.CategoryConverter;
 import com.project.domain.calendar.domain.CalendarType;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
@@ -111,10 +112,21 @@ public class CalendarServiceImpl implements CalendarService {
     private DailyResponseDTO getDailyPersonal(Long userId, LocalDate date) {
         List<DailyRecordDTO> records = mapper.selectDailyPersonal(userId, date);
 
-        return new DailyResponseDTO(date, records.size(), records);
+        return new DailyResponseDTO(date, records.size(), convertCategory(records));
     }
 
     private DailyResponseDTO getDailyWedding(Long userId, LocalDate date) {
         return null;
+    }
+
+    // 거래 내역의 영문 카테고리를 한글로 변환
+    private List<DailyRecordDTO> convertCategory(List<DailyRecordDTO> records) {
+        records.forEach(record -> {
+            record.setCategory(
+                    CategoryConverter.convert(record.getType(), record.getCategory())
+            );
+        });
+
+        return records;
     }
 }
