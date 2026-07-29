@@ -29,4 +29,80 @@
         GROUP BY record_date
         ORDER BY record_date
     </select>
+
+    <select id="selectMonthlyWeddingSummary"
+            resultType="com.project.domain.calendar.dto.response.MonthlyWeddingSummaryDTO">
+        SELECT
+            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
+        FROM service_record sr
+        WHERE sr.user_id IN (
+            SELECT #{userId}
+            UNION
+            SELECT
+                CASE
+                    WHEN c.groom_id = #{userId} THEN c.bride_id
+                    ELSE c.groom_id
+                END
+            FROM couple c
+            WHERE c.status = 'CONNECTED'
+                AND (c.groom_id = #{userId}
+                    OR c.bride_id = #{userId})
+        )
+        AND sr.record_date BETWEEN #{start} AND #{end}
+        AND (
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                THEN sr.changed_category
+                ELSE sr.category
+            END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+    </select>
+
+    <select id="selectMonthlyWeddingCalendar"
+            resultType="com.project.domain.calendar.dto.response.CalendarDayDTO">
+        SELECT
+            sr.record_date AS date,
+            MAX(CASE WHEN sr.type='INCOME' THEN 1 ELSE 0 END) AS hasIncome,
+            MAX(CASE WHEN sr.type='EXPENSE' THEN 1 ELSE 0 END) AS hasExpense,
+            MAX(CASE WHEN sr.type='SAVING' THEN 1 ELSE 0 END) AS hasSaving
+        FROM service_record sr
+        WHERE sr.user_id IN (
+            SELECT #{userId}
+            UNION
+            SELECT
+                CASE
+                    WHEN c.groom_id = #{userId} THEN c.bride_id
+                    ELSE c.groom_id
+                END
+            FROM couple c
+            WHERE c.status='CONNECTED'
+                AND (c.groom_id=#{userId}
+                    OR c.bride_id=#{userId})
+        )
+        AND sr.record_date BETWEEN #{start} AND #{end}
+        AND (
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                THEN sr.changed_category
+                ELSE sr.category
+            END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+        GROUP BY sr.record_date
+        ORDER BY sr.record_date
+    </select>
 </mapper>

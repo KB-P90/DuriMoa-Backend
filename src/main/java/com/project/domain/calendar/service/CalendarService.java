@@ -8,5 +8,4 @@ import java.time.YearMonth;
 
 public interface CalendarService {
     Object getMonthly(Long userId, YearMonth month, CalendarType type);
-
 }
