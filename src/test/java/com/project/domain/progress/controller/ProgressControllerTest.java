@@ -5,8 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.progress.dto.ProgressResponseDTO;
+import com.project.domain.progress.exception.ProgressExceptionHandler;
 import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.service.ProgressService;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +32,7 @@ class ProgressControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(progressController)
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new ProgressExceptionHandler())
                 .build();
     }
 

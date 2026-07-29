@@ -1,11 +1,8 @@
 package com.project.domain.progress.exception;
 
-import com.project.common.exception.BusinessException;
-import org.springframework.http.HttpStatus;
-
-public class SavingRecordNotFoundException extends BusinessException {
+public class SavingRecordNotFoundException extends RuntimeException {
 
     public SavingRecordNotFoundException() {
-        super("SAVING_RECORD_NOT_FOUND", "저축 거래 내역이 없습니다.", HttpStatus.NOT_FOUND);
+        super("저축 거래 내역이 없습니다.");
     }
 }

@@ -1,8 +1,5 @@
 package com.project.domain.couple.service;
 
-import com.project.domain.couple.exception.CoupleNotConnectedException;
-import com.project.domain.couple.exception.CoupleNotFoundException;
-import com.project.domain.member.exception.UserNotFoundException;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.mapper.CoupleMapper;
 import com.project.domain.member.service.MemberService;
@@ -11,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +43,7 @@ class CoupleServiceImplTest {
         when(memberService.existsMemberById(10L)).thenReturn(true);
         when(coupleMapper.findCouplesByUserId(10L)).thenReturn(Collections.emptyList());
 
-        assertThrows(CoupleNotFoundException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> coupleService.getConnectedCoupleByUserId(10L));
     }
 
@@ -55,13 +53,13 @@ class CoupleServiceImplTest {
         when(memberService.existsMemberById(10L)).thenReturn(true);
         when(coupleMapper.findCouplesByUserId(10L)).thenReturn(List.of(couple));
 
-        assertThrows(CoupleNotConnectedException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> coupleService.getConnectedCoupleByUserId(10L));
     }
 
     @Test
     void rejectsNullUserId() {
-        assertThrows(UserNotFoundException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> coupleService.getConnectedCoupleByUserId(null));
     }
 
@@ -69,7 +67,7 @@ class CoupleServiceImplTest {
     void rejectsDeletedOrUnknownUser() {
         when(memberService.existsMemberById(10L)).thenReturn(false);
 
-        assertThrows(UserNotFoundException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> coupleService.getConnectedCoupleByUserId(10L));
     }
 }
