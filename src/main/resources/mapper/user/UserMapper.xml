@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.user.mapper.UserMapper">
+
+    <resultMap id="userProfileResultMap"
+               type="com.project.domain.user.dto.UserProfileDto">
+
+        <id column="user_id" property="id"/>
+
+        <result column="user_name" property="name"/>
+        <result column="user_role" property="role"/>
+        <result column="provider" property="provider"/>
+        <result column="profile_image" property="profileImage"/>
+        <result column="is_shared" property="shared"/>
+
+        <result column="partner_name" property="partnerName"/>
+        <result column="partner_role" property="partnerRole"/>
+
+        <result column="couple_created_at" property="coupleCreatedAt"/>
+        <result column="couple_status" property="coupleStatus"/>
+    </resultMap>
+
+    <update id="update"
+            parameterType="com.project.domain.user.domain.UserProfileVO">
+
+        UPDATE user
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="profileImage != null">profile_image = #{profileImage},</if>
+            <if test="isShared != null">is_shared = #{isShared},</if>
+        </set>
+        WHERE id = #{id}
+
+    </update>
+
+    <select id="get"
+            parameterType="long"
+            resultMap="userProfileResultMap">
+
+        SELECT u.id            AS user_id,
+               u.name          AS user_name,
+               u.role          AS user_role,
+               u.provider      AS provider,
+               u.profile_image AS profile_image,
+               u.is_shared     AS is_shared,
+
+               p.name          AS partner_name,
+               p.role          AS partner_role,
+
+               c.created_at    AS couple_created_at,
+               c.status        AS couple_status
+
+        FROM user u
+
+                 LEFT JOIN couple c
+                           ON c.groom_id = u.id
+                               OR c.bride_id = u.id
+
+                 LEFT JOIN user p
+                           ON p.id = CASE
+                                         WHEN c.groom_id = u.id THEN c.bride_id
+                                         WHEN c.bride_id = u.id THEN c.groom_id
+                               END
+
+        WHERE u.id = #{userId}
+
+    </select>
+
+</mapper>
