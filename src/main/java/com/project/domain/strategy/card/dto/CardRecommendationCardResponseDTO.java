@@ -13,7 +13,7 @@ public class CardRecommendationCardResponseDTO {
     @JsonProperty("rank")
     private final Integer rank;
 
-    // 사용자 보유 카드 식별자로 사용하는 account.id입니다.
+    // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
     @JsonProperty("user_card_key")
     private final Long userCardKey;
 

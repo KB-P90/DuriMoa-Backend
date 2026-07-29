@@ -1,9 +1,8 @@
 package com.project.domain.strategy.card.exception;
 
-import com.project.common.exception.ApiException;
 import org.springframework.http.HttpStatus;
 
-public class CardAccessDeniedException extends ApiException {
+public class CardAccessDeniedException extends CardStrategyException {
 
     // 카드 소유권 검증 실패를 403 오류로 전달합니다.
     public CardAccessDeniedException() {

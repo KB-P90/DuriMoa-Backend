@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class UserCardRecord {
 
-    // 사용자 보유 카드 식별자로 사용하는 account.id입니다.
+    // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
     private Long userCardKey;
 
     // 카드 소유 사용자 ID입니다.

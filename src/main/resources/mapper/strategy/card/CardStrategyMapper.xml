@@ -23,91 +23,88 @@
 
     <select id="selectUserCardsByUserIds" resultType="com.project.domain.strategy.card.model.UserCardRecord">
         SELECT
-            a.id AS user_card_key,
-            a.user_id AS user_id,
+            c.id AS user_card_key,
+            c.user_id AS user_id,
             u.name AS owner_name,
             u.role AS owner_role,
             cp.id AS card_product_id,
             cp.company AS company,
-            COALESCE(a.card_name, cp.name) AS card_name,
+            COALESCE(c.card_name, cp.name) AS card_name,
             cp.annual_fee AS annual_fee,
             cp.image AS image,
             JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
             cp.`condition` AS condition_text,
             cp.updated_at AS condition_checked_at
-        FROM account a
+        FROM card c
         INNER JOIN `user` u
-            ON u.id = a.user_id
+            ON u.id = c.user_id
         INNER JOIN card_product cp
-            ON cp.id = a.card_product_id
-        WHERE a.type = 'CARD'
-          AND a.card_product_id IS NOT NULL
-          AND a.user_id IN
+            ON cp.id = c.card_product_id
+        WHERE c.card_product_id IS NOT NULL
+          AND c.user_id IN
         <foreach collection="userIds" item="userId" open="(" separator="," close=")">
             #{userId}
         </foreach>
         ORDER BY
-            a.user_id ASC,
+            c.user_id ASC,
             cp.company ASC,
-            COALESCE(a.card_name, cp.name) ASC,
-            a.id ASC
+            COALESCE(c.card_name, cp.name) ASC,
+            c.id ASC
     </select>
 
     <select id="selectCurrentMonthPerformances" resultType="com.project.domain.strategy.card.model.CardPerformanceRecord">
         SELECT
-            a.id AS user_card_key,
+            c.id AS user_card_key,
             GREATEST(
                 COALESCE(SUM(
                     CASE
-                        WHEN r.type = 'EXPENSE' THEN r.amount
-                        WHEN r.type = 'INCOME' THEN -r.amount
+                        WHEN cr.type = 'EXPENSE' THEN cr.amount
+                        WHEN cr.type = 'INCOME' THEN -cr.amount
                         ELSE 0
                     END
                 ), 0),
                 0
             ) AS recognized_performance_amount
-        FROM account a
-        LEFT JOIN record r
-            ON r.account_id = a.id
-           AND r.record_date &gt;= #{startDate}
-           AND r.record_date &lt;= #{endDate}
-           AND r.type IN ('EXPENSE', 'INCOME')
-        WHERE a.id IN
+        FROM card c
+        LEFT JOIN card_record cr
+            ON cr.card_id = c.id
+           AND cr.record_date &gt;= #{startDate}
+           AND cr.record_date &lt;= #{endDate}
+           AND cr.type IN ('EXPENSE', 'INCOME')
+        WHERE c.id IN
         <foreach collection="userCardKeys" item="userCardKey" open="(" separator="," close=")">
             #{userCardKey}
         </foreach>
-        GROUP BY a.id
+        GROUP BY c.id
     </select>
 
     <select id="selectCardDetailByUserCardKey" resultType="com.project.domain.strategy.card.model.CardProductRecord">
         SELECT
-            a.id AS user_card_key,
+            c.id AS user_card_key,
             cp.id AS card_product_id,
             cp.company AS company,
-            COALESCE(a.card_name, cp.name) AS card_name,
+            COALESCE(c.card_name, cp.name) AS card_name,
             cp.image AS image,
             cp.annual_fee AS annual_fee,
             JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
             cp.`condition` AS condition_text,
             cp.updated_at AS condition_checked_at
-        FROM account a
+        FROM card c
         INNER JOIN card_product cp
-            ON cp.id = a.card_product_id
-        WHERE a.id = #{userCardKey}
-          AND a.type = 'CARD'
-          AND a.card_product_id IS NOT NULL
+            ON cp.id = c.card_product_id
+        WHERE c.id = #{userCardKey}
+          AND c.card_product_id IS NOT NULL
     </select>
 
     <select id="existsCardAccessInActiveCouple" resultType="java.lang.Integer">
         SELECT COUNT(1)
-        FROM account a
-        INNER JOIN couple c
-            ON c.status = 'CONNECTED'
-           AND (a.user_id = c.groom_id OR a.user_id = c.bride_id)
-        WHERE a.id = #{userCardKey}
-          AND a.type = 'CARD'
-          AND a.card_product_id IS NOT NULL
-          AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
+        FROM card cd
+        INNER JOIN couple co
+            ON co.status = 'CONNECTED'
+           AND (cd.user_id = co.groom_id OR cd.user_id = co.bride_id)
+        WHERE cd.id = #{userCardKey}
+          AND cd.card_product_id IS NOT NULL
+          AND (co.groom_id = #{userId} OR co.bride_id = #{userId})
     </select>
 
     <select id="selectCardProductIdByCompanyAndName" resultType="java.lang.Long">

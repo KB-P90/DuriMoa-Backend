@@ -1,9 +1,8 @@
 package com.project.domain.strategy.card.exception;
 
-import com.project.common.exception.ApiException;
 import org.springframework.http.HttpStatus;
 
-public class CardAuthenticationRequiredException extends ApiException {
+public class CardAuthenticationRequiredException extends CardStrategyException {
 
     // 인증 사용자 식별 실패를 401 오류로 전달합니다.
     public CardAuthenticationRequiredException() {

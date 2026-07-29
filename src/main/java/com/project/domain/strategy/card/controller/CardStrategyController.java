@@ -10,7 +10,6 @@ import com.project.domain.strategy.card.service.CardStrategyService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +39,7 @@ public class CardStrategyController {
         Long paymentAmount = CardPaymentAmountValidator.validate(amount);
         Long authenticatedUserId = resolveAuthenticatedUserId(authentication, userIdHeader);
         CardRecommendationResponseDTO response = cardStrategyService.recommendCards(authenticatedUserId, paymentAmount);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "카드 추천 조회에 성공했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("카드 추천 조회에 성공했습니다.", response));
     }
 
     // 사용자 카드 식별자로 권한 검증 후 카드 상세 정보를 조회합니다.
@@ -54,7 +53,7 @@ public class CardStrategyController {
         Long authenticatedUserId = resolveAuthenticatedUserId(authentication, userIdHeader);
         Long userCardKey = parseUserCardKey(userCardKeyText);
         CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, userCardKey);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "카드 상세 조회에 성공했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("카드 상세 조회에 성공했습니다.", response));
     }
 
     // Spring Security 인증 정보 또는 개발용 헤더에서 사용자 ID를 추출합니다.
