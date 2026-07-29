@@ -9,5 +9,5 @@ import java.util.List;
 @Mapper
 public interface MonthlyMapper {
 
-    List<ExpenseCategoryDTO> selectMonthlyExpenseCategories(@Param("year") Integer year, @Param("month") Integer month);
+    List<ExpenseCategoryDTO> selectMonthlyExpenseCategories(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 }

@@ -25,6 +25,7 @@ DROP TABLE IF EXISTS `couple`;
 DROP TABLE IF EXISTS `card_product`;
 DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
+-- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -296,9 +297,9 @@ CREATE TABLE `account_record` (
 CREATE TABLE `service_record` (
                           `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
                           `user_id`     BIGINT       NOT NULL COMMENT '사용자 ID',
+                          `type`        VARCHAR(10)      NOT NULL COMMENT '내역 구분',
                           `category`    VARCHAR(10)  NOT NULL COMMENT '결혼비용, 개인소비 등',
-                          `changed_category`    VARCHAR(10)  NOT NULL COMMENT '변경된 카테고리',
-                          `title`       VARCHAR(100) NOT NULL COMMENT '제목',
+                          `changed_category`    VARCHAR(10)  NULL COMMENT '변경된 카테고리',
                           `amount`      BIGINT       NOT NULL COMMENT '금액',
                           `record_date` DATE         NOT NULL COMMENT '거래 일자',
                           `memo`        TEXT         NULL COMMENT '메모',
@@ -364,3 +365,36 @@ CREATE TABLE `wedding_statistics` (
                                       CONSTRAINT `chk_wedding_statistics_amounts`
                                           CHECK (`high_10` >= 0 AND `high_25` >= 0 AND `mid_50` >= 0 AND `low_25` >= 0 AND `low_10` >= 0)
 );
+
+/*
+
+CREATE TABLE expense_avg (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    category VARCHAR(50) NOT NULL
+        COMMENT '지출 카테고리 코드',
+
+    avg_amount DECIMAL(15, 2) NOT NULL
+        COMMENT '2030세대 카테고리별 월평균 지출 금액',
+
+    sample_count INT NULL
+        COMMENT '평균 산출에 사용된 표본 수',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_expense_avg_amount
+        CHECK (avg_amount >= 0),
+
+    CONSTRAINT chk_expense_avg_sample_count
+        CHECK (sample_count IS NULL OR sample_count >= 0),
+
+    UNIQUE KEY uk_expense_avg_category (category)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '2030세대 카테고리별 월평균 지출';
+
+*/

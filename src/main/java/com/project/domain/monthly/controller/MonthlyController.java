@@ -25,15 +25,21 @@ public class MonthlyController {
 
     @ApiOperation(
             value = "카테고리별 지출 조회",
-            notes = "연도와 월을 입력받아 해당 월의 카테고리별 지출 금액, 전월 대비 비율, 지출 비율을 조회합니다."
+            notes = "사용자 ID, 연도, 월을 입력받아 해당 월의 카테고리별 지출 금액, 전월 대비 비율, 지출 비율을 조회합니다."
     )
     @GetMapping
     public ResponseEntity<ApiResponse<MonthlyExpenseResponseDTO>> getMonthlyCategoryExpenses(
+            // TODO: 추후 JWT 로그인 구현 완료 시 SecurityContext에서 userId를 추출하도록 변경 및 userId @RequestParam 삭제 예정
+            @ApiParam(value = "사용자 ID (임시: JWT 적용 전)", example = "1")
+            @RequestParam(value = "userId", required = false) Long userId,
             @ApiParam(value = "조회 연도", example = "2026")
             @RequestParam(value = "year", required = false) Integer year,
             @ApiParam(value = "조회 월", example = "7")
             @RequestParam(value = "month", required = false) Integer month
     ) {
+        if (userId == null) {
+            userId = 1L; // 임시 기본값 (JWT 로그인 적용 전 테스트용)
+        }
         if (year == null) {
             year = LocalDate.now().getYear();
         }
@@ -41,7 +47,7 @@ public class MonthlyController {
             month = LocalDate.now().getMonthValue();
         }
 
-        MonthlyExpenseResponseDTO response = monthlyService.getMonthlyCategoryExpenses(year, month);
+        MonthlyExpenseResponseDTO response = monthlyService.getMonthlyCategoryExpenses(userId, year, month);
         return ResponseEntity.ok(ApiResponse.success("월별 카테고리별 지출 목록을 조회했습니다.", response));
     }
 }

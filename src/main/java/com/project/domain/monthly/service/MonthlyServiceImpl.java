@@ -18,8 +18,9 @@ public class MonthlyServiceImpl implements MonthlyService {
 
     @Override
     @Transactional(readOnly = true)
-    public MonthlyExpenseResponseDTO getMonthlyCategoryExpenses(Integer year, Integer month) {
-        List<ExpenseCategoryDTO> categories = monthlyMapper.selectMonthlyExpenseCategories(year, month);
+    public MonthlyExpenseResponseDTO getMonthlyCategoryExpenses(Long userId, Integer year, Integer month) {
+
+        List<ExpenseCategoryDTO> categories = monthlyMapper.selectMonthlyExpenseCategories(userId, year, month);
         
         if (categories == null) {
             categories = Collections.emptyList();
