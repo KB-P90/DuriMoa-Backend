@@ -1,17 +1,17 @@
 package com.project.domain.calendar.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.*;
 
 import java.time.LocalDate;
 
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CalendarDayDTO {
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;
     private boolean hasIncome;
     private boolean hasExpense;

@@ -296,9 +296,9 @@ CREATE TABLE `account_record` (
 CREATE TABLE `service_record` (
                           `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
                           `user_id`     BIGINT       NOT NULL COMMENT '사용자 ID',
+                          `type`        VARCHAR(10)  NOT NULL COMMENT 'INCOME, EXPENSE, SAVING',
                           `category`    VARCHAR(10)  NOT NULL COMMENT '결혼비용, 개인소비 등',
-                          `changed_category`    VARCHAR(10)  NOT NULL COMMENT '변경된 카테고리',
-                          `title`       VARCHAR(100) NOT NULL COMMENT '제목',
+                          `changed_category`    VARCHAR(10)  NULL COMMENT '변경된 카테고리',
                           `amount`      BIGINT       NOT NULL COMMENT '금액',
                           `record_date` DATE         NOT NULL COMMENT '거래 일자',
                           `memo`        TEXT         NULL COMMENT '메모',

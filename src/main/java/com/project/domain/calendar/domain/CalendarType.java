@@ -1,6 +1,6 @@
 package com.project.domain.calendar.domain;
 
-public enum RecordType {
+public enum CalendarType {
     WEDDING,
     PERSONAL
 }
