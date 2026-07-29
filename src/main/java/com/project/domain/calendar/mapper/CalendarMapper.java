@@ -43,4 +43,10 @@ public interface CalendarMapper {
             @Param("date") LocalDate date
     );
 
+    List<DailyRecordDTO> selectDailyWedding(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date,
+            @Param("categories") List<String> categories
+    );
+
 }

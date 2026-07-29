@@ -33,6 +33,7 @@ public class CalendarServiceImpl implements CalendarService {
         };
     }
 
+    // 월별 조회 - 개인 소비
     private MonthlyPersonalResponseDTO getMonthlyPersonal(Long userId, YearMonth month) {
         LocalDate start = month.atDay(1);
         LocalDate end = getEndDate(month);
@@ -46,16 +47,14 @@ public class CalendarServiceImpl implements CalendarService {
         return new MonthlyPersonalResponseDTO(summary, calendar);
     }
 
+    // 월별 조회 - 결혼 비용
     private MonthlyWeddingResponseDTO getMonthlyWedding(Long userId, YearMonth month) {
         LocalDate start = month.atDay(1);
         LocalDate end = getEndDate(month);
 
         // 결혼 카테고리
-        List<String> categories = new ArrayList<>();
-        categories.addAll(ExpenseCategory.getWeddingCodes());
-        categories.addAll(IncomeCategory.getWeddingCodes());
-        categories.addAll(SavingCategory.getWeddingCodes());
-
+        List<String> categories = getWeddingCategories();
+        
         // 월 요약
         MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);
 
@@ -109,14 +108,22 @@ public class CalendarServiceImpl implements CalendarService {
         };
     }
 
+    // 일별 조회 - 개인 소비
     private DailyResponseDTO getDailyPersonal(Long userId, LocalDate date) {
         List<DailyRecordDTO> records = mapper.selectDailyPersonal(userId, date);
 
         return new DailyResponseDTO(date, records.size(), convertCategory(records));
     }
 
+    // 일별 조회 - 결혼 비용
     private DailyResponseDTO getDailyWedding(Long userId, LocalDate date) {
-        return null;
+
+        // 결혼 카테고리
+        List<String> categories = getWeddingCategories();
+
+        List<DailyRecordDTO> records = mapper.selectDailyWedding(userId, date, categories);
+
+        return new DailyResponseDTO(date, records.size(), convertCategory(records));
     }
 
     // 거래 내역의 영문 카테고리를 한글로 변환
@@ -128,5 +135,16 @@ public class CalendarServiceImpl implements CalendarService {
         });
 
         return records;
+    }
+
+    // 결혼 카테고리 리스트
+    private List<String> getWeddingCategories() {
+        List<String> categories = new ArrayList<>();
+
+        categories.addAll(ExpenseCategory.getWeddingCodes());
+        categories.addAll(IncomeCategory.getWeddingCodes());
+        categories.addAll(SavingCategory.getWeddingCodes());
+
+        return categories;
     }
 }

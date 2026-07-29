@@ -125,4 +125,50 @@
             AND sr.record_date = #{date}
         ORDER BY sr.updated_at DESC
     </select>
+
+    <select id="selectDailyWedding" resultType="com.project.domain.calendar.dto.response.DailyRecordDTO">
+        SELECT
+            sr.id AS recordId,
+            sr.type AS type,
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                    THEN sr.changed_category
+                ELSE sr.category
+            END AS category,
+            sr.amount,
+            sr.memo,
+            u.name AS owner
+        FROM service_record sr
+        INNER JOIN user u
+            ON sr.user_id = u.id
+        WHERE sr.record_date = #{date}
+            AND sr.user_id IN (
+                SELECT #{userId}
+                UNION
+                SELECT
+                CASE
+                WHEN c.groom_id = #{userId} THEN c.bride_id
+                ELSE c.groom_id
+                END
+                FROM couple c
+                WHERE c.status='CONNECTED'
+                AND (c.groom_id=#{userId}
+                OR c.bride_id=#{userId})
+        )
+        AND (
+        CASE
+        WHEN sr.changed_category IS NOT NULL
+        THEN sr.changed_category
+        ELSE sr.category
+        END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+        ORDER BY sr.updated_at DESC
+    </select>
 </mapper>
