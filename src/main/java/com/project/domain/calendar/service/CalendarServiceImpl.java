@@ -1,7 +1,9 @@
 package com.project.domain.calendar.service;
 
+import com.project.common.enums.ExpenseCategory;
+import com.project.common.enums.IncomeCategory;
+import com.project.common.enums.SavingCategory;
 import com.project.domain.calendar.domain.CalendarType;
-import com.project.domain.calendar.domain.WeddingCategory;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +50,10 @@ public class CalendarServiceImpl implements CalendarService {
         LocalDate end = getEndDate(month);
 
         // 결혼 카테고리
-        List<String> categories = WeddingCategory.getCodes();
+        List<String> categories = new ArrayList<>();
+        categories.addAll(ExpenseCategory.getWeddingCodes());
+        categories.addAll(IncomeCategory.getWeddingCodes());
+        categories.addAll(SavingCategory.getWeddingCodes());
 
         // 월 요약
         MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);

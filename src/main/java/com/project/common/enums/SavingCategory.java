@@ -8,9 +8,9 @@ import java.util.List;
 @Getter
 public enum SavingCategory {
 
-    GENERAL("저축", false),
+    GENERALSAVING("저축", false),
 
-    WEDDING("결혼 저축", true);
+    WEDDINGSAVING("결혼 저축", true);
 
     private final String categoryName;
     private final boolean wedding;
