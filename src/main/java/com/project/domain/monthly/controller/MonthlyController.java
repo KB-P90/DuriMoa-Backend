@@ -3,6 +3,8 @@ package com.project.domain.monthly.controller;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
+import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
+import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 import com.project.domain.monthly.service.MonthlyService;
 import io.swagger.annotations.Api;
@@ -103,5 +105,16 @@ public class MonthlyController {
 
         monthlyService.startSavingMission(userId, missionId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("절약 미션 도전을 시작했습니다.", null));
+    }
+
+    @ApiOperation(
+            value = "절약 추천 미션 생성",
+            notes = "직전 월 소비 패턴을 분석하여 절약이 가능한 카테고리를 선정하고 추천 미션을 생성합니다."
+    )
+    @PostMapping("/saving-missions/recommendations")
+    public ResponseEntity<ApiResponse<SavingMissionRecommendationResponseDTO>> generateSavingMissionRecommendations(
+            @RequestBody SavingMissionRecommendationRequestDTO requestDTO
+    ) {
+        return monthlyService.generateSavingMissionRecommendations(requestDTO);
     }
 }

@@ -1,8 +1,12 @@
 package com.project.domain.monthly.service;
 
+import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
+import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
+import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
+import org.springframework.http.ResponseEntity;
 
 public interface MonthlyService {
 
@@ -34,4 +38,12 @@ public interface MonthlyService {
      * @param requestDTO 미션 도전 요청 DTO
      */
     void startSavingMission(Long userId, Long missionId, SavingMissionChallengeRequestDTO requestDTO);
+
+    /**
+     * 직전 월 소비 패턴을 분석하여 절약 추천 미션을 생성합니다.
+     *
+     * @param requestDTO 절약 추천 미션 생성 요청 DTO
+     * @return ResponseEntity<ApiResponse<SavingMissionRecommendationResponseDTO>>
+     */
+    ResponseEntity<ApiResponse<SavingMissionRecommendationResponseDTO>> generateSavingMissionRecommendations(SavingMissionRecommendationRequestDTO requestDTO);
 }

@@ -334,7 +334,6 @@ CREATE TABLE `saving_missions` (
                                    `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID',
                                    `category`        VARCHAR(50)  NOT NULL COMMENT '지출 카테고리',
                                    `title`           VARCHAR(100) NOT NULL COMMENT '미션 제목',
-                                   `description`     VARCHAR(255) NULL COMMENT '활동 방법',
                                    `expected_saving` BIGINT       NOT NULL DEFAULT 0 COMMENT '예상 절감액',
                                    `status`          VARCHAR(10)  NOT NULL COMMENT '미션 상태',
                                    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',

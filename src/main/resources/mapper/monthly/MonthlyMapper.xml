@@ -119,4 +119,42 @@
           AND status = '도전하기'
     </update>
 
+    <resultMap id="CategoryExpenseAnalysisResultMap" type="com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO">
+        <result property="categoryCode" column="category_code"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="txCount" column="tx_count"/>
+    </resultMap>
+
+    <select id="selectCategoryExpenseAnalysis" resultMap="CategoryExpenseAnalysisResultMap">
+        SELECT
+            category AS category_code,
+            SUM(amount) AS total_amount,
+            COUNT(id) AS tx_count
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND type = 'EXPENSE'
+          AND record_date &gt;= #{startDate}
+          AND record_date &lt; #{endDate}
+        GROUP BY category
+        ORDER BY total_amount DESC
+    </select>
+
+    <insert id="insertSavingMission" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO saving_missions (
+            user_id,
+            category,
+            title,
+            expected_saving,
+            status,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{categoryCode},
+            #{title},
+            #{expectedSavingAmount},
+            #{status},
+            #{createdAt}
+        )
+    </insert>
+
 </mapper>
