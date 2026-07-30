@@ -8,12 +8,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ServiceRecord {
     private Long id;
 
     private Long userId;
-
-    private String owner;
 
     private RecordType type;
 
@@ -26,8 +27,4 @@ public class ServiceRecord {
     private LocalDate recordDate;
 
     private String memo;
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
 }

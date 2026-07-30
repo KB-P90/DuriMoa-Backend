@@ -5,6 +5,8 @@ import com.project.common.enums.IncomeCategory;
 import com.project.common.enums.SavingCategory;
 import com.project.common.util.CategoryConverter;
 import com.project.domain.calendar.domain.CalendarType;
+import com.project.domain.calendar.domain.ServiceRecord;
+import com.project.domain.calendar.dto.request.RecordCreateRequestDTO;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
 import lombok.RequiredArgsConstructor;
@@ -146,5 +148,14 @@ public class CalendarServiceImpl implements CalendarService {
         categories.addAll(SavingCategory.getWeddingCodes());
 
         return categories;
+    }
+
+    @Override
+    public RecordResponseDTO create(Long userId, RecordCreateRequestDTO recordDTO) {
+
+        ServiceRecord record = recordDTO.toVO(userId);
+        mapper.create(record);
+
+        return RecordResponseDTO.of(record.getId());
     }
 }

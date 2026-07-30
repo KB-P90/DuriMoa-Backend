@@ -1,5 +1,6 @@
 package com.project.domain.calendar.mapper;
 
+import com.project.domain.calendar.domain.ServiceRecord;
 import com.project.domain.calendar.dto.response.CalendarDayDTO;
 import com.project.domain.calendar.dto.response.DailyRecordDTO;
 import com.project.domain.calendar.dto.response.MonthlyPersonalSummaryDTO;
@@ -49,4 +50,5 @@ public interface CalendarMapper {
             @Param("categories") List<String> categories
     );
 
+    void create(ServiceRecord record);
 }

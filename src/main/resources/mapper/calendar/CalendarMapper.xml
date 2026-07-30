@@ -171,4 +171,14 @@
         </foreach>
         ORDER BY sr.updated_at DESC
     </select>
+
+    <insert id="create">
+        INSERT INTO service_record (user_id, type, category, amount, record_date, memo)
+        VALUES (#{userId}, #{type}, #{category}, #{amount}, #{recordDate}, #{memo})
+
+        <selectKey resultType="Long" keyProperty="id" keyColumn="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
 </mapper>
