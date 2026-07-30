@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.goal.mapper.GoalMapper">
+
+    <insert id="insertGoal"
+            parameterType="com.project.domain.goal.domain.GoalVO"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO goal (
+            couple_id,
+            name,
+            wedding_date,
+            region,
+            total_budget,
+            groom_ratio,
+            bride_ratio,
+            created_at
+        ) VALUES (
+            #{coupleId},
+            #{name},
+            #{weddingDate},
+            #{region},
+            #{totalBudget},
+            #{groomRatio},
+            #{brideRatio},
+            #{createdAt}
+        )
+    </insert>
+
+    <insert id="insertGoalItems">
+        INSERT INTO goal_item (
+            goal_id,
+            category,
+            target_amount,
+            is_included,
+            type
+        )
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (
+                #{goalId},
+                #{item.category},
+                #{item.targetAmount},
+                #{item.included},
+                #{item.type}
+            )
+        </foreach>
+    </insert>
+</mapper>
