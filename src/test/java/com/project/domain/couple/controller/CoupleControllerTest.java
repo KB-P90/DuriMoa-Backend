@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,9 +44,11 @@ class CoupleControllerTest {
     }
 
     @Test
-    void statusReturnsMyCoupleStatus() throws Exception {
-        when(coupleInvitationService.getStatus(3L))
-                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "REQUESTED"));
+    void statusReturnsListOfMyCoupleRelationships() throws Exception {
+        when(coupleInvitationService.getStatuses(3L))
+                .thenReturn(List.of(
+                        new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"),
+                        new CoupleInvitationDTO(5L, "박서연", "B", "WAIT")));
 
         MvcResult result = mockMvc.perform(get("/couple/status"))
                 .andExpect(status().isOk())
@@ -53,8 +56,9 @@ class CoupleControllerTest {
         JsonNode response = readResponse(result);
 
         assertTrue(response.get("success").asBoolean());
-        assertEquals("REQUESTED", response.at("/data/status").asText());
-        assertEquals("이유진", response.at("/data/name").asText());
+        assertEquals(2, response.get("data").size());
+        assertEquals("이유진", response.at("/data/0/name").asText());
+        assertEquals("박서연", response.at("/data/1/name").asText());
     }
 
     @Test
@@ -76,17 +80,33 @@ class CoupleControllerTest {
     }
 
     @Test
-    void acceptConfirmsPendingRequestWithoutBody() throws Exception {
-        when(coupleInvitationService.accept(4L))
+    void acceptConfirmsSpecifiedPartnerRequest() throws Exception {
+        when(coupleInvitationService.accept(eq(4L), eq(1L)))
                 .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "CONNECTED"));
 
-        MvcResult result = mockMvc.perform(post("/couple/accept"))
+        MvcResult result = mockMvc.perform(post("/couple/accept")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"partnerUserId\":1}"))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);
 
         assertTrue(response.get("success").asBoolean());
         assertEquals("CONNECTED", response.at("/data/status").asText());
+    }
+
+    @Test
+    void disconnectReturnsDisconnectedStatus() throws Exception {
+        when(coupleInvitationService.disconnect(3L))
+                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "DISCONNECTED"));
+
+        MvcResult result = mockMvc.perform(post("/couple/disconnect"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertTrue(response.get("success").asBoolean());
+        assertEquals("DISCONNECTED", response.at("/data/status").asText());
     }
 
     private JsonNode readResponse(MvcResult result) throws Exception {

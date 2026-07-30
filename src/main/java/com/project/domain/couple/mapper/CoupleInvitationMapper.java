@@ -4,22 +4,23 @@ import com.project.domain.couple.dto.CoupleInvitationDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface CoupleInvitationMapper {
 
     // 현재 로그인한 사용자 조회
     public CoupleInvitationDTO findUserById(Long userId);
 
-    // 나와 연결된(WAIT/CONNECTED) 커플의 상대방 + 상태 조회 (없으면 null)
-    public CoupleInvitationDTO findCoupleByUserId(Long userId);
+    // 나와 연결된(WAIT/CONNECTED) 모든 상대방 + 상태 목록 조회 (동시에 여러 명일 수 있음)
+    public List<CoupleInvitationDTO> findCouplesByUserId(Long userId);
 
-    // 내 초대코드를 누가 사용해서, 내가 확인해줘야 하는 요청이 와 있는지 확인
-    public boolean existsPendingRequestToMe(Long userId);
+    // 나와 특정 상대(partnerId) 간의 커플 row 조회 (없으면 null)
+    public CoupleInvitationDTO findCoupleByUserIds(@Param("userId") Long userId, @Param("partnerId") Long partnerId);
 
     // 초대코드 주인(상대방) 조회
     public CoupleInvitationDTO findPartnerByInviteCode(String inviteCode);
 
-    // userId가 otherUserId 말고 다른 상대와 연결된 커플이 있는지 카운트
+    // userId가 otherUserId 말고 다른 상대와 CONNECTED된 커플이 있는지 카운트 (WAIT는 여러 명과 동시에 있어도 됨)
     public int countCoupleExcept(@Param("userId") Long userId, @Param("otherUserId") Long otherUserId);
 
     // 신랑/신부 조합으로 기존 커플 상태 조회 (없으면 null)
@@ -30,6 +31,9 @@ public interface CoupleInvitationMapper {
 
     // WAIT -> CONNECTED로 전환
     public void connectCouple(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
+
+    // CONNECTED -> DISCONNECTED로 전환 (row는 삭제하지 않고 이력으로 남김)
+    public void disconnectCouple(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
 
     // 상대방 초대코드를 처음 사용했을 때 REQUESTED로 변경
     public void requestInvitation(@Param("inviteCode") String inviteCode, @Param("inviteeId") Long inviteeId);

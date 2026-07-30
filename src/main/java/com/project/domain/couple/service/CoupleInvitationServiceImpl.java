@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,19 +33,10 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         coupleInvitationMapper.insertInvitation(userId, inviteCode, LocalDateTime.now().plusDays(30));
     }
 
-    // 내 커플 연결 상태 조회. WAIT인 경우 내 초대코드가 사용된 거면 REQUESTED(상대가 나한테 요청함)로 보여준다
+    // 나와 연결된(WAIT/CONNECTED) 모든 상대방 목록 조회. 동시에 여러 명에게서 요청이 와 있을 수 있다.
     @Override
-    public CoupleInvitationDTO getStatus(Long currentUserId) {
-        CoupleInvitationDTO couple = coupleInvitationMapper.findCoupleByUserId(currentUserId);
-        if (couple == null) {
-            return null;
-        }
-
-        if ("WAIT".equals(couple.getStatus()) && coupleInvitationMapper.existsPendingRequestToMe(currentUserId)) {
-            couple.setStatus("REQUESTED");
-        }
-
-        return couple;
+    public List<CoupleInvitationDTO> getStatuses(Long currentUserId) {
+        return coupleInvitationMapper.findCouplesByUserId(currentUserId);
     }
 
     // 상대방 초대코드를 입력해서 연결을 요청/확정한다.
@@ -96,20 +88,23 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 연결된 커플입니다.");
     }
 
-    // 코드 없이 버튼으로 수락: 내 초대코드로 이미 만들어진 WAIT 요청을 그대로 확정한다
+    // 나에게 와 있는 여러 요청 중 특정 상대(partnerUserId)의 요청을 수락한다.
+    // 이미 다른 상대와 CONNECTED된 상태라면(예: 다른 요청을 먼저 수락한 경우) 남은 요청은 수락할 수 없다.
     @Override
     @Transactional
-    public CoupleInvitationDTO accept(Long currentUserId) {
+    public CoupleInvitationDTO accept(Long currentUserId, Long partnerUserId) {
         CoupleInvitationDTO currentUser = coupleInvitationMapper.findUserById(currentUserId);
         if (currentUser == null) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 회원입니다. userId=" + currentUserId);
         }
 
-        CoupleInvitationDTO couple = coupleInvitationMapper.findCoupleByUserId(currentUserId);
-        if (couple == null
-                || !"WAIT".equals(couple.getStatus())
-                || !coupleInvitationMapper.existsPendingRequestToMe(currentUserId)) {
+        CoupleInvitationDTO couple = coupleInvitationMapper.findCoupleByUserIds(currentUserId, partnerUserId);
+        if (couple == null || !"WAIT".equals(couple.getStatus())) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "대기 중인 연결 요청이 없습니다.");
+        }
+
+        if (coupleInvitationMapper.countCoupleExcept(currentUserId, partnerUserId) > 0) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 다른 커플과 연결되어 있습니다.");
         }
 
         Long groomId;
@@ -126,6 +121,35 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         coupleInvitationMapper.acceptOwnInvitation(currentUserId);
 
         return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), "CONNECTED");
+    }
+
+    // 연결된 커플을 끊는다. row는 지우지 않고 DISCONNECTED로 남겨서, 이후 새 상대와는 자유롭게 연결할 수 있게 한다.
+    @Override
+    @Transactional
+    public CoupleInvitationDTO disconnect(Long currentUserId) {
+        CoupleInvitationDTO currentUser = coupleInvitationMapper.findUserById(currentUserId);
+        if (currentUser == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 회원입니다. userId=" + currentUserId);
+        }
+
+        CoupleInvitationDTO couple = coupleInvitationMapper.findCouplesByUserId(currentUserId).stream()
+                .filter(c -> "CONNECTED".equals(c.getStatus()))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "연결된 커플이 없습니다."));
+
+        Long groomId;
+        Long brideId;
+        if ("G".equals(currentUser.getRole())) {
+            groomId = currentUser.getUserId();
+            brideId = couple.getUserId();
+        } else {
+            groomId = couple.getUserId();
+            brideId = currentUser.getUserId();
+        }
+
+        coupleInvitationMapper.disconnectCouple(groomId, brideId);
+
+        return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), "DISCONNECTED");
     }
 
     // 자기 자신 코드 입력 방지, 역할 동일 검사, 이미 다른 커플에 연결돼 있는지 검사

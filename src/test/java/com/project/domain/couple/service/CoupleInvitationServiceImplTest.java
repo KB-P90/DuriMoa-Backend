@@ -10,10 +10,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -48,32 +50,22 @@ class CoupleInvitationServiceImplTest {
     }
 
     @Test
-    void getStatusReturnsNullWhenNoCoupleExists() {
-        when(coupleInvitationMapper.findCoupleByUserId(1L)).thenReturn(null);
+    void getStatusesReturnsEmptyListWhenNoCoupleExists() {
+        when(coupleInvitationMapper.findCouplesByUserId(1L)).thenReturn(Collections.emptyList());
 
-        assertNull(coupleInvitationService.getStatus(1L));
+        assertTrue(coupleInvitationService.getStatuses(1L).isEmpty());
     }
 
     @Test
-    void getStatusShowsRequestedWhenMyCodeWasUsed() {
-        when(coupleInvitationMapper.findCoupleByUserId(1L))
-                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"));
-        when(coupleInvitationMapper.existsPendingRequestToMe(1L)).thenReturn(true);
+    void getStatusesReturnsAllPendingAndConnectedRelationships() {
+        List<CoupleInvitationDTO> couples = List.of(
+                new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"),
+                new CoupleInvitationDTO(3L, "박서연", "B", "WAIT"));
+        when(coupleInvitationMapper.findCouplesByUserId(1L)).thenReturn(couples);
 
-        CoupleInvitationDTO result = coupleInvitationService.getStatus(1L);
+        List<CoupleInvitationDTO> result = coupleInvitationService.getStatuses(1L);
 
-        assertEquals("REQUESTED", result.getStatus());
-    }
-
-    @Test
-    void getStatusShowsWaitWhenIUsedTheirCode() {
-        when(coupleInvitationMapper.findCoupleByUserId(2L))
-                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "WAIT"));
-        when(coupleInvitationMapper.existsPendingRequestToMe(2L)).thenReturn(false);
-
-        CoupleInvitationDTO result = coupleInvitationService.getStatus(2L);
-
-        assertEquals("WAIT", result.getStatus());
+        assertEquals(2, result.size());
     }
 
     @Test
@@ -114,6 +106,22 @@ class CoupleInvitationServiceImplTest {
 
         assertThrows(CustomException.class,
                 () -> coupleInvitationService.invite(1L, "XYZ789"));
+    }
+
+    @Test
+    void inviteAllowsSecondRequesterWhileFirstIsStillWaiting() {
+        // C가 A(userId=1)의 코드를 입력하는 상황. A는 이미 B와 WAIT 상태지만 CONNECTED는 아니므로 countCoupleExcept는 0이어야 통과한다.
+        when(coupleInvitationMapper.findUserById(3L)).thenReturn(new CoupleInvitationDTO(3L, "박서연", "B", null));
+        when(coupleInvitationMapper.findPartnerByInviteCode("AAA111"))
+                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.countCoupleExcept(3L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(1L, 3L)).thenReturn(0);
+        when(coupleInvitationMapper.findCoupleStatus(1L, 3L)).thenReturn(null);
+
+        CoupleInvitationDTO result = coupleInvitationService.invite(3L, "AAA111");
+
+        verify(coupleInvitationMapper).insertCouple(1L, 3L);
+        assertEquals("WAIT", result.getStatus());
     }
 
     @Test
@@ -174,36 +182,69 @@ class CoupleInvitationServiceImplTest {
     }
 
     @Test
-    void acceptConfirmsPendingRequestWithoutCode() {
+    void acceptConfirmsSpecifiedPendingRequest() {
         when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
-        when(coupleInvitationMapper.findCoupleByUserId(2L))
+        when(coupleInvitationMapper.findCoupleByUserIds(2L, 1L))
                 .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "WAIT"));
-        when(coupleInvitationMapper.existsPendingRequestToMe(2L)).thenReturn(true);
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
 
-        CoupleInvitationDTO result = coupleInvitationService.accept(2L);
+        CoupleInvitationDTO result = coupleInvitationService.accept(2L, 1L);
 
         verify(coupleInvitationMapper).connectCouple(1L, 2L);
         verify(coupleInvitationMapper).acceptOwnInvitation(2L);
-        verify(coupleInvitationMapper, never()).acceptInvitation(anyString(), any());
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }
 
     @Test
-    void acceptRejectsWhenNoPendingRequest() {
+    void acceptRejectsWhenNoPendingRequestFromThatPartner() {
         when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
-        when(coupleInvitationMapper.findCoupleByUserId(2L)).thenReturn(null);
+        when(coupleInvitationMapper.findCoupleByUserIds(2L, 1L)).thenReturn(null);
 
-        assertThrows(CustomException.class, () -> coupleInvitationService.accept(2L));
+        assertThrows(CustomException.class, () -> coupleInvitationService.accept(2L, 1L));
     }
 
     @Test
-    void acceptRejectsWhenIAmTheWaitingSide() {
+    void acceptRejectsWhenAlreadyConnectedToAnotherPartner() {
+        // A(1)가 B(2)를 이미 수락해 CONNECTED된 상태에서, C(3)의 요청을 뒤늦게 수락하려는 상황
         when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
-        when(coupleInvitationMapper.findCoupleByUserId(1L))
-                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"));
-        when(coupleInvitationMapper.existsPendingRequestToMe(1L)).thenReturn(false);
+        when(coupleInvitationMapper.findCoupleByUserIds(1L, 3L))
+                .thenReturn(new CoupleInvitationDTO(3L, "박서연", "B", "WAIT"));
+        when(coupleInvitationMapper.countCoupleExcept(1L, 3L)).thenReturn(1);
 
-        assertThrows(CustomException.class, () -> coupleInvitationService.accept(1L));
+        assertThrows(CustomException.class, () -> coupleInvitationService.accept(1L, 3L));
+        verify(coupleInvitationMapper, never()).connectCouple(any(), any());
+    }
+
+    @Test
+    void disconnectTurnsConnectedCoupleIntoDisconnected() {
+        when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.findCouplesByUserId(1L))
+                .thenReturn(List.of(new CoupleInvitationDTO(2L, "이유진", "B", "CONNECTED")));
+
+        CoupleInvitationDTO result = coupleInvitationService.disconnect(1L);
+
+        verify(coupleInvitationMapper).disconnectCouple(1L, 2L);
+        assertEquals("DISCONNECTED", result.getStatus());
+        assertEquals("이유진", result.getName());
+    }
+
+    @Test
+    void disconnectRejectsWhenNoConnectedCouple() {
+        when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.findCouplesByUserId(1L)).thenReturn(Collections.emptyList());
+
+        assertThrows(CustomException.class, () -> coupleInvitationService.disconnect(1L));
+        verify(coupleInvitationMapper, never()).disconnectCouple(any(), any());
+    }
+
+    @Test
+    void disconnectRejectsWhenCoupleIsStillWaiting() {
+        when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.findCouplesByUserId(1L))
+                .thenReturn(List.of(new CoupleInvitationDTO(2L, "이유진", "B", "WAIT")));
+
+        assertThrows(CustomException.class, () -> coupleInvitationService.disconnect(1L));
+        verify(coupleInvitationMapper, never()).disconnectCouple(any(), any());
     }
 }
