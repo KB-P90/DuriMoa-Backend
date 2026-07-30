@@ -24,6 +24,12 @@ public class AuthExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
     }
 
+    @ExceptionHandler(RequiredTermsAgreementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRequiredTermsAgreement(
+            RequiredTermsAgreementException exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
+    }
+
     @ExceptionHandler(InvalidLoginCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidLoginCredentials(
             InvalidLoginCredentialsException exception) {

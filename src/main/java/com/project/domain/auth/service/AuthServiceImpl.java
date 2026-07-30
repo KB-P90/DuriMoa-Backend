@@ -10,6 +10,7 @@ import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.exception.InvalidLoginCredentialsException;
 import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
 import com.project.domain.auth.exception.PhoneDuplicateException;
+import com.project.domain.auth.exception.RequiredTermsAgreementException;
 import com.project.domain.auth.mapper.AuthMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -21,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    private static final String SERVICE_TERMS = "SERVICE";
+    private static final String PRIVACY_TERMS = "PRIVACY";
+    private static final String MARKETING_TERMS = "MARKETING";
+
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -30,6 +35,10 @@ public class AuthServiceImpl implements AuthService {
     public SignupResponseDTO signup(SignupRequestDTO request) {
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
             throw new PasswordConfirmationMismatchException();
+        }
+        if (!Boolean.TRUE.equals(request.getServiceTermsAgreed())
+                || !Boolean.TRUE.equals(request.getPrivacyTermsAgreed())) {
+            throw new RequiredTermsAgreementException();
         }
 
         String normalizedPhone = request.getPhone().replace("-", "");
@@ -48,7 +57,9 @@ public class AuthServiceImpl implements AuthService {
             throw new PhoneDuplicateException();
         }
 
-        return authMapper.findSignedUpUserByPhone(normalizedPhone);
+        SignupResponseDTO response = authMapper.findSignedUpUserByPhone(normalizedPhone);
+        saveTermsAgreements(response.getUserId(), request);
+        return response;
     }
 
     @Override
@@ -73,5 +84,11 @@ public class AuthServiceImpl implements AuthService {
                 loginUser.getProfileImage(),
                 loginUser.getProvider());
         return new LoginResponseDTO(accessToken, user);
+    }
+
+    private void saveTermsAgreements(Long userId, SignupRequestDTO request) {
+        authMapper.insertTermsAgreement(userId, SERVICE_TERMS, request.getServiceTermsAgreed());
+        authMapper.insertTermsAgreement(userId, PRIVACY_TERMS, request.getPrivacyTermsAgreed());
+        authMapper.insertTermsAgreement(userId, MARKETING_TERMS, request.getMarketingTermsAgreed());
     }
 }
