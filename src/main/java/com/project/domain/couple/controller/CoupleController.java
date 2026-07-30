@@ -9,11 +9,9 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -29,9 +27,8 @@ public class CoupleController {
     @ApiOperation(value = "내 커플 연결 상태 목록 조회", notes = "동시에 여러 명에게서 요청이 와 있을 수 있어 배열로 반환한다")
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<List<CoupleInvitationDTO>>> status(
-//            @AuthenticationPrincipal Long userId
+            @ApiIgnore @AuthenticationPrincipal Long userId
     ) {
-        Long userId = 3L;
         List<CoupleInvitationDTO> statuses = coupleInvitationService.getStatuses(userId);
         return ResponseEntity.ok(ApiResponse.success(statuses));
     }
@@ -39,9 +36,8 @@ public class CoupleController {
     @ApiOperation(value = "초대코드 입력으로 연결 요청/확정")
     @PostMapping("/invite")
     public ResponseEntity<ApiResponse<CoupleInvitationDTO>> invite(
-//            @AuthenticationPrincipal Long userId,
+            @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody InviteCodeRequestDTO request) {
-        Long userId = 3L;
         CoupleInvitationDTO result = coupleInvitationService.invite(userId, request.getInviteCode());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -49,9 +45,8 @@ public class CoupleController {
     @ApiOperation(value = "연결 요청 수락", notes = "나에게 와 있는 요청 중 partnerUserId로 지정한 상대의 요청을 수락한다")
     @PostMapping("/accept")
     public ResponseEntity<ApiResponse<CoupleInvitationDTO>> accept(
-//            @AuthenticationPrincipal Long userId,
+            @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AcceptInvitationRequestDTO request) {
-        Long userId = 4L;
         CoupleInvitationDTO result = coupleInvitationService.accept(userId, request.getPartnerUserId());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -59,9 +54,8 @@ public class CoupleController {
     @ApiOperation(value = "커플 연결 끊기", notes = "연결된 커플을 DISCONNECTED로 전환한다 (데이터는 삭제되지 않음)")
     @PostMapping("/disconnect")
     public ResponseEntity<ApiResponse<CoupleInvitationDTO>> disconnect(
-//            @AuthenticationPrincipal Long userId
+            @ApiIgnore @AuthenticationPrincipal Long userId
     ) {
-        Long userId = 3L;
         CoupleInvitationDTO result = coupleInvitationService.disconnect(userId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
