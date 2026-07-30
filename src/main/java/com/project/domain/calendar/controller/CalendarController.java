@@ -2,7 +2,7 @@ package com.project.domain.calendar.controller;
 
 import com.project.common.response.ApiResponse;
 import com.project.domain.calendar.domain.CalendarType;
-import com.project.domain.calendar.dto.request.RecordCreateRequestDTO;
+import com.project.domain.calendar.dto.request.RecordRequestDTO;
 import com.project.domain.calendar.dto.response.RecordResponseDTO;
 import com.project.domain.calendar.exception.BadRequestException;
 import com.project.domain.calendar.service.CalendarService;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 
 @RestController
 @RequestMapping("/api/records")
@@ -70,10 +69,26 @@ public class CalendarController {
     }
 
     @PostMapping()
-    public ResponseEntity<ApiResponse<RecordResponseDTO>> create(@RequestBody RecordCreateRequestDTO record) {
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> create(@RequestBody RecordRequestDTO record) {
         // TODO 로그인 구현 후 Security에서 가져오기
         Long userId = 1L;
 
         return ResponseEntity.ok(ApiResponse.success("내역이 등록되었습니다.", service.create(userId, record)));
+    }
+
+    @PatchMapping("/{recordId}")
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> update(@PathVariable Long recordId, @RequestBody RecordRequestDTO record) {
+        // TODO 로그인 구현 후 Security에서 가져오기
+        Long userId = 1L;
+
+        return ResponseEntity.ok(ApiResponse.success("내역이 수정되었습니다.", service.update(userId, recordId, record)));
+    }
+
+    @DeleteMapping("/{recordId}")
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> delete(@PathVariable Long recordId) {
+        // TODO 로그인 구현 후 Security에서 가져오기
+        Long userId = 1L;
+
+        return ResponseEntity.ok(ApiResponse.success("내역이 삭제되었습니다.", service.delete(userId, recordId)));
     }
 }

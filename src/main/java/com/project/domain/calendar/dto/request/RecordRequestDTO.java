@@ -14,22 +14,12 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RecordCreateRequestDTO {
+public class RecordRequestDTO {
     RecordType type;
     String category;
     Long amount;
     LocalDate recordDate;
     String memo;
-
-    public static RecordCreateRequestDTO of(ServiceRecord record) {
-        return record == null ? null : RecordCreateRequestDTO.builder()
-                .type(record.getType())
-                .category(record.getCategory())
-                .amount(record.getAmount())
-                .recordDate(record.getRecordDate())
-                .memo(record.getMemo())
-                .build();
-    }
 
     public ServiceRecord toVO(Long userId) {
         String categoryCode = switch (type) {

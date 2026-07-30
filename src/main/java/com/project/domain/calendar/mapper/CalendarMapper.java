@@ -51,4 +51,8 @@ public interface CalendarMapper {
     );
 
     void create(ServiceRecord record);
+
+    int update(ServiceRecord record);
+
+    int delete(Long no);
 }

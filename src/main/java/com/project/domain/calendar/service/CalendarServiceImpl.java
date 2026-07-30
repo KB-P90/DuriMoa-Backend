@@ -6,7 +6,7 @@ import com.project.common.enums.SavingCategory;
 import com.project.common.util.CategoryConverter;
 import com.project.domain.calendar.domain.CalendarType;
 import com.project.domain.calendar.domain.ServiceRecord;
-import com.project.domain.calendar.dto.request.RecordCreateRequestDTO;
+import com.project.domain.calendar.dto.request.RecordRequestDTO;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
 import lombok.RequiredArgsConstructor;
@@ -151,11 +151,29 @@ public class CalendarServiceImpl implements CalendarService {
     }
 
     @Override
-    public RecordResponseDTO create(Long userId, RecordCreateRequestDTO recordDTO) {
+    public RecordResponseDTO create(Long userId, RecordRequestDTO recordDTO) {
 
         ServiceRecord record = recordDTO.toVO(userId);
         mapper.create(record);
 
         return RecordResponseDTO.of(record.getId());
+    }
+
+    @Override
+    public RecordResponseDTO update(Long userId, Long recordId, RecordRequestDTO recordDTO) {
+
+        ServiceRecord record = recordDTO.toVO(userId);
+        record.setId(recordId);
+
+        mapper.update(record);
+
+        return RecordResponseDTO.of(record.getId());
+    }
+
+    @Override
+    public RecordResponseDTO delete(Long userId, Long recordId) {
+        mapper.delete(recordId);
+
+        return RecordResponseDTO.of(recordId);
     }
 }

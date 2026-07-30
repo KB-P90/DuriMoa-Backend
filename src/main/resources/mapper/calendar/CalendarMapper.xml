@@ -181,4 +181,20 @@
         </selectKey>
     </insert>
 
+    <update id="update">
+        UPDATE service_record
+        SET type = #{type},
+            changed_category = #{category},
+            amount = #{amount},
+            record_date = #{recordDate},
+            memo = #{memo},
+            updated_at = now()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE
+        FROM service_record
+        WHERE id = #{recordId}
+    </delete>
 </mapper>
