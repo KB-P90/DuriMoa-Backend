@@ -102,19 +102,8 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation 'org.mockito:mockito-core:5.11.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
-    testImplementation 'org.hamcrest:hamcrest:3.0'
-    testImplementation 'com.jayway.jsonpath:json-path:2.10.0'
-}
-
-// This environment's test compiler cannot resolve main classes from the output directory.
-// Compile main sources with test sources so `gradlew test` can use the same classes.
-tasks.named('compileTestJava') {
-    source = sourceSets.test.java + sourceSets.main.java
-    classpath = configurations.testCompileClasspath
 }
 
 test {
     useJUnitPlatform()
-    scanForTestClasses = false
-    include '**/*Test.class'
 }
