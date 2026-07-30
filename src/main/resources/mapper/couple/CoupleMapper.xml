@@ -4,116 +4,22 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.project.domain.couple.mapper.CoupleMapper">
 
-    <resultMap id="coupleResultMap"
-               type="com.project.domain.couple.dto.CoupleDTO">
-        <id column="user_id" property="userId"/>
-        <result column="name" property="name"/>
-        <result column="role" property="role"/>
-        <result column="status" property="status"/>
+    <resultMap id="coupleResultMap" type="com.project.domain.couple.dto.CoupleDTO">
+        <id property="id" column="id"/>
+        <result property="groomId" column="groom_id"/>
+        <result property="brideId" column="bride_id"/>
+        <result property="status" column="status"/>
     </resultMap>
 
-    <!-- 나와 연결된(WAIT/CONNECTED) 커플의 상대방 + 상태 조회 (없으면 null) -->
-    <select id="findCoupleByUserId" resultMap="coupleResultMap">
-        SELECT CASE WHEN c.groom_id = #{userId} THEN c.bride_id ELSE c.groom_id END AS user_id,
-               u.name   AS name,
-               u.role   AS role,
-               c.status AS status
-        FROM couple c
-                 JOIN `user` u ON u.id = CASE WHEN c.groom_id = #{userId} THEN c.bride_id ELSE c.groom_id END
-        WHERE c.groom_id = #{userId}
-           OR c.bride_id = #{userId}
-    </select>
-
-    <!-- 내 초대코드를 누가 사용해서, 내가 확인해줘야 하는 요청이 와 있는지 확인 -->
-    <select id="existsPendingRequestToMe" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1 FROM invitation WHERE inviter_id = #{userId} AND status = 'REQUESTED'
-        )
-    </select>
-
-    <!-- 현재 로그인한 사용자 조회 -->
-    <select id="findUserById" resultMap="coupleResultMap">
-        SELECT id AS user_id, name, role
-        FROM `user`
-        WHERE id = #{userId}
-    </select>
-
-    <!-- 초대코드 주인(상대방) 조회 -->
-    <select id="findPartnerByInviteCode" resultMap="coupleResultMap">
-        SELECT u.id   AS user_id,
-               u.name AS name,
-               u.role AS role
-        FROM invitation i
-                 JOIN `user` u ON u.id = i.inviter_id
-        WHERE i.invite_code = #{inviteCode}
-    </select>
-
-    <!-- userId가 otherUserId 말고 다른 상대와 연결된(WAIT/CONNECTED) 커플이 있는지 카운트 -->
-    <select id="countCoupleExcept" resultType="int">
-        SELECT COUNT(*)
+    <select id="findCouplesByUserId" resultMap="coupleResultMap">
+        SELECT id,
+               groom_id,
+               bride_id,
+               status
         FROM couple
-        WHERE (groom_id = #{userId} OR bride_id = #{userId})
-          AND NOT (groom_id = #{otherUserId} OR bride_id = #{otherUserId})
+        WHERE groom_id = #{userId}
+           OR bride_id = #{userId}
+        ORDER BY id DESC
     </select>
-
-    <!-- 두 사람 조합으로 기존 커플 상태 조회 (역할이 바뀌어도 같은 두 사람이면 찾아냄, 없으면 null) -->
-    <select id="findCoupleStatus" resultType="string">
-        SELECT status
-        FROM couple
-        WHERE (groom_id = #{groomId} AND bride_id = #{brideId})
-           OR (groom_id = #{brideId} AND bride_id = #{groomId})
-    </select>
-
-    <!-- 커플 WAIT 상태로 최초 생성 -->
-    <insert id="insertCouple">
-        INSERT INTO couple (groom_id, bride_id, status)
-        VALUES (#{groomId}, #{brideId}, 'WAIT')
-    </insert>
-
-    <!-- WAIT -> CONNECTED로 전환 (역할이 바뀌어도 같은 두 사람이면 매칭) -->
-    <update id="connectCouple">
-        UPDATE couple
-        SET status = 'CONNECTED'
-        WHERE ((groom_id = #{groomId} AND bride_id = #{brideId})
-            OR (groom_id = #{brideId} AND bride_id = #{groomId}))
-          AND status = 'WAIT'
-    </update>
-
-    <!-- 상대방 초대코드를 처음 사용했을 때 REQUESTED로 변경 -->
-    <update id="requestInvitation">
-        UPDATE invitation
-        SET invitee_id = #{inviteeId},
-            status      = 'REQUESTED'
-        WHERE invite_code = #{inviteCode}
-    </update>
-
-    <!-- 상대방 초대코드를 최종 확정했을 때 ACCEPTED로 변경 -->
-    <update id="acceptInvitation">
-        UPDATE invitation
-        SET invitee_id = #{inviteeId},
-            status      = 'ACCEPTED'
-        WHERE invite_code = #{inviteCode}
-    </update>
-
-    <!-- 연결이 확정되면 내 초대코드(REQUESTED 상태)도 ACCEPTED로 변경 -->
-    <update id="acceptOwnInvitation">
-        UPDATE invitation
-        SET status = 'ACCEPTED'
-        WHERE inviter_id = #{inviterId}
-          AND status = 'REQUESTED'
-    </update>
-
-    <!-- 초대코드 생성 시 중복 여부 확인용 -->
-    <select id="existsInviteCode" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1 FROM invitation WHERE invite_code = #{inviteCode}
-        )
-    </select>
-
-    <!-- 회원가입 시 초대코드 발급 -->
-    <insert id="insertInvitation">
-        INSERT INTO invitation (inviter_id, invite_code, status, expired_at)
-        VALUES (#{inviterId}, #{inviteCode}, 'CREATED', #{expiredAt})
-    </insert>
 
 </mapper>

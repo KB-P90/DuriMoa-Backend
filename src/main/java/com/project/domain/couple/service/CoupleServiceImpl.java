@@ -4,152 +4,83 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.mapper.CoupleMapper;
+import com.project.domain.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class CoupleServiceImpl implements CoupleService {
 
-    private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final String CONNECTED_STATUS = "CONNECTED";
 
     private final CoupleMapper coupleMapper;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final MemberService memberService;
 
-    // 회원가입 직후 호출: 코드 중복될 때까지 재생성 후 30일 유효로 발급
     @Override
-    @Transactional
-    public void createInviteCode(Long userId) {
-        String inviteCode;
-        do {
-            inviteCode = generateInviteCode();
-        } while (coupleMapper.existsInviteCode(inviteCode));
-
-        coupleMapper.insertInvitation(userId, inviteCode, LocalDateTime.now().plusDays(30));
+    public CoupleDTO getConnectedCoupleForCurrentUser() {
+        return getConnectedCoupleByUserId(getCurrentUserId());
     }
 
-    // 내 커플 연결 상태 조회. WAIT인 경우 내 초대코드가 사용된 거면 REQUESTED(상대가 나한테 요청함)로 보여준다
     @Override
-    public CoupleDTO getStatus(Long currentUserId) {
-        CoupleDTO couple = coupleMapper.findCoupleByUserId(currentUserId);
-        if (couple == null) {
-            return null;
+    @Transactional(readOnly = true)
+    public CoupleDTO getConnectedCoupleByUserId(Long userId) {
+        if (userId == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "사용자를 찾을 수 없습니다.");
         }
 
-        if ("WAIT".equals(couple.getStatus()) && coupleMapper.existsPendingRequestToMe(currentUserId)) {
-            couple.setStatus("REQUESTED");
+        if (!memberService.existsMemberById(userId)) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "사용자를 찾을 수 없습니다.");
         }
 
-        return couple;
+        List<CoupleDTO> couples = coupleMapper.findCouplesByUserId(userId);
+        if (couples == null || couples.isEmpty()) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "연결된 커플을 찾을 수 없습니다.");
+        }
+
+        boolean hasNonConnectedCouple = false;
+        for (CoupleDTO couple : couples) {
+            if (!couple.hasMember(userId)) {
+                continue;
+            }
+            if (CONNECTED_STATUS.equals(couple.getStatus())) {
+                return couple;
+            }
+            hasNonConnectedCouple = true;
+        }
+
+        if (hasNonConnectedCouple) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "연결된 커플만 이용할 수 있습니다.");
+        }
+
+        throw new CustomException(ErrorCode.FORBIDDEN, "커플 구성원만 이용할 수 있습니다.");
     }
 
-    // 상대방 초대코드를 입력해서 연결을 요청/확정한다.
-    // 첫 번째 입력자는 couple을 WAIT로 생성하고, 두 번째 입력자(이미 WAIT인 커플을 발견)는 CONNECTED로 전환한다.
-    @Override
-    @Transactional
-    public CoupleDTO invite(Long currentUserId, String inviteCode) {
-        CoupleDTO currentUser = coupleMapper.findUserById(currentUserId);
-        if (currentUser == null) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 회원입니다. userId=" + currentUserId);
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증된 사용자 정보가 필요합니다.");
         }
 
-        CoupleDTO partner = coupleMapper.findPartnerByInviteCode(inviteCode);
-        if (partner == null) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "유효하지 않은 초대코드입니다.");
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof Number) {
+            return ((Number) principal).longValue();
         }
 
-        validate(currentUser, partner);
-
-        // 역할(G/B)에 따라 groom/bride 자리를 고정한다
-        Long groomId;
-        Long brideId;
-        if ("G".equals(currentUser.getRole())) {
-            groomId = currentUser.getUserId();
-            brideId = partner.getUserId();
-        } else {
-            groomId = partner.getUserId();
-            brideId = currentUser.getUserId();
+        if (principal instanceof String) {
+            try {
+                return Long.parseLong((String) principal);
+            } catch (NumberFormatException exception) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED,
+                        "인증된 사용자 정보가 필요합니다.");
+            }
         }
 
-        String status = coupleMapper.findCoupleStatus(groomId, brideId);
-
-        // 아직 아무도 연결 시도를 안 한 경우 -> WAIT로 최초 생성
-        if (status == null) {
-            coupleMapper.insertCouple(groomId, brideId);
-            coupleMapper.requestInvitation(inviteCode, currentUserId);
-            return new CoupleDTO(partner.getUserId(), partner.getName(), partner.getRole(), "WAIT");
-        }
-
-        // 상대방이 먼저 연결을 시도해 WAIT 상태인 경우 -> 지금 확정해서 CONNECTED로 전환
-        if ("WAIT".equals(status)) {
-            coupleMapper.connectCouple(groomId, brideId);
-            coupleMapper.acceptInvitation(inviteCode, currentUserId);
-            coupleMapper.acceptOwnInvitation(currentUserId);
-            return new CoupleDTO(partner.getUserId(), partner.getName(), partner.getRole(), "CONNECTED");
-        }
-
-        // 이미 CONNECTED거나 그 외 상태면 재요청 불가
-        throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 연결된 커플입니다.");
-    }
-
-    // 코드 없이 버튼으로 수락: 내 초대코드로 이미 만들어진 WAIT 요청을 그대로 확정한다
-    @Override
-    @Transactional
-    public CoupleDTO accept(Long currentUserId) {
-        CoupleDTO currentUser = coupleMapper.findUserById(currentUserId);
-        if (currentUser == null) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 회원입니다. userId=" + currentUserId);
-        }
-
-        CoupleDTO couple = coupleMapper.findCoupleByUserId(currentUserId);
-        if (couple == null
-                || !"WAIT".equals(couple.getStatus())
-                || !coupleMapper.existsPendingRequestToMe(currentUserId)) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "대기 중인 연결 요청이 없습니다.");
-        }
-
-        Long groomId;
-        Long brideId;
-        if ("G".equals(currentUser.getRole())) {
-            groomId = currentUser.getUserId();
-            brideId = couple.getUserId();
-        } else {
-            groomId = couple.getUserId();
-            brideId = currentUser.getUserId();
-        }
-
-        coupleMapper.connectCouple(groomId, brideId);
-        coupleMapper.acceptOwnInvitation(currentUserId);
-
-        return new CoupleDTO(couple.getUserId(), couple.getName(), couple.getRole(), "CONNECTED");
-    }
-
-    // 자기 자신 코드 입력 방지, 역할 동일 검사, 이미 다른 커플에 연결돼 있는지 검사
-    private void validate(CoupleDTO currentUser, CoupleDTO partner) {
-        if (currentUser.getUserId().equals(partner.getUserId())) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "본인의 초대코드는 입력할 수 없습니다.");
-        }
-
-        if (currentUser.getRole().equals(partner.getRole())) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "두 사용자의 역할이 동일합니다. 역할을 변경한 후 다시 시도해주세요.");
-        }
-
-        if (coupleMapper.countCoupleExcept(currentUser.getUserId(), partner.getUserId()) > 0
-                || coupleMapper.countCoupleExcept(partner.getUserId(), currentUser.getUserId()) > 0) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 다른 커플과 연결되어 있습니다.");
-        }
-    }
-
-    // 영문 대문자+숫자 6자리 코드 생성 (예: ABC123)
-    private String generateInviteCode() {
-        StringBuilder code = new StringBuilder(6);
-        for (int i = 0; i < 6; i++) {
-            code.append(CODE_CHARACTERS.charAt(secureRandom.nextInt(CODE_CHARACTERS.length())));
-        }
-        return code.toString();
+        throw new CustomException(ErrorCode.UNAUTHORIZED, "인증된 사용자 정보가 필요합니다.");
     }
 }
