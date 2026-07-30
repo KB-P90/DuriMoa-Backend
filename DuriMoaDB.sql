@@ -130,6 +130,7 @@ CREATE TABLE `couple` (
                           `created_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                           PRIMARY KEY (`id`),
+                          UNIQUE KEY `uk_couple_groom_bride` (`groom_id`, `bride_id`),
                           KEY `idx_couple_groom_id` (`groom_id`),
                           KEY `idx_couple_bride_id` (`bride_id`),
                           CONSTRAINT `fk_couple_groom`
