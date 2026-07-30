@@ -1,8 +1,9 @@
 package com.project.domain.home.controller;
 
 import com.project.common.response.ApiResponse;
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.HomeResponseDTO;
-import com.project.domain.home.exception.HomeException.HomeAuthenticationRequiredException;
 import com.project.domain.home.service.HomeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -40,7 +41,7 @@ public class HomeController {
         if (userId == null || userId <= 0) {
             Long authenticationUserId = extractUserIdFromAuthentication(authentication);
             if (authenticationUserId == null) {
-                throw new HomeAuthenticationRequiredException();
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
             return authenticationUserId;
         }

@@ -1,7 +1,8 @@
 package com.project.domain.home.service;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.HomeResponseDTO;
-import com.project.domain.home.exception.HomeException.HomeUserNotFoundException;
 import com.project.domain.home.mapper.HomeMapper;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
@@ -83,7 +84,11 @@ class HomeServiceImplTest {
 
         Mockito.when(mapper.selectHomeUser(99L)).thenReturn(null);
 
-        Assertions.assertThrows(HomeUserNotFoundException.class, () -> service.getHome(99L));
+        CustomException exception = Assertions.assertThrows(
+                CustomException.class,
+                () -> service.getHome(99L)
+        );
+        Assertions.assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
     }
 
     // 사용자 기본 정보 테스트 데이터를 만듭니다.

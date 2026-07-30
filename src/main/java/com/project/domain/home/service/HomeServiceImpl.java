@@ -1,5 +1,7 @@
 package com.project.domain.home.service;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.AssetSummaryResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.CoupleResponseDTO;
@@ -10,8 +12,6 @@ import com.project.domain.home.dto.HomeResponseDTO.SavingAlertResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.SavingMissionSummaryResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.SetupChecklistResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.SetupChecklistStepResponseDTO;
-import com.project.domain.home.exception.HomeException.HomeAuthenticationRequiredException;
-import com.project.domain.home.exception.HomeException.HomeUserNotFoundException;
 import com.project.domain.home.mapper.HomeMapper;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
@@ -48,7 +48,7 @@ public class HomeServiceImpl implements HomeService {
 
         HomeUserRecord user = homeMapper.selectHomeUser(authenticatedUserId);
         if (user == null) {
-            throw new HomeUserNotFoundException();
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
         HomeCoupleRecord couple = homeMapper.selectActiveCouple(authenticatedUserId);
@@ -70,7 +70,7 @@ public class HomeServiceImpl implements HomeService {
     // 인증 사용자 ID가 홈 조회에 사용할 수 있는 값인지 확인합니다.
     private void validateAuthenticatedUser(Long authenticatedUserId) {
         if (authenticatedUserId == null || authenticatedUserId <= 0) {
-            throw new HomeAuthenticationRequiredException();
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
 

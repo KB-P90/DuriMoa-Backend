@@ -2,9 +2,9 @@ package com.project.domain.home.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO.SetupChecklistResponseDTO;
-import com.project.domain.home.exception.HomeExceptionHandler;
 import com.project.domain.home.service.HomeService;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -38,7 +38,7 @@ class HomeControllerTest {
         homeService = Mockito.mock(HomeService.class);
         HomeController homeController = new HomeController(homeService);
         mockMvc = MockMvcBuilders.standaloneSetup(homeController)
-                .setControllerAdvice(new HomeExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         objectMapper = new ObjectMapper();
@@ -80,7 +80,7 @@ class HomeControllerTest {
 
         JsonNode response = readResponse(result);
         Assertions.assertFalse(response.get("success").asBoolean());
-        Assertions.assertEquals("인증 사용자 정보를 확인할 수 없습니다.", response.get("message").asText());
+        Assertions.assertEquals("인증이 필요합니다.", response.get("message").asText());
         Assertions.assertTrue(response.get("data").isNull());
     }
 
