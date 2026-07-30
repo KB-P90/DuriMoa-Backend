@@ -44,8 +44,11 @@ public interface CoupleInvitationMapper {
     // 상대방 초대코드를 최종 확정했을 때 ACCEPTED로 변경
     public void acceptInvitation(@Param("inviteCode") String inviteCode, @Param("inviteeId") Long inviteeId);
 
-    // 연결이 확정되면 내 초대코드(REQUESTED 상태)도 ACCEPTED로 변경
-    public void acceptOwnInvitation(Long inviterId);
+    // 연결이 확정되면 내 초대코드로 그 상대가 걸어놓은 REQUESTED row도 ACCEPTED로 변경
+    public void acceptOwnInvitation(@Param("inviterId") Long inviterId, @Param("partnerId") Long partnerId);
+
+    // 연결이 확정된 직후, 나와 상대에게 걸려 있던 다른 REQUESTED row들을 삭제 (더 이상 성사될 수 없는 요청이라 이력으로 남길 필요 없음)
+    public void deleteOtherPendingInvitations(@Param("userId") Long userId, @Param("partnerId") Long partnerId);
 
     // 초대코드 생성 시 중복 여부 확인용
     public boolean existsInviteCode(String inviteCode);

@@ -109,7 +109,8 @@ CREATE TABLE `invitation` (
                               `created_at`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                               PRIMARY KEY (`id`),
-                              UNIQUE KEY `uk_invitation_invite_code` (`invite_code`),
+                              UNIQUE KEY `uk_invitation_inviter_invitee` (`inviter_id`, `invitee_id`),
+                              KEY `idx_invitation_invite_code` (`invite_code`),
                               KEY `idx_invitation_inviter_id` (`inviter_id`),
                               KEY `idx_invitation_invitee_id` (`invitee_id`),
                               KEY `idx_invitation_status_expired_at` (`status`, `expired_at`),

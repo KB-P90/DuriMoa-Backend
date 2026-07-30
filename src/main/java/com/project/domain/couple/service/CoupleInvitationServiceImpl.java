@@ -81,8 +81,9 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         if (CoupleStatus.WAIT.getStatus().equals(status)) {
             coupleInvitationMapper.connectCouple(groomId, brideId);
             coupleInvitationMapper.acceptInvitation(inviteCode, currentUserId);
-            coupleInvitationMapper.acceptOwnInvitation(currentUserId);
+            coupleInvitationMapper.acceptOwnInvitation(currentUserId, partner.getUserId());
             coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
+            coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partner.getUserId());
             return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), CoupleStatus.CONNECTED.getStatus());
         }
 
@@ -121,8 +122,9 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         }
 
         coupleInvitationMapper.connectCouple(groomId, brideId);
-        coupleInvitationMapper.acceptOwnInvitation(currentUserId);
+        coupleInvitationMapper.acceptOwnInvitation(currentUserId, partnerUserId);
         coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
+        coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partnerUserId);
 
         return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), CoupleStatus.CONNECTED.getStatus());
     }

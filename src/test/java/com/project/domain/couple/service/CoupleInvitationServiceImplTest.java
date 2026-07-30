@@ -155,8 +155,9 @@ class CoupleInvitationServiceImplTest {
 
         verify(coupleInvitationMapper).connectCouple(1L, 2L);
         verify(coupleInvitationMapper).acceptInvitation("ABC123", 2L);
-        verify(coupleInvitationMapper).acceptOwnInvitation(2L);
+        verify(coupleInvitationMapper).acceptOwnInvitation(2L, 1L);
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
+        verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
         verify(coupleInvitationMapper, never()).insertCouple(any(), any());
         assertEquals("CONNECTED", result.getStatus());
     }
@@ -192,8 +193,9 @@ class CoupleInvitationServiceImplTest {
         CoupleInvitationDTO result = coupleInvitationService.accept(2L, 1L);
 
         verify(coupleInvitationMapper).connectCouple(1L, 2L);
-        verify(coupleInvitationMapper).acceptOwnInvitation(2L);
+        verify(coupleInvitationMapper).acceptOwnInvitation(2L, 1L);
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
+        verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }
