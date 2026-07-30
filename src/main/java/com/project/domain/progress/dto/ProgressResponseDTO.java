@@ -18,7 +18,4 @@ public class ProgressResponseDTO {
     private Long groomSavingAmount;
     private Long brideSavingAmount;
     private List<MonthlySavingDTO> monthlySavings;
-    private List<GoalChecklistItemDTO> goalChecklist;
-    private List<IndividualProgressDTO> individualProgress;
-    private List<MonthlySuccessRecordDTO> monthlySuccessRecords;
 }

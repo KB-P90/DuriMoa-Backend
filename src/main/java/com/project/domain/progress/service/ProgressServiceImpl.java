@@ -11,12 +11,10 @@ import com.project.domain.progress.mapper.ProgressMapper;
 import java.util.Collections;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Profile("!local")
 @RequiredArgsConstructor
 public class ProgressServiceImpl implements ProgressService {
 
