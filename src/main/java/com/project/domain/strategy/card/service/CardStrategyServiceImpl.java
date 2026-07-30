@@ -1,14 +1,13 @@
 package com.project.domain.strategy.card.service;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
+import com.project.domain.strategy.card.dto.BestCardResponseDTO;
+import com.project.domain.strategy.card.dto.CardBenefitResponseDTO;
 import com.project.domain.strategy.card.dto.CardDetailResponseDTO;
-import com.project.domain.strategy.card.dto.CardDetailResponseDTO.CardBenefitResponseDTO;
 import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO;
-import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO.BestCardResponseDTO;
-import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO.CardRecommendationCardResponseDTO;
-import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO.CardRecommendationOwnerResponseDTO;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardAccessDeniedException;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardAuthenticationRequiredException;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardNotFoundException;
+import com.project.domain.strategy.card.dto.CardRecommendationCardResponseDTO;
+import com.project.domain.strategy.card.dto.CardRecommendationOwnerResponseDTO;
 import com.project.domain.strategy.card.mapper.CardStrategyMapper;
 import com.project.domain.strategy.card.model.CardBenefitCalculation;
 import com.project.domain.strategy.card.model.CardBenefitCalculator;
@@ -126,16 +125,16 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     public CardDetailResponseDTO getCardDetail(Long authenticatedUserId, Long userCardKey) {
         validateAuthenticatedUser(authenticatedUserId);
         if (userCardKey == null || userCardKey <= 0) {
-            throw new CardNotFoundException("카드 정보를 찾을 수 없습니다.");
+            throw resourceNotFound("카드 정보를 찾을 수 없습니다.");
         }
 
         Integer accessCount = cardStrategyMapper.existsCardAccessInActiveCouple(authenticatedUserId, userCardKey);
         if (accessCount == null || accessCount <= 0) {
-            throw new CardAccessDeniedException();
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
         CardProductRecord cardDetail = cardStrategyMapper.selectCardDetailByUserCardKey(userCardKey);
         if (cardDetail == null) {
-            throw new CardNotFoundException("카드 정보를 찾을 수 없습니다.");
+            throw resourceNotFound("카드 정보를 찾을 수 없습니다.");
         }
 
         // 카드 상세 화면에 표시할 정규화된 혜택 규칙 목록입니다.
@@ -172,7 +171,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     // 인증 사용자 ID가 유효한지 확인합니다.
     private void validateAuthenticatedUser(Long authenticatedUserId) {
         if (authenticatedUserId == null || authenticatedUserId <= 0) {
-            throw new CardAuthenticationRequiredException();
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
 
@@ -180,9 +179,13 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     private List<CardOwnerRecord> findActiveCoupleMembers(Long authenticatedUserId) {
         List<CardOwnerRecord> owners = cardStrategyMapper.selectActiveCoupleMembers(authenticatedUserId);
         if (owners == null || owners.isEmpty()) {
-            throw new CardNotFoundException("활성 커플 정보를 찾을 수 없습니다.");
+            throw resourceNotFound("활성 커플 정보를 찾을 수 없습니다.");
         }
         return owners;
+    }
+
+    private CustomException resourceNotFound(String message) {
+        return new CustomException(ErrorCode.RESOURCE_NOT_FOUND, message);
     }
 
     // 카드별 현재 월 인정 실적을 조회해 카드 식별자 기준 Map으로 변환합니다.

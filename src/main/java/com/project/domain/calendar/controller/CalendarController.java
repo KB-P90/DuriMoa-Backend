@@ -6,7 +6,6 @@ import com.project.common.response.ApiResponse;
 import com.project.domain.calendar.domain.CalendarType;
 import com.project.domain.calendar.dto.request.RecordRequestDTO;
 import com.project.domain.calendar.dto.response.RecordResponseDTO;
-import com.project.domain.calendar.exception.BadRequestException;
 import com.project.domain.calendar.service.CalendarService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

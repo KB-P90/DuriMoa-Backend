@@ -1,7 +1,7 @@
 package com.project.domain.strategy.card.service.collection;
 
-import com.project.domain.strategy.card.dto.CardProductCollectionDTO.CardProductCollectRequestDTO;
-import com.project.domain.strategy.card.dto.CardProductCollectionDTO.CardProductCollectionResultDTO;
+import com.project.domain.strategy.card.dto.CardProductCollectRequestDTO;
+import com.project.domain.strategy.card.dto.CardProductCollectionResultDTO;
 import java.util.List;
 
 public interface CardProductCollectionService {
