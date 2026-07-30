@@ -10,6 +10,7 @@ import com.project.domain.auth.dto.LoginUserResponseDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.mapper.AuthMapper;
+import com.project.domain.couple.service.CoupleInvitationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final CoupleInvitationService coupleInvitationService;
 
     @Override
     @Transactional
@@ -65,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
 
         SignupResponseDTO response = authMapper.findSignedUpUserByPhone(normalizedPhone);
         saveTermsAgreements(response.getUserId(), request);
+        coupleInvitationService.createInviteCode(response.getUserId());
         return response;
     }
 

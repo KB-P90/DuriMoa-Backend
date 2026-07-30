@@ -8,6 +8,7 @@ import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.mapper.AuthMapper;
+import com.project.domain.couple.service.CoupleInvitationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,11 +38,14 @@ class AuthServiceImplTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private CoupleInvitationService coupleInvitationService;
+
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider);
+        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider, coupleInvitationService);
     }
 
     @Test
