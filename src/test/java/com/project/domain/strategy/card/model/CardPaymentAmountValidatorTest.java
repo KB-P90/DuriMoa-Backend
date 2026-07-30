@@ -1,6 +1,6 @@
 package com.project.domain.strategy.card.model;
 
-import com.project.domain.strategy.card.exception.CardStrategyException.InvalidCardPaymentAmountException;
+import com.project.common.exception.CustomException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +18,7 @@ class CardPaymentAmountValidatorTest {
     @Test
     void validateRejectsAmountBelowMinimum() {
         Assertions.assertThrows(
-                InvalidCardPaymentAmountException.class,
+                CustomException.class,
                 () -> CardPaymentAmountValidator.validate("999")
         );
     }
@@ -27,7 +27,7 @@ class CardPaymentAmountValidatorTest {
     @Test
     void validateRejectsNonNumericAmount() {
         Assertions.assertThrows(
-                InvalidCardPaymentAmountException.class,
+                CustomException.class,
                 () -> CardPaymentAmountValidator.validate("30만원")
         );
     }
@@ -36,7 +36,7 @@ class CardPaymentAmountValidatorTest {
     @Test
     void validateRejectsAmountOverMaximum() {
         Assertions.assertThrows(
-                InvalidCardPaymentAmountException.class,
+                CustomException.class,
                 () -> CardPaymentAmountValidator.validate("100000001")
         );
     }
