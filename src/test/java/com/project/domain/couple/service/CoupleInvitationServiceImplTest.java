@@ -156,6 +156,7 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).connectCouple(1L, 2L);
         verify(coupleInvitationMapper).acceptInvitation("ABC123", 2L);
         verify(coupleInvitationMapper).acceptOwnInvitation(2L);
+        verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         verify(coupleInvitationMapper, never()).insertCouple(any(), any());
         assertEquals("CONNECTED", result.getStatus());
     }
@@ -192,6 +193,7 @@ class CoupleInvitationServiceImplTest {
 
         verify(coupleInvitationMapper).connectCouple(1L, 2L);
         verify(coupleInvitationMapper).acceptOwnInvitation(2L);
+        verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }
@@ -213,6 +215,20 @@ class CoupleInvitationServiceImplTest {
         when(coupleInvitationMapper.countCoupleExcept(1L, 3L)).thenReturn(1);
 
         assertThrows(CustomException.class, () -> coupleInvitationService.accept(1L, 3L));
+        verify(coupleInvitationMapper, never()).connectCouple(any(), any());
+    }
+
+    @Test
+    void acceptRejectsWhenPartnerIsAlreadyConnectedToSomeoneElse() {
+        // B(2)가 A(1) 코드를 입력해 WAIT 상태를 만들어뒀는데, 그 사이 A가 C와 먼저 CONNECTED된 상황.
+        // B 본인은 다른 CONNECTED가 없지만, 상대(A) 쪽이 이미 다른 사람과 CONNECTED라 막혀야 한다.
+        when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
+        when(coupleInvitationMapper.findCoupleByUserIds(2L, 1L))
+                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "WAIT"));
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(1);
+
+        assertThrows(CustomException.class, () -> coupleInvitationService.accept(2L, 1L));
         verify(coupleInvitationMapper, never()).connectCouple(any(), any());
     }
 

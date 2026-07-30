@@ -35,6 +35,9 @@ public interface CoupleInvitationMapper {
     // CONNECTED -> DISCONNECTED로 전환 (row는 삭제하지 않고 이력으로 남김)
     public void disconnectCouple(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
 
+    // groomId/brideId가 CONNECTED된 직후, 두 사람에게 걸려 있던 다른 WAIT 요청들을 삭제 (연결된 적이 없어서 이력으로 남길 필요가 없음)
+    public void deleteOtherPendingRequests(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
+
     // 상대방 초대코드를 처음 사용했을 때 REQUESTED로 변경
     public void requestInvitation(@Param("inviteCode") String inviteCode, @Param("inviteeId") Long inviteeId);
 

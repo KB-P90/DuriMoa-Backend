@@ -95,6 +95,15 @@
           AND status = 'CONNECTED'
     </update>
 
+    <!-- groomId/brideId가 CONNECTED된 직후, 두 사람에게 걸려 있던 다른 WAIT 요청들을 삭제 (연결된 적이 없어서 이력으로 남길 필요가 없음) -->
+    <delete id="deleteOtherPendingRequests">
+        DELETE FROM couple
+        WHERE status = 'WAIT'
+          AND (groom_id IN (#{groomId}, #{brideId}) OR bride_id IN (#{groomId}, #{brideId}))
+          AND NOT ((groom_id = #{groomId} AND bride_id = #{brideId})
+                OR (groom_id = #{brideId} AND bride_id = #{groomId}))
+    </delete>
+
     <!-- 상대방 초대코드를 처음 사용했을 때 REQUESTED로 변경 -->
     <update id="requestInvitation">
         UPDATE invitation

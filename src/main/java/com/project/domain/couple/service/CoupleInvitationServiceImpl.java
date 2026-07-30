@@ -1,5 +1,6 @@
 package com.project.domain.couple.service;
 
+import com.project.common.enums.CoupleStatus;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleInvitationDTO;
@@ -73,15 +74,16 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         if (status == null) {
             coupleInvitationMapper.insertCouple(groomId, brideId);
             coupleInvitationMapper.requestInvitation(inviteCode, currentUserId);
-            return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), "WAIT");
+            return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), CoupleStatus.WAIT.getStatus());
         }
 
         // 상대방이 먼저 연결을 시도해 WAIT 상태인 경우 -> 지금 확정해서 CONNECTED로 전환
-        if ("WAIT".equals(status)) {
+        if (CoupleStatus.WAIT.getStatus().equals(status)) {
             coupleInvitationMapper.connectCouple(groomId, brideId);
             coupleInvitationMapper.acceptInvitation(inviteCode, currentUserId);
             coupleInvitationMapper.acceptOwnInvitation(currentUserId);
-            return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), "CONNECTED");
+            coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
+            return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), CoupleStatus.CONNECTED.getStatus());
         }
 
         // 이미 CONNECTED거나 그 외 상태면 재요청 불가
@@ -99,11 +101,12 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         }
 
         CoupleInvitationDTO couple = coupleInvitationMapper.findCoupleByUserIds(currentUserId, partnerUserId);
-        if (couple == null || !"WAIT".equals(couple.getStatus())) {
+        if (couple == null || !CoupleStatus.WAIT.getStatus().equals(couple.getStatus())) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "대기 중인 연결 요청이 없습니다.");
         }
 
-        if (coupleInvitationMapper.countCoupleExcept(currentUserId, partnerUserId) > 0) {
+        if (coupleInvitationMapper.countCoupleExcept(currentUserId, partnerUserId) > 0
+                || coupleInvitationMapper.countCoupleExcept(partnerUserId, currentUserId) > 0) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 다른 커플과 연결되어 있습니다.");
         }
 
@@ -119,8 +122,9 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
 
         coupleInvitationMapper.connectCouple(groomId, brideId);
         coupleInvitationMapper.acceptOwnInvitation(currentUserId);
+        coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
 
-        return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), "CONNECTED");
+        return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), CoupleStatus.CONNECTED.getStatus());
     }
 
     // 연결된 커플을 끊는다. row는 지우지 않고 DISCONNECTED로 남겨서, 이후 새 상대와는 자유롭게 연결할 수 있게 한다.
@@ -133,7 +137,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         }
 
         CoupleInvitationDTO couple = coupleInvitationMapper.findCouplesByUserId(currentUserId).stream()
-                .filter(c -> "CONNECTED".equals(c.getStatus()))
+                .filter(c -> CoupleStatus.CONNECTED.getStatus().equals(c.getStatus()))
                 .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "연결된 커플이 없습니다."));
 
@@ -149,7 +153,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
 
         coupleInvitationMapper.disconnectCouple(groomId, brideId);
 
-        return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), "DISCONNECTED");
+        return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), CoupleStatus.DISCONNECTED.getStatus());
     }
 
     // 자기 자신 코드 입력 방지, 역할 동일 검사, 이미 다른 커플에 연결돼 있는지 검사
