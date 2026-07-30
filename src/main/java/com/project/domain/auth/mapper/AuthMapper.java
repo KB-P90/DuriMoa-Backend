@@ -1,9 +1,11 @@
 package com.project.domain.auth.mapper;
 
-import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
+import com.project.domain.auth.dto.SignupResponseDTO;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+@Mapper
 public interface AuthMapper {
 
     Boolean existsUserByPhone(@Param("phone") String phone);

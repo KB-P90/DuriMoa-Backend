@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.progress.mapper.ProgressMapper">
+
+    <select id="existsSavingRecord" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM account a
+                     INNER JOIN account_record ar ON ar.account_id = a.id
+            WHERE a.user_id IN (#{groomId}, #{brideId})
+              AND ar.type = 'SAVING'
+        )
+    </select>
+
+    <select id="findTotalSavingAmount" resultType="long">
+        SELECT COALESCE(SUM(ar.amount), 0)
+        FROM account a
+                 INNER JOIN account_record ar ON ar.account_id = a.id
+        WHERE a.user_id IN (#{groomId}, #{brideId})
+          AND ar.type = 'SAVING'
+    </select>
+
+    <select id="findCoupleSavingSummary"
+            resultType="com.project.domain.progress.dto.CoupleSavingSummaryDTO">
+        SELECT COALESCE(SUM(CASE WHEN a.user_id = #{groomId} THEN ar.amount ELSE 0 END), 0)
+                       AS groomSavingAmount,
+               COALESCE(SUM(CASE WHEN a.user_id = #{brideId} THEN ar.amount ELSE 0 END), 0)
+                       AS brideSavingAmount
+        FROM account a
+                 INNER JOIN account_record ar ON ar.account_id = a.id
+        WHERE a.user_id IN (#{groomId}, #{brideId})
+          AND ar.type = 'SAVING'
+    </select>
+
+    <select id="findMonthlySavingAmounts"
+            resultType="com.project.domain.progress.dto.MonthlySavingDTO">
+        SELECT DATE_FORMAT(ar.record_date, '%Y-%m') AS yearMonth,
+               COALESCE(SUM(ar.amount), 0) AS savingAmount
+        FROM account a
+                 INNER JOIN account_record ar ON ar.account_id = a.id
+        WHERE a.user_id IN (#{groomId}, #{brideId})
+          AND ar.type = 'SAVING'
+        GROUP BY DATE_FORMAT(ar.record_date, '%Y-%m')
+        ORDER BY MIN(ar.record_date) ASC
+    </select>
+
+</mapper>
