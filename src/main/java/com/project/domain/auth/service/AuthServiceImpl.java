@@ -11,7 +11,7 @@ import com.project.domain.auth.exception.InvalidLoginCredentialsException;
 import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
 import com.project.domain.auth.exception.PhoneDuplicateException;
 import com.project.domain.auth.mapper.AuthMapper;
-import com.project.domain.couple.service.CoupleService;
+import com.project.domain.couple.service.CoupleInvitationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +25,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final CoupleService coupleService;
+    private final CoupleInvitationService coupleInvitationService;
 
     @Override
     @Transactional
@@ -51,7 +51,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         SignupResponseDTO response = authMapper.findSignedUpUserByPhone(normalizedPhone);
-        coupleService.createInviteCode(response.getUserId());
+        coupleInvitationService.createInviteCode(response.getUserId());
         return response;
     }
 

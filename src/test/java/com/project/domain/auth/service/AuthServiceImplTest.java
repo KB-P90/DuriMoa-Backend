@@ -10,7 +10,7 @@ import com.project.domain.auth.exception.InvalidLoginCredentialsException;
 import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
 import com.project.domain.auth.exception.PhoneDuplicateException;
 import com.project.domain.auth.mapper.AuthMapper;
-import com.project.domain.couple.service.CoupleService;
+import com.project.domain.couple.service.CoupleInvitationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,13 +41,13 @@ class AuthServiceImplTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Mock
-    private CoupleService coupleService;
+    private CoupleInvitationService coupleInvitationService;
 
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider, coupleService);
+        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider, coupleInvitationService);
     }
 
     @Test

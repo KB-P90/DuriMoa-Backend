@@ -2,8 +2,8 @@ package com.project.domain.couple.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.domain.couple.dto.CoupleDTO;
-import com.project.domain.couple.service.CoupleService;
+import com.project.domain.couple.dto.CoupleInvitationDTO;
+import com.project.domain.couple.service.CoupleInvitationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,22 +30,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CoupleControllerTest {
 
     @Mock
-    private CoupleService coupleService;
+    private CoupleInvitationService coupleInvitationService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        CoupleController coupleController = new CoupleController(coupleService);
+        CoupleController coupleController = new CoupleController(coupleInvitationService);
         mockMvc = MockMvcBuilders.standaloneSetup(coupleController).build();
         objectMapper = new ObjectMapper();
     }
 
     @Test
     void statusReturnsMyCoupleStatus() throws Exception {
-        when(coupleService.getStatus(3L))
-                .thenReturn(new CoupleDTO(2L, "이유진", "B", "REQUESTED"));
+        when(coupleInvitationService.getStatus(3L))
+                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "REQUESTED"));
 
         MvcResult result = mockMvc.perform(get("/couple/status"))
                 .andExpect(status().isOk())
@@ -59,8 +59,8 @@ class CoupleControllerTest {
 
     @Test
     void inviteReturnsConnectionResult() throws Exception {
-        when(coupleService.invite(eq(3L), eq("XYZ789")))
-                .thenReturn(new CoupleDTO(2L, "이유진", "B", "WAIT"));
+        when(coupleInvitationService.invite(eq(3L), eq("XYZ789")))
+                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"));
 
         MvcResult result = mockMvc.perform(post("/couple/invite")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -77,8 +77,8 @@ class CoupleControllerTest {
 
     @Test
     void acceptConfirmsPendingRequestWithoutBody() throws Exception {
-        when(coupleService.accept(4L))
-                .thenReturn(new CoupleDTO(1L, "김주영", "G", "CONNECTED"));
+        when(coupleInvitationService.accept(4L))
+                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "CONNECTED"));
 
         MvcResult result = mockMvc.perform(post("/couple/accept"))
                 .andExpect(status().isOk())
