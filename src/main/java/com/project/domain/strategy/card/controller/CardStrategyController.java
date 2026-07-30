@@ -1,10 +1,10 @@
 package com.project.domain.strategy.card.controller;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.strategy.card.dto.CardDetailResponseDTO;
 import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardAuthenticationRequiredException;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardNotFoundException;
 import com.project.domain.strategy.card.model.CardPaymentAmountValidator;
 import com.project.domain.strategy.card.service.CardStrategyService;
 import io.swagger.annotations.Api;
@@ -63,9 +63,9 @@ public class CardStrategyController {
             return authenticationUserId;
         }
         if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
-            return parsePositiveLong(userIdHeader, new CardAuthenticationRequiredException());
+            return parsePositiveLong(userIdHeader, new CustomException(ErrorCode.UNAUTHORIZED));
         }
-        throw new CardAuthenticationRequiredException();
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
     // Authentication 이름이 숫자 사용자 ID일 때 Long으로 변환합니다.
@@ -87,7 +87,10 @@ public class CardStrategyController {
 
     // 상세 조회의 사용자 카드 식별자를 양수 Long으로 변환합니다.
     private Long parseUserCardKey(String userCardKeyText) {
-        return parsePositiveLong(userCardKeyText, new CardNotFoundException("카드 정보를 찾을 수 없습니다."));
+        return parsePositiveLong(
+                userCardKeyText,
+                new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "카드 정보를 찾을 수 없습니다.")
+        );
     }
 
     // 숫자 문자열을 양수 Long으로 변환하고 실패 시 지정된 예외를 던집니다.

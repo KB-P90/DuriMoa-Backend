@@ -78,4 +78,16 @@
           AND provider = 'LOCAL'
     </select>
 
+    <insert id="insertTermsAgreement">
+        INSERT INTO terms_agreement (
+            user_id,
+            terms_type,
+            agreed
+        ) VALUES (
+            #{userId},
+            #{termsType},
+            #{agreed}
+        )
+    </insert>
+
 </mapper>

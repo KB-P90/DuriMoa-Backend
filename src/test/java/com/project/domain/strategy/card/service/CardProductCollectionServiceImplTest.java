@@ -1,7 +1,7 @@
 package com.project.domain.strategy.card.service;
 
-import com.project.domain.strategy.card.dto.CardProductCollectionDTO.CardProductCollectRequestDTO;
-import com.project.domain.strategy.card.dto.CardProductCollectionDTO.CardProductCollectionResultDTO;
+import com.project.domain.strategy.card.dto.CardProductCollectRequestDTO;
+import com.project.domain.strategy.card.dto.CardProductCollectionResultDTO;
 import com.project.domain.strategy.card.mapper.CardStrategyMapper;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductSource;
 import com.project.domain.strategy.card.service.collection.CardProductCollectionServiceImpl;
