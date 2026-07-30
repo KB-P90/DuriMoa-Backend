@@ -9,6 +9,9 @@ import com.project.domain.calendar.service.CalendarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -24,11 +27,12 @@ public class CalendarController {
 
     @GetMapping("/monthly")
     public ResponseEntity<ApiResponse<?>> getMonthlyRecord(
+//            @AuthenticationPrincipal Long userId,
+            Authentication authentication,
             @RequestParam String month,
             @RequestParam String type
     ) {
-        // TODO 로그인 구현 후 Security에서 가져오기
-        Long userId = 1L;
+        Long userId = (Long) authentication.getPrincipal();
 
         YearMonth yearMonth;
         CalendarType calendarType;
@@ -47,11 +51,12 @@ public class CalendarController {
 
     @GetMapping("/daily")
     public ResponseEntity<ApiResponse<?>> getDailyRecord(
+//            @AuthenticationPrincipal Long userId,
+            Authentication authentication,
             @RequestParam String date,
             @RequestParam String type
     ) {
-        // TODO 로그인 구현 후 Security에서 가져오기
-        Long userId = 1L;
+        Long userId = (Long) authentication.getPrincipal();
 
         LocalDate localDate;
         CalendarType calendarType;
@@ -69,25 +74,35 @@ public class CalendarController {
     }
 
     @PostMapping()
-    public ResponseEntity<ApiResponse<RecordResponseDTO>> create(@RequestBody RecordRequestDTO record) {
-        // TODO 로그인 구현 후 Security에서 가져오기
-        Long userId = 1L;
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> create(
+//            @AuthenticationPrincipal Long userId,
+            Authentication authentication,
+            @RequestBody RecordRequestDTO record
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(ApiResponse.success("내역이 등록되었습니다.", service.create(userId, record)));
     }
 
     @PatchMapping("/{recordId}")
-    public ResponseEntity<ApiResponse<RecordResponseDTO>> update(@PathVariable Long recordId, @RequestBody RecordRequestDTO record) {
-        // TODO 로그인 구현 후 Security에서 가져오기
-        Long userId = 1L;
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> update(
+//            @AuthenticationPrincipal Long userId,
+            Authentication authentication,
+            @PathVariable Long recordId,
+            @RequestBody RecordRequestDTO record
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(ApiResponse.success("내역이 수정되었습니다.", service.update(userId, recordId, record)));
     }
 
     @DeleteMapping("/{recordId}")
-    public ResponseEntity<ApiResponse<RecordResponseDTO>> delete(@PathVariable Long recordId) {
-        // TODO 로그인 구현 후 Security에서 가져오기
-        Long userId = 1L;
+    public ResponseEntity<ApiResponse<RecordResponseDTO>> delete(
+//            @AuthenticationPrincipal Long userId,
+            Authentication authentication,
+            @PathVariable Long recordId
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(ApiResponse.success("내역이 삭제되었습니다.", service.delete(userId, recordId)));
     }
