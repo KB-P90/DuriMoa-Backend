@@ -104,7 +104,7 @@ public class MonthlyController {
         }
 
         monthlyService.startSavingMission(userId, missionId, requestDTO);
-        return ResponseEntity.ok(ApiResponse.success("절약 미션 도전을 시작했습니다.", null));
+        return ResponseEntity.ok(ApiResponse.success("절약 미션 도전을 시작했습니다."));
     }
 
     @ApiOperation(
