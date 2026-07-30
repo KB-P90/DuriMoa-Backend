@@ -19,4 +19,9 @@ public interface AuthMapper {
     SignupResponseDTO findSignedUpUserByPhone(@Param("phone") String phone);
 
     LoginUserDTO findLoginUserByPhone(@Param("phone") String phone);
+
+    Integer insertTermsAgreement(
+            @Param("userId") Long userId,
+            @Param("termsType") String termsType,
+            @Param("agreed") Boolean agreed);
 }

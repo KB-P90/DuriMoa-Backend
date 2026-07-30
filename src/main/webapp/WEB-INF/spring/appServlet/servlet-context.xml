@@ -8,7 +8,11 @@
 		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
 
     <!-- Enables the Spring MVC @Controller programming model -->
-    <mvc:annotation-driven/>
+    <mvc:annotation-driven>
+        <mvc:argument-resolvers>
+            <bean class="org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver"/>
+        </mvc:argument-resolvers>
+    </mvc:annotation-driven>
 
     <!-- Handles HTTP GET requests for /resources/** -->
     <!--    <mvc:resources mapping="/resources/**" location="/resources/" />-->
