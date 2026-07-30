@@ -5,14 +5,17 @@ import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
+import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.service.GoalService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +40,19 @@ public class GoalController {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         GoalCreateResponseDTO response = goalService.createGoal(authenticatedUserId, request);
         return ResponseEntity.ok(ApiResponse.success("결혼 목표가 저장되었습니다.", response));
+    }
+
+    @ApiOperation(value = "결혼 목표 목록 조회", notes = "인증 사용자의 연결된 커플에 저장된 모든 결혼 목표를 조회합니다.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<GoalResponseDTO>>> getGoals(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        List<GoalResponseDTO> response = goalService.getGoals(authenticatedUserId);
+        return ResponseEntity.ok(
+                ApiResponse.success("결혼 목표 목록 조회에 성공했습니다.", response)
+        );
     }
 
     private Long resolveAuthenticatedUserId(Long userId, Authentication authentication) {

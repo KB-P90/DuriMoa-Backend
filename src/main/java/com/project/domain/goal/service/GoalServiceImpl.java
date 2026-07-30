@@ -12,13 +12,17 @@ import com.project.domain.goal.domain.GoalVO;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
+import com.project.domain.goal.dto.GoalItemResponseDTO;
+import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +82,37 @@ public class GoalServiceImpl implements GoalService {
                 .status(GoalStatus.NORMAL.name())
                 .createdAt(createdAt)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoalResponseDTO> getGoals(Long authenticatedUserId) {
+        validateAuthenticatedUser(authenticatedUserId);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        List<GoalVO> goals = goalMapper.selectGoalsByCoupleId(couple.getId());
+        if (goals == null || goals.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> goalIds = goals.stream()
+                .map(GoalVO::getId)
+                .collect(Collectors.toList());
+        List<GoalItemVO> goalItems = goalMapper.selectGoalItemsByGoalIds(goalIds);
+        if (goalItems == null) {
+            goalItems = Collections.emptyList();
+        }
+        Map<Long, List<GoalItemResponseDTO>> itemsByGoalId = goalItems.stream()
+                .collect(Collectors.groupingBy(
+                        GoalItemVO::getGoalId,
+                        Collectors.mapping(GoalItemResponseDTO::from, Collectors.toList())
+                ));
+
+        return goals.stream()
+                .map(goal -> GoalResponseDTO.from(
+                        goal,
+                        itemsByGoalId.getOrDefault(goal.getId(), Collections.emptyList())
+                ))
+                .collect(Collectors.toList());
     }
 
     private void validateAuthenticatedUser(Long authenticatedUserId) {

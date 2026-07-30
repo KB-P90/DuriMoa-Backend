@@ -13,4 +13,8 @@ public interface GoalMapper {
             @Param("goalId") Long goalId,
             @Param("items") List<GoalItemVO> items
     );
+
+    List<GoalVO> selectGoalsByCoupleId(@Param("coupleId") Long coupleId);
+
+    List<GoalItemVO> selectGoalItemsByGoalIds(@Param("goalIds") List<Long> goalIds);
 }

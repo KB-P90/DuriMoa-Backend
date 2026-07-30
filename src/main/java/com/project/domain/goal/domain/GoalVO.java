@@ -23,5 +23,7 @@ public class GoalVO {
     private Long totalBudget;
     private Long groomRatio;
     private Long brideRatio;
+    private String status;
+    private Boolean isMain;
     private LocalDateTime createdAt;
 }

@@ -19,8 +19,11 @@ import com.project.domain.goal.domain.GoalVO;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
+import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -171,6 +174,51 @@ class GoalServiceImplTest {
         verify(goalMapper, never()).insertGoal(any());
     }
 
+    @Test
+    void getGoalsReturnsGoalsWithGroupedItems() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleId(10L)).thenReturn(List.of(
+                goal(2L, "확정 예산", "CONFIRMED", true),
+                goal(1L, "일반 예산", "NORMAL", false)
+        ));
+        when(goalMapper.selectGoalItemsByGoalIds(List.of(2L, 1L))).thenReturn(List.of(
+                goalItem(4L, 2L, "예식장"),
+                goalItem(1L, 1L, "스튜디오"),
+                goalItem(2L, 1L, "예비비")
+        ));
+
+        List<GoalResponseDTO> response = service.getGoals(1L);
+
+        assertEquals(2, response.size());
+        assertEquals(2L, response.get(0).getGoalId());
+        assertEquals("CONFIRMED", response.get(0).getStatus());
+        assertEquals(1, response.get(0).getItems().size());
+        assertEquals(1L, response.get(1).getGoalId());
+        assertEquals(2, response.get(1).getItems().size());
+        assertEquals("스튜디오", response.get(1).getItems().get(0).getCategory());
+        verify(goalMapper).selectGoalsByCoupleId(10L);
+        verify(goalMapper).selectGoalItemsByGoalIds(List.of(2L, 1L));
+    }
+
+    @Test
+    void getGoalsReturnsEmptyListWithoutItemQuery() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleId(10L)).thenReturn(Collections.emptyList());
+
+        List<GoalResponseDTO> response = service.getGoals(1L);
+
+        assertEquals(Collections.emptyList(), response);
+        verify(goalMapper, never()).selectGoalItemsByGoalIds(anyList());
+    }
+
     private GoalCreateRequestDTO validRequest() {
         return GoalCreateRequestDTO.builder()
                 .name("균형형 결혼 예산")
@@ -199,6 +247,34 @@ class GoalServiceImplTest {
                 .category(category)
                 .targetAmount(targetAmount)
                 .included(included)
+                .type("균형형")
+                .build();
+    }
+
+    private GoalVO goal(Long id, String name, String status, Boolean isMain) {
+        return GoalVO.builder()
+                .id(id)
+                .coupleId(10L)
+                .name(name)
+                .weddingDate(LocalDate.of(2099, 10, 9))
+                .region("서울(강남)")
+                .totalBudget(35_000_000L)
+                .groomRatio(50L)
+                .brideRatio(50L)
+                .status(status)
+                .isMain(isMain)
+                .createdAt(LocalDateTime.of(2026, 7, 30, 10, 30))
+                .build();
+    }
+
+    private GoalItemVO goalItem(Long id, Long goalId, String category) {
+        return GoalItemVO.builder()
+                .id(id)
+                .goalId(goalId)
+                .category(category)
+                .targetAmount(1_000_000L)
+                .included(true)
+                .completed(false)
                 .type("균형형")
                 .build();
     }

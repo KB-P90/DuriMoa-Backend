@@ -11,8 +11,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GoalItemVO {
 
+    private Long id;
+    private Long goalId;
     private String category;
     private Long targetAmount;
     private Boolean included;
+    private Boolean completed;
     private String type;
 }
