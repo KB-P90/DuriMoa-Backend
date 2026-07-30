@@ -181,6 +181,12 @@
         </selectKey>
     </insert>
 
+    <select id="findById" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT id, user_id AS userId, type, category, changed_category AS changedCategory, amount, record_date AS recordDate, memo
+        FROM service_record
+        WHERE id = #{recordId}
+    </select>
+
     <update id="update">
         UPDATE service_record
         SET type = #{type},
@@ -190,11 +196,13 @@
             memo = #{memo},
             updated_at = now()
         WHERE id = #{id}
+          AND user_id = #{userId}
     </update>
 
     <delete id="delete">
         DELETE
         FROM service_record
         WHERE id = #{recordId}
+          AND user_id = #{userId}
     </delete>
 </mapper>

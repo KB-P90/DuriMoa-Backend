@@ -54,5 +54,9 @@ public interface CalendarMapper {
 
     int update(ServiceRecord record);
 
-    int delete(Long no);
+    int delete(
+            @Param("userId") Long userId,
+            @Param("recordId") Long recordId);
+
+    ServiceRecord findById(Long recordId);
 }

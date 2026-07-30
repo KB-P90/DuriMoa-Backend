@@ -162,6 +162,12 @@ public class CalendarServiceImpl implements CalendarService {
     @Override
     public RecordResponseDTO update(Long userId, Long recordId, RecordRequestDTO recordDTO) {
 
+        ServiceRecord existingRecord = mapper.findById(recordId);
+
+        if (existingRecord == null || !existingRecord.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("수정할 수 없는 거래 내역입니다.");
+        }
+
         ServiceRecord record = recordDTO.toVO(userId);
         record.setId(recordId);
 
@@ -172,7 +178,11 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public RecordResponseDTO delete(Long userId, Long recordId) {
-        mapper.delete(recordId);
+        int result = mapper.delete(userId, recordId);
+
+        if (result == 0) {
+            throw new IllegalArgumentException("삭제할 권한이 없습니다.");
+        }
 
         return RecordResponseDTO.of(recordId);
     }
