@@ -5,6 +5,8 @@ import com.project.common.enums.IncomeCategory;
 import com.project.common.enums.RecordType;
 import com.project.common.enums.SavingCategory;
 import com.project.domain.calendar.domain.ServiceRecord;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -14,11 +16,22 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ApiModel(description = "거래 내역 등록 및 수정 요청 DTO")
 public class RecordRequestDTO {
+
+    @ApiModelProperty(value = "거래 유형", example = "EXPENSE", required = true)
     RecordType type;
+
+    @ApiModelProperty(value = "거래 카테고리", example = "식비", required = true)
     String category;
+
+    @ApiModelProperty(value = "거래 금액", example = "50000", required = true)
     Long amount;
+
+    @ApiModelProperty(value = "거래 날짜", example = "2026-07-30", required = true)
     LocalDate recordDate;
+
+    @ApiModelProperty(value = "거래 메모", example = "웨딩홀 계약금", required = false)
     String memo;
 
     public ServiceRecord toVO(Long userId) {
