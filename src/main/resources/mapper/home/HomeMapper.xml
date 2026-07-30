@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.home.mapper.HomeMapper">
+
+    <select id="selectHomeUser" resultType="com.project.domain.home.model.HomeRecord$HomeUserRecord">
+        SELECT
+            u.id AS user_id,
+            u.name AS user_name,
+            u.role AS user_role
+        FROM `user` u
+        WHERE u.id = #{userId}
+          AND u.is_deleted = FALSE
+    </select>
+
+    <select id="selectActiveCouple" resultType="com.project.domain.home.model.HomeRecord$HomeCoupleRecord">
+        SELECT
+            c.id AS couple_id,
+            c.groom_id AS groom_id,
+            c.bride_id AS bride_id,
+            me.id AS user_id,
+            me.name AS user_name,
+            me.role AS user_role,
+            partner.id AS partner_user_id,
+            partner.name AS partner_name,
+            partner.role AS partner_role,
+            c.status AS couple_status
+        FROM couple c
+        INNER JOIN `user` me
+            ON me.id = #{userId}
+           AND me.is_deleted = FALSE
+        INNER JOIN `user` partner
+            ON partner.id = CASE
+                WHEN c.groom_id = #{userId} THEN c.bride_id
+                WHEN c.bride_id = #{userId} THEN c.groom_id
+            END
+           AND partner.is_deleted = FALSE
+        WHERE c.status = 'CONNECTED'
+          AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
+          AND c.groom_id IS NOT NULL
+          AND c.bride_id IS NOT NULL
+        ORDER BY c.id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectChecklistEvidence" resultType="com.project.domain.home.model.HomeRecord$HomeChecklistEvidenceRecord">
+        SELECT
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM account a
+                    WHERE a.user_id = #{userId}
+                      AND (
+                          NULLIF(TRIM(a.connected_id), '') IS NOT NULL
+                          OR NULLIF(TRIM(a.account_id), '') IS NOT NULL
+                      )
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM card cd
+                    WHERE cd.user_id = #{userId}
+                      AND (
+                          NULLIF(TRIM(cd.connected_id), '') IS NOT NULL
+                          OR NULLIF(TRIM(cd.card_id), '') IS NOT NULL
+                      )
+                ) THEN TRUE
+                ELSE FALSE
+            END AS account_linked,
+            CASE
+                WHEN main_goal.id IS NOT NULL THEN TRUE
+                ELSE FALSE
+            END AS wedding_goal_created,
+            CASE
+                WHEN main_goal.id IS NOT NULL
+                 AND NULLIF(TRIM(main_goal.region), '') IS NOT NULL THEN TRUE
+                ELSE FALSE
+            END AS region_selected,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM account a
+                    INNER JOIN account_record ar
+                        ON ar.account_id = a.id
+                    WHERE a.user_id IN (#{groomId}, #{brideId})
+                      AND ar.type = 'SAVING'
+                ) THEN TRUE
+                ELSE FALSE
+            END AS first_saving_recorded,
+            main_goal.id AS main_goal_id,
+            main_goal.status AS main_goal_status,
+            DATE_FORMAT(main_goal.wedding_date, '%Y-%m-%d') AS wedding_date,
+            NULLIF(TRIM(main_goal.region), '') AS region
+        FROM (
+            SELECT 1 AS checklist_base
+        ) base
+        LEFT JOIN goal main_goal
+            ON main_goal.id = (
+                SELECT g.id
+                FROM goal g
+                WHERE g.couple_id = #{coupleId}
+                  AND g.is_main = TRUE
+                  AND g.status IN ('NORMAL', 'DRAFT', 'CONFIRMED')
+                ORDER BY
+                    CASE g.status
+                        WHEN 'CONFIRMED' THEN 0
+                        WHEN 'NORMAL' THEN 1
+                        ELSE 2
+                    END,
+                    g.id DESC
+                LIMIT 1
+            )
+    </select>
+
+    <select id="selectSavingMissionSummary" resultType="com.project.domain.home.model.HomeRecord$HomeSavingMissionSummaryRecord">
+        SELECT
+            COALESCE((
+                SELECT SUM(sm.expected_saving)
+                FROM saving_missions sm
+                WHERE sm.user_id = #{userId}
+                  AND YEAR(sm.created_at) = #{year}
+                  AND MONTH(sm.created_at) = #{month}
+                  AND sm.status = '도전중'
+            ), 0) AS total_expected_saving_amount,
+            (
+                SELECT COUNT(sm.id)
+                FROM saving_missions sm
+                WHERE sm.user_id = #{userId}
+                  AND YEAR(sm.created_at) = #{year}
+                  AND MONTH(sm.created_at) = #{month}
+                  AND sm.status = '도전중'
+            ) AS in_progress_mission_count,
+            (
+                SELECT COUNT(sm.id)
+                FROM saving_missions sm
+                WHERE sm.user_id = #{userId}
+                  AND YEAR(sm.created_at) = #{year}
+                  AND MONTH(sm.created_at) = #{month}
+                  AND sm.status = '완료'
+            ) AS completed_mission_count,
+            representative.id AS mission_id,
+            representative.category AS category_code,
+            representative.title AS title,
+            representative.status AS status,
+            representative.expected_saving AS expected_saving_amount
+        FROM (
+            SELECT 1 AS summary_base
+        ) base
+        LEFT JOIN saving_missions representative
+            ON representative.id = (
+                SELECT sm.id
+                FROM saving_missions sm
+                WHERE sm.user_id = #{userId}
+                  AND YEAR(sm.created_at) = #{year}
+                  AND MONTH(sm.created_at) = #{month}
+                  AND sm.status = '도전중'
+                ORDER BY
+                    sm.created_at DESC,
+                    sm.id DESC
+                LIMIT 1
+            )
+    </select>
+</mapper>
