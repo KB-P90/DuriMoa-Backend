@@ -3,6 +3,8 @@ package com.project.domain.calendar.service;
 import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.IncomeCategory;
 import com.project.common.enums.SavingCategory;
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.util.CategoryConverter;
 import com.project.domain.calendar.domain.CalendarType;
 import com.project.domain.calendar.domain.ServiceRecord;
@@ -29,7 +31,7 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public Object getMonthly(Long userId, YearMonth month, CalendarType type) {
-        return switch(type) {
+        return switch (type) {
             case PERSONAL -> getMonthlyPersonal(userId, month);
             case WEDDING -> getMonthlyWedding(userId, month);
         };
@@ -56,7 +58,7 @@ public class CalendarServiceImpl implements CalendarService {
 
         // 결혼 카테고리
         List<String> categories = getWeddingCategories();
-        
+
         // 월 요약
         MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);
 
@@ -104,7 +106,7 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public DailyResponseDTO getDaily(Long userId, LocalDate date, CalendarType type) {
-        return switch(type) {
+        return switch (type) {
             case PERSONAL -> getDailyPersonal(userId, date);
             case WEDDING -> getDailyWedding(userId, date);
         };
@@ -164,8 +166,12 @@ public class CalendarServiceImpl implements CalendarService {
 
         ServiceRecord existingRecord = mapper.findById(recordId);
 
-        if (existingRecord == null || !existingRecord.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("수정할 수 없는 거래 내역입니다.");
+        if (existingRecord == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        if (!existingRecord.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
         ServiceRecord record = recordDTO.toVO(userId);
@@ -181,7 +187,7 @@ public class CalendarServiceImpl implements CalendarService {
         int result = mapper.delete(userId, recordId);
 
         if (result == 0) {
-            throw new IllegalArgumentException("삭제할 권한이 없습니다.");
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
         return RecordResponseDTO.of(recordId);

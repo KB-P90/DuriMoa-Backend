@@ -1,5 +1,7 @@
 package com.project.common.enums;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import lombok.Getter;
 
 import java.util.Arrays;
@@ -40,6 +42,6 @@ public enum IncomeCategory {
         return Arrays.stream(values())
                 .filter(c -> c.getCategoryName().equals(categoryName))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("잘못된 수입 카테고리입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT_VALUE, "존재하지 않는 카테고리입니다."));
     }
 }

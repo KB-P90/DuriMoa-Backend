@@ -1,5 +1,7 @@
 package com.project.domain.calendar.controller;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.calendar.domain.CalendarType;
 import com.project.domain.calendar.dto.request.RecordRequestDTO;
@@ -50,10 +52,8 @@ public class CalendarController {
         try {
             yearMonth = YearMonth.parse(month);
             calendarType = CalendarType.valueOf(type.toUpperCase());
-        } catch (DateTimeParseException e) {
-            throw new BadRequestException("month는 yyyy-MM 형식이어야 합니다.");
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("type은 personal과 wedding 중 하나여야 합니다.");
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         return ResponseEntity.ok(ApiResponse.success(service.getMonthly(userId, yearMonth, calendarType)));
@@ -80,10 +80,8 @@ public class CalendarController {
         try {
             localDate = LocalDate.parse(date);
             calendarType = CalendarType.valueOf(type.toUpperCase());
-        } catch (DateTimeParseException e) {
-            throw new BadRequestException("date는 yyyy-MM-dd 형식이어야 합니다.");
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("type은 personal과 wedding 중 하나여야 합니다.");
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         return ResponseEntity.ok(ApiResponse.success(service.getDaily(userId, localDate, calendarType)));
