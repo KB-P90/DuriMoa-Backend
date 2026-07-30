@@ -70,7 +70,7 @@ class HomeServiceImplTest {
         Assertions.assertNull(response.getAssetSummary().getTotalSavedAmount());
         Assertions.assertEquals(70000L, response.getSavingMissionSummary().getTotalExpectedSavingAmount());
         Assertions.assertEquals(1, response.getSavingMissionSummary().getInProgressMissionCount());
-        Assertions.assertEquals(0, response.getSavingMissionSummary().getCompletedMissionCount());
+        Assertions.assertEquals(1, response.getSavingMissionSummary().getCompletedMissionCount());
         Assertions.assertEquals(10L, response.getSavingMissionSummary().getMission().getMissionId());
         Assertions.assertEquals("카페 지출 줄이기", response.getSavingMissionSummary().getMission().getTitle());
         Assertions.assertEquals("도전중", response.getSavingMissionSummary().getMission().getStatus());
@@ -130,12 +130,12 @@ class HomeServiceImplTest {
         return evidence;
     }
 
-    // 홈 도전중 절약미션 요약 테스트 데이터를 만듭니다.
+    // 홈 도전중 절약미션 표시와 완료 미션 수 요약 테스트 데이터를 만듭니다.
     private HomeSavingMissionSummaryRecord savingMissionSummary() {
         HomeSavingMissionSummaryRecord summary = new HomeSavingMissionSummaryRecord();
         summary.setTotalExpectedSavingAmount(70000L);
         summary.setInProgressMissionCount(1);
-        summary.setCompletedMissionCount(0);
+        summary.setCompletedMissionCount(1);
         summary.setMissionId(10L);
         summary.setCategoryCode("CAFE");
         summary.setTitle("카페 지출 줄이기");

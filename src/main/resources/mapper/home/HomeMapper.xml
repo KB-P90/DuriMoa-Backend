@@ -79,10 +79,11 @@
             CASE
                 WHEN EXISTS (
                     SELECT 1
-                    FROM service_record sr
-                    WHERE sr.user_id IN (#{groomId}, #{brideId})
-                      AND sr.type = 'SAVING'
-                      AND sr.amount &gt; 0
+                    FROM account a
+                    INNER JOIN account_record ar
+                        ON ar.account_id = a.id
+                    WHERE a.user_id IN (#{groomId}, #{brideId})
+                      AND ar.type = 'SAVING'
                 ) THEN TRUE
                 ELSE FALSE
             END AS first_saving_recorded,
@@ -129,7 +130,14 @@
                   AND MONTH(sm.created_at) = #{month}
                   AND sm.status = '도전중'
             ) AS in_progress_mission_count,
-            0 AS completed_mission_count,
+            (
+                SELECT COUNT(sm.id)
+                FROM saving_missions sm
+                WHERE sm.user_id = #{userId}
+                  AND YEAR(sm.created_at) = #{year}
+                  AND MONTH(sm.created_at) = #{month}
+                  AND sm.status = '완료'
+            ) AS completed_mission_count,
             representative.id AS mission_id,
             representative.category AS category_code,
             representative.title AS title,

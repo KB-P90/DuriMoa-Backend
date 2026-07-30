@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.home.dto.HomeResponseDTO;
-import com.project.domain.home.dto.HomeResponseDTO.SetupChecklistResponseDTO;
+import com.project.domain.home.dto.SetupChecklistResponseDTO;
 import com.project.domain.home.service.HomeService;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
