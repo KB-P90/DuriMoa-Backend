@@ -1,11 +1,12 @@
 package com.project.domain.progress.service;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.service.CoupleService;
 import com.project.domain.progress.dto.CoupleSavingSummaryDTO;
 import com.project.domain.progress.dto.MonthlySavingDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
-import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.mapper.ProgressMapper;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +33,9 @@ public class ProgressServiceImpl implements ProgressService {
         Long brideId = couple.getBrideId();
 
         if (!progressMapper.existsSavingRecord(groomId, brideId)) {
-            throw new SavingRecordNotFoundException();
+            throw new CustomException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "저축 거래 내역이 없습니다.");
         }
 
         Long totalSavingAmount = progressMapper.findTotalSavingAmount(groomId, brideId);

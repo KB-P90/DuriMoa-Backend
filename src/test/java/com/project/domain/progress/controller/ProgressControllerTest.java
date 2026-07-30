@@ -5,9 +5,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.progress.dto.ProgressResponseDTO;
-import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.service.ProgressService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,8 +58,10 @@ class ProgressControllerTest {
     }
 
     @Test
-    void returnsApiResponseForSavingRecordNotFoundException() throws Exception {
-        when(progressService.getProgress()).thenThrow(new SavingRecordNotFoundException());
+    void returnsApiResponseWhenSavingRecordIsMissing() throws Exception {
+        when(progressService.getProgress()).thenThrow(new CustomException(
+                ErrorCode.RESOURCE_NOT_FOUND,
+                "저축 거래 내역이 없습니다."));
 
         mockMvc.perform(get("/api/progress"))
                 .andExpect(status().isNotFound())

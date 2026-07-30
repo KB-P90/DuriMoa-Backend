@@ -6,12 +6,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.project.common.exception.CustomException;
 import com.project.domain.couple.dto.CoupleDTO;
 import com.project.domain.couple.service.CoupleService;
 import com.project.domain.progress.dto.CoupleSavingSummaryDTO;
 import com.project.domain.progress.dto.MonthlySavingDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
-import com.project.domain.progress.exception.SavingRecordNotFoundException;
 import com.project.domain.progress.mapper.ProgressMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ class ProgressServiceImplTest {
         when(coupleService.getConnectedCoupleForCurrentUser()).thenReturn(couple);
         when(progressMapper.existsSavingRecord(10L, 20L)).thenReturn(false);
 
-        assertThrows(SavingRecordNotFoundException.class, () -> progressService.getProgress());
+        assertThrows(CustomException.class, () -> progressService.getProgress());
 
         verify(progressMapper).existsSavingRecord(10L, 20L);
         verifyNoMoreInteractions(progressMapper);
