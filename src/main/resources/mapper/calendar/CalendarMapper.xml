@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.domain.calendar.mapper.CalendarMapper">
+
+    <select id="selectMonthlyPersonalSummary"
+            resultType="com.project.domain.calendar.dto.response.MonthlyPersonalSummaryDTO">
+        SELECT
+            COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS income,
+            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND record_date BETWEEN #{start} AND #{end}
+    </select>
+
+    <select id="selectMonthlyPersonalCalendar"
+            resultType="com.project.domain.calendar.dto.response.CalendarDayDTO">
+        SELECT
+            record_date AS date,
+            MAX(CASE WHEN type='INCOME' THEN 1 ELSE 0 END) AS hasIncome,
+            MAX(CASE WHEN type='EXPENSE' THEN 1 ELSE 0 END) AS hasExpense,
+            MAX(CASE WHEN type='SAVING' THEN 1 ELSE 0 END) AS hasSaving
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND record_date BETWEEN #{start} AND #{end}
+        GROUP BY record_date
+        ORDER BY record_date
+    </select>
+
+    <select id="selectMonthlyWeddingSummary"
+            resultType="com.project.domain.calendar.dto.response.MonthlyWeddingSummaryDTO">
+        SELECT
+            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
+        FROM service_record sr
+        WHERE sr.user_id IN (
+            SELECT #{userId}
+            UNION
+            SELECT
+                CASE
+                    WHEN c.groom_id = #{userId} THEN c.bride_id
+                    ELSE c.groom_id
+                END
+            FROM couple c
+            WHERE c.status = 'CONNECTED'
+                AND (c.groom_id = #{userId}
+                    OR c.bride_id = #{userId})
+        )
+        AND sr.record_date BETWEEN #{start} AND #{end}
+        AND (
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                THEN sr.changed_category
+                ELSE sr.category
+            END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+    </select>
+
+    <select id="selectMonthlyWeddingCalendar"
+            resultType="com.project.domain.calendar.dto.response.CalendarDayDTO">
+        SELECT
+            sr.record_date AS date,
+            MAX(CASE WHEN sr.type='INCOME' THEN 1 ELSE 0 END) AS hasIncome,
+            MAX(CASE WHEN sr.type='EXPENSE' THEN 1 ELSE 0 END) AS hasExpense,
+            MAX(CASE WHEN sr.type='SAVING' THEN 1 ELSE 0 END) AS hasSaving
+        FROM service_record sr
+        WHERE sr.user_id IN (
+            SELECT #{userId}
+            UNION
+            SELECT
+                CASE
+                    WHEN c.groom_id = #{userId} THEN c.bride_id
+                    ELSE c.groom_id
+                END
+            FROM couple c
+            WHERE c.status='CONNECTED'
+                AND (c.groom_id=#{userId}
+                    OR c.bride_id=#{userId})
+        )
+        AND sr.record_date BETWEEN #{start} AND #{end}
+        AND (
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                THEN sr.changed_category
+                ELSE sr.category
+            END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+        GROUP BY sr.record_date
+        ORDER BY sr.record_date
+    </select>
+
+    <select id="selectDailyPersonal" resultType="com.project.domain.calendar.dto.response.DailyRecordDTO">
+        SELECT
+            sr.id AS recordId,
+            sr.type AS type,
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                    THEN sr.changed_category
+                ELSE sr.category
+            END AS category,
+            sr.amount,
+            sr.memo,
+            u.name AS owner
+        FROM service_record sr
+        INNER JOIN user u
+            ON sr.user_id = u.id
+        WHERE sr.user_id = #{userId}
+            AND sr.record_date = #{date}
+        ORDER BY sr.updated_at DESC
+    </select>
+
+    <select id="selectDailyWedding" resultType="com.project.domain.calendar.dto.response.DailyRecordDTO">
+        SELECT
+            sr.id AS recordId,
+            sr.type AS type,
+            CASE
+                WHEN sr.changed_category IS NOT NULL
+                    THEN sr.changed_category
+                ELSE sr.category
+            END AS category,
+            sr.amount,
+            sr.memo,
+            u.name AS owner
+        FROM service_record sr
+        INNER JOIN user u
+            ON sr.user_id = u.id
+        WHERE sr.record_date = #{date}
+            AND sr.user_id IN (
+                SELECT #{userId}
+                UNION
+                SELECT
+                CASE
+                WHEN c.groom_id = #{userId} THEN c.bride_id
+                ELSE c.groom_id
+                END
+                FROM couple c
+                WHERE c.status='CONNECTED'
+                AND (c.groom_id=#{userId}
+                OR c.bride_id=#{userId})
+        )
+        AND (
+        CASE
+        WHEN sr.changed_category IS NOT NULL
+        THEN sr.changed_category
+        ELSE sr.category
+        END
+        ) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+        ORDER BY sr.updated_at DESC
+    </select>
+
+    <insert id="create">
+        INSERT INTO service_record (user_id, type, category, amount, record_date, memo)
+        VALUES (#{userId}, #{type}, #{category}, #{amount}, #{recordDate}, #{memo})
+
+        <selectKey resultType="Long" keyProperty="id" keyColumn="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <select id="findById" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT id, user_id AS userId, type, category, changed_category AS changedCategory, amount, record_date AS recordDate, memo
+        FROM service_record
+        WHERE id = #{recordId}
+    </select>
+
+    <update id="update">
+        UPDATE service_record
+        SET type = #{type},
+            changed_category = #{category},
+            amount = #{amount},
+            record_date = #{recordDate},
+            memo = #{memo},
+            updated_at = now()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <delete id="delete">
+        DELETE
+        FROM service_record
+        WHERE id = #{recordId}
+          AND user_id = #{userId}
+    </delete>
+</mapper>

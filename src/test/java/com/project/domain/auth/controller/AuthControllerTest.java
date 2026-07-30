@@ -2,10 +2,11 @@ package com.project.domain.auth.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
+import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.LoginUserResponseDTO;
-import com.project.domain.auth.exception.AuthExceptionHandler;
-import com.project.domain.auth.exception.InvalidLoginCredentialsException;
 import com.project.domain.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class AuthControllerTest {
     void setUp() {
         AuthController authController = new AuthController(authService);
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new AuthExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         objectMapper = new ObjectMapper();
     }
@@ -67,7 +68,10 @@ class AuthControllerTest {
 
     @Test
     void loginReturnsUnauthorizedForInvalidCredentials() throws Exception {
-        when(authService.login(any())).thenThrow(new InvalidLoginCredentialsException());
+        when(authService.login(any())).thenThrow(
+                new CustomException(
+                        ErrorCode.UNAUTHORIZED,
+                        "휴대폰 번호 또는 비밀번호가 일치하지 않습니다."));
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

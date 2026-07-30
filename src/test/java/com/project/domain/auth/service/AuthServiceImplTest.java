@@ -1,14 +1,12 @@
 package com.project.domain.auth.service;
 
 import com.project.common.security.JwtTokenProvider;
+import com.project.common.exception.CustomException;
 import com.project.domain.auth.dto.LoginRequestDTO;
 import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
-import com.project.domain.auth.exception.InvalidLoginCredentialsException;
-import com.project.domain.auth.exception.PasswordConfirmationMismatchException;
-import com.project.domain.auth.exception.PhoneDuplicateException;
 import com.project.domain.auth.mapper.AuthMapper;
 import com.project.domain.couple.service.CoupleInvitationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +62,9 @@ class AuthServiceImplTest {
 
         verify(authMapper).insertUser(
                 "01012345678", "encodedPassword", "홍길동", "G");
+        verify(authMapper).insertTermsAgreement(1L, "SERVICE", true);
+        verify(authMapper).insertTermsAgreement(1L, "PRIVACY", true);
+        verify(authMapper).insertTermsAgreement(1L, "MARKETING", false);
         assertEquals(1L, response.getUserId());
         assertEquals("01012345678", response.getPhone());
         assertEquals("LOCAL", response.getProvider());
@@ -75,7 +76,7 @@ class AuthServiceImplTest {
                 createRequest("01012345678", "password123", "password123", "홍길동", "G");
         when(authMapper.existsUserByPhone("01012345678")).thenReturn(true);
 
-        assertThrows(PhoneDuplicateException.class, () -> authService.signup(request));
+        assertThrows(CustomException.class, () -> authService.signup(request));
         verify(passwordEncoder, never()).encode(anyString());
     }
 
@@ -85,8 +86,24 @@ class AuthServiceImplTest {
                 createRequest("01012345678", "password123", "different123", "홍길동", "G");
 
         assertThrows(
-                PasswordConfirmationMismatchException.class,
+                CustomException.class,
                 () -> authService.signup(request));
+        verify(authMapper, never()).existsUserByPhone(anyString());
+    }
+
+    @Test
+    void signupRejectsRequiredTermsAgreementMissing() throws Exception {
+        SignupRequestDTO request = createRequest(
+                "01012345678",
+                "password123",
+                "password123",
+                "홍길동",
+                "G",
+                false,
+                true,
+                false);
+
+        assertThrows(CustomException.class, () -> authService.signup(request));
         verify(authMapper, never()).existsUserByPhone(anyString());
     }
 
@@ -118,7 +135,7 @@ class AuthServiceImplTest {
         LoginRequestDTO request = createLoginRequest("01012345678", "password123");
         when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(null);
 
-        assertThrows(InvalidLoginCredentialsException.class, () -> authService.login(request));
+        assertThrows(CustomException.class, () -> authService.login(request));
         verify(passwordEncoder, never()).matches(anyString(), anyString());
     }
 
@@ -136,7 +153,7 @@ class AuthServiceImplTest {
         when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(loginUser);
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
 
-        assertThrows(InvalidLoginCredentialsException.class, () -> authService.login(request));
+        assertThrows(CustomException.class, () -> authService.login(request));
         verify(jwtTokenProvider, never()).createAccessToken(1L, "G");
     }
 
@@ -146,12 +163,27 @@ class AuthServiceImplTest {
             String passwordConfirm,
             String name,
             String role) throws Exception {
+        return createRequest(phone, password, passwordConfirm, name, role, true, true, false);
+    }
+
+    private SignupRequestDTO createRequest(
+            String phone,
+            String password,
+            String passwordConfirm,
+            String name,
+            String role,
+            Boolean serviceTermsAgreed,
+            Boolean privacyTermsAgreed,
+            Boolean marketingTermsAgreed) throws Exception {
         SignupRequestDTO request = new SignupRequestDTO();
         setField(request, "phone", phone);
         setField(request, "password", password);
         setField(request, "passwordConfirm", passwordConfirm);
         setField(request, "name", name);
         setField(request, "role", role);
+        setField(request, "serviceTermsAgreed", serviceTermsAgreed);
+        setField(request, "privacyTermsAgreed", privacyTermsAgreed);
+        setField(request, "marketingTermsAgreed", marketingTermsAgreed);
         return request;
     }
 
