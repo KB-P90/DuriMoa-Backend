@@ -44,4 +44,12 @@ public enum ExpenseCategory {
                 .map(Enum::name)
                 .toList();
     }
+
+    // 한글 => 영문 변환
+    public static ExpenseCategory fromKorean(String categoryName) {
+        return Arrays.stream(values())
+                .filter(c -> c.getCategoryName().equals(categoryName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("잘못된 지출 카테고리입니다."));
+    }
 }
