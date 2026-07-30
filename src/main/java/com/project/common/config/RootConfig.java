@@ -19,12 +19,12 @@ import javax.sql.DataSource;
 
 @Configuration
 @PropertySource({"classpath:/database.properties"})
-//@MapperScan(basePackages = {
-//    // 주석 지우고 Mapper 작성
-//})
-//@ComponentScan(basePackages = {
-//    // 주석 지우고 Service 작성
-//})
+@MapperScan(basePackages = {
+    "com.project.domain.calendar.mapper"
+})
+@ComponentScan(basePackages = {
+    "com.project.domain.calendar.service"
+})
 @EnableTransactionManagement
 public class RootConfig {
     @Value("${jdbc.driverClassName}")
