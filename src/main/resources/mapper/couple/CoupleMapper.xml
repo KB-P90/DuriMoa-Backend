@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.couple.mapper.CoupleMapper">
+
+    <resultMap id="coupleResultMap" type="com.project.domain.couple.dto.CoupleDTO">
+        <id property="id" column="id"/>
+        <result property="groomId" column="groom_id"/>
+        <result property="brideId" column="bride_id"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="findCouplesByUserId" resultMap="coupleResultMap">
+        SELECT id,
+               groom_id,
+               bride_id,
+               status
+        FROM couple
+        WHERE groom_id = #{userId}
+           OR bride_id = #{userId}
+        ORDER BY id DESC
+    </select>
+
+</mapper>

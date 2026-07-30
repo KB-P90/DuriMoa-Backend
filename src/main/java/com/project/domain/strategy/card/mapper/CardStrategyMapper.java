@@ -7,8 +7,10 @@ import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductSour
 import com.project.domain.strategy.card.model.CardStrategyRecord.UserCardRecord;
 import java.time.LocalDate;
 import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+@Mapper
 public interface CardStrategyMapper {
 
     // 인증 사용자가 속한 활성 커플의 구성원을 조회합니다.
