@@ -1,0 +1,182 @@
+package com.project.domain.onboarding;
+
+import com.project.domain.codef.dto.CodefAccountItemDTO;
+import com.project.domain.codef.dto.CodefApiResponseDTO;
+import com.project.domain.codef.service.CodefService;
+import com.project.domain.onboarding.dto.OnboardingQueryRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingQueryResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.mapper.OnboardingMapper;
+import com.project.domain.onboarding.service.OnboardingServiceImpl;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.project.common.config.CodefConfig;
+
+@ExtendWith(MockitoExtension.class)
+class OnboardingServiceTest {
+
+    @Mock
+    private CodefService codefService;
+
+    @Mock
+    private OnboardingMapper onboardingMapper;
+
+    @Mock
+    private CodefConfig codefConfig;
+
+    @InjectMocks
+    private OnboardingServiceImpl onboardingService;
+
+    @Test
+    @DisplayName("커넥티드 ID 미존재 시 계정 등록 API 호출 및 생성 처리 테스트")
+    void registerOrAddAccount_CreatesNewConnectedId_WhenNotExists() {
+        // given
+        Long userId = 1L;
+        CodefAccountItemDTO item = CodefAccountItemDTO.builder()
+                .countryCode("KR")
+                .businessType("BK")
+                .clientType("P")
+                .organization("0004")
+                .loginType("1")
+                .id("test_user_id")
+                .password("password123!")
+                .build();
+
+        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
+                .accountItem(item)
+                .build();
+
+        when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn(null);
+
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("connectedId", "new_demo_connected_id");
+        CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
+                .data(dataMap)
+                .build();
+        when(codefService.createConnectedId(any())).thenReturn(codefRes);
+
+        // when
+        OnboardingRegisterResponseDTO result = onboardingService.registerOrAddAccount(userId, requestDTO);
+
+        // then
+        assertNotNull(result);
+        assertEquals("CREATED", result.getActionType());
+        assertEquals("new_demo_connected_id", result.getConnectedId());
+        assertEquals("KB국민은행", result.getCompany());
+        verify(onboardingMapper).updateUserConnectedId(userId, "new_demo_connected_id");
+    }
+
+    @Test
+    @DisplayName("커넥티드 ID 기존 존재 시 계정 추가 API 호출 및 추가 처리 테스트")
+    void registerOrAddAccount_AddsAccount_WhenConnectedIdExists() {
+        // given
+        Long userId = 1L;
+        CodefAccountItemDTO item = CodefAccountItemDTO.builder()
+                .countryCode("KR")
+                .businessType("CD")
+                .clientType("P")
+                .organization("0301")
+                .loginType("1")
+                .id("test_user_id")
+                .password("password123!")
+                .build();
+
+        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
+                .accountItem(item)
+                .build();
+
+        when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("existing_connected_id");
+
+        // when
+        OnboardingRegisterResponseDTO result = onboardingService.registerOrAddAccount(userId, requestDTO);
+
+        // then
+        assertNotNull(result);
+        assertEquals("ADDED", result.getActionType());
+        assertEquals("existing_connected_id", result.getConnectedId());
+        assertEquals("KB국민카드", result.getCompany());
+        verify(codefService).addConnectedAccount(any());
+    }
+
+    @Test
+    @DisplayName("계좌 목록 조회 성공 테스트")
+    void getAccountsOrCards_Success() {
+        // given
+        Long userId = 1L;
+        OnboardingQueryRequestDTO requestDTO = OnboardingQueryRequestDTO.builder()
+                .businessType("BK")
+                .organization("0004")
+                .connectedId("demo_connected_id")
+                .build();
+
+        CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
+                .data(Collections.singletonList(Collections.singletonMap("resAccount", "1234567890")))
+                .build();
+
+        when(codefService.getAccountList(any())).thenReturn(codefRes);
+
+        // when
+        OnboardingQueryResponseDTO result = onboardingService.getAccountsOrCards(userId, requestDTO);
+
+        // then
+        assertNotNull(result);
+        assertEquals("demo_connected_id", result.getConnectedId());
+        assertEquals("BK", result.getBusinessType());
+        assertNotNull(result.getItemList());
+    }
+
+    @Test
+    @DisplayName("선택 계좌 거래 내역 수집 및 DB 저장 동기화 테스트")
+    void selectAccountsOrCards_Success() {
+        // given
+        Long userId = 1L;
+        OnboardingSelectRequestDTO requestDTO = OnboardingSelectRequestDTO.builder()
+                .businessType("BK")
+                .organization("0004")
+                .selectedNumbers(Collections.singletonList("12345678901234"))
+                .startDate("20260701")
+                .endDate("20260731")
+                .build();
+
+        when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("demo_connected_id");
+        when(onboardingMapper.findAccountIdByUserAndNumber(userId, 12345678901234L, "12345678901234", "KB국민은행")).thenReturn(10L);
+
+        Map<String, Object> trMap = new HashMap<>();
+        trMap.put("resAccountTrDate", "20260715");
+        trMap.put("resAccountOut", "50000");
+        trMap.put("resAccountDesc1", "식비 지출");
+
+        CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
+                .data(Collections.singletonList(trMap))
+                .build();
+        when(codefService.requestProduct(any())).thenReturn(codefRes);
+
+        // when
+        OnboardingSelectResponseDTO result = onboardingService.selectAccountsOrCards(userId, requestDTO);
+
+        // then
+        assertNotNull(result);
+        assertEquals("BK", result.getBusinessType());
+        assertEquals(1, result.getTotalSavedRecords());
+        assertEquals(1, result.getProcessedNumbers().size());
+        verify(onboardingMapper).insertAccountRecord(any());
+    }
+}
