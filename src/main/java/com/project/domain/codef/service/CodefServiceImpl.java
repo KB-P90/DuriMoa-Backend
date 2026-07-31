@@ -13,8 +13,8 @@ import com.project.domain.codef.dto.CodefProductRequestDTO;
 import com.project.domain.codef.dto.CodefResultDTO;
 import com.project.domain.codef.dto.CodefTokenRequestDTO;
 import com.project.domain.codef.dto.CodefTokenResponseDTO;
-import com.project.domain.codef.exception.CodefApiException;
-import com.project.domain.codef.exception.CodefTokenException;
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpEntity;
@@ -27,6 +27,13 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
+
+import javax.crypto.Cipher;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -82,7 +89,7 @@ public class CodefServiceImpl implements CodefService {
                     codefConfig.getOauthUrl(), entity, CodefTokenResponseDTO.class);
 
             if (response.getBody() == null || response.getBody().getAccessToken() == null) {
-                throw new CodefTokenException("CODEF 토큰 발급 응답이 올바르지 않습니다.");
+                throw new CustomException(ErrorCode.UNAUTHORIZED, "CODEF 토큰 발급 응답이 올바르지 않습니다.");
             }
 
             CodefTokenResponseDTO tokenDto = response.getBody();
@@ -95,7 +102,7 @@ public class CodefServiceImpl implements CodefService {
             return tokenDto;
         } catch (Exception e) {
             log.error("CODEF 토큰 발급 중 오류 발생: {}", e.getMessage());
-            throw new CodefTokenException("CODEF 토큰 발급에 실패하였습니다.", e);
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "CODEF 토큰 발급에 실패하였습니다.");
         }
     }
 
@@ -186,10 +193,40 @@ public class CodefServiceImpl implements CodefService {
                 String passwordStr = String.valueOf(pwObj);
                 if (StringUtils.hasText(passwordStr) && passwordStr.length() < 100) {
                     log.info("계정 목록 내 평문 비밀번호 자동 RSA 암호화 수행");
-                    String encryptedPw = com.project.domain.codef.util.CodefRsaUtil.encryptPassword(passwordStr, publicKeyPem);
+                    String encryptedPw = encryptRsaPassword(passwordStr, publicKeyPem);
                     account.put("password", encryptedPw);
                 }
             }
+        }
+    }
+
+    private String encryptRsaPassword(String plainPassword, String publicKeyPem) {
+        if (plainPassword == null || plainPassword.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "암호화할 비밀번호가 비어 있습니다.");
+        }
+        if (publicKeyPem == null || publicKeyPem.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF Public Key가 지정되지 않았습니다.");
+        }
+
+        try {
+            String cleanKey = publicKeyPem
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s+", "");
+
+            byte[] decodedKey = Base64.getDecoder().decode(cleanKey);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey publicKey = keyFactory.generatePublic(keySpec);
+
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+
+            byte[] encryptedBytes = cipher.doFinal(plainPassword.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encryptedBytes);
+        } catch (Exception e) {
+            log.error("RSA 비밀번호 암호화 중 오류 발생", e);
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "비밀번호 RSA 암호화 실패: " + e.getMessage());
         }
     }
 
@@ -245,7 +282,7 @@ public class CodefServiceImpl implements CodefService {
                     .build();
         } catch (Exception e) {
             log.error("CODEF API 상품 요청 중 오류 발생: {}", e.getMessage());
-            throw new CodefApiException("CODEF API 요청에 실패하였습니다: " + e.getMessage(), e);
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF API 요청에 실패하였습니다: " + e.getMessage());
         }
     }
 }
