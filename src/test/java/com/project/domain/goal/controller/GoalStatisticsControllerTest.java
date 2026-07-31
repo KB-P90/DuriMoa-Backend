@@ -8,9 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
+import com.project.domain.goal.dto.GoalBudgetTypeEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.service.GoalStatisticsService;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -72,6 +75,44 @@ class GoalStatisticsControllerTest {
 
         assertEquals(false, response.get("success").asBoolean());
         assertEquals("필수 요청 파라미터가 누락되었습니다.", response.get("message").asText());
+    }
+
+    @Test
+    void getGoalBudgetEstimateReturnsCommonResponse() throws Exception {
+        GoalBudgetEstimateResponseDTO estimate = GoalBudgetEstimateResponseDTO.builder()
+                .region("서울(강남)")
+                .estimates(Arrays.asList(
+                        GoalBudgetTypeEstimateResponseDTO.builder()
+                                .type("알뜰형")
+                                .totalAmount(23_200_000L)
+                                .build(),
+                        GoalBudgetTypeEstimateResponseDTO.builder()
+                                .type("균형형")
+                                .totalAmount(28_500_000L)
+                                .build(),
+                        GoalBudgetTypeEstimateResponseDTO.builder()
+                                .type("플렉스형")
+                                .totalAmount(35_000_000L)
+                                .build()
+                ))
+                .build();
+        when(goalStatisticsService.findGoalBudgetEstimate("서울(강남)"))
+                .thenReturn(estimate);
+
+        MvcResult result = mockMvc.perform(get("/api/goal/stat/estimate")
+                        .param("region", "서울(강남)"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals(true, response.get("success").asBoolean());
+        assertEquals(
+                "유형별 예상 결혼 예산 조회에 성공했습니다.",
+                response.get("message").asText()
+        );
+        assertEquals("알뜰형", response.at("/data/estimates/0/type").asText());
+        assertEquals(23_200_000L, response.at("/data/estimates/0/totalAmount").asLong());
+        assertEquals(35_000_000L, response.at("/data/estimates/2/totalAmount").asLong());
     }
 
     private JsonNode readResponse(MvcResult result) throws Exception {
