@@ -43,7 +43,10 @@ public class SecurityConfig {
                         "/v2/api-docs",
                         "/webjars/**")
                     .permitAll()
-                .antMatchers(HttpMethod.GET, "/api/goal/stat")
+                .antMatchers(
+                        HttpMethod.GET,
+                        "/api/goal/stat",
+                        "/api/goal/stat/estimate")
                     .permitAll()
                 .antMatchers("/api/notifications/**", "/api/notification-settings/**")
                     .authenticated()

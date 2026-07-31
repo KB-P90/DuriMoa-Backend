@@ -124,7 +124,7 @@ class AuthServiceImplTest {
 
         LoginResponseDTO response = authService.login(request);
 
-        assertEquals("accessToken", response.getAccessToken());
+        assertEquals("Bearer accessToken", response.getAccessToken());
         assertEquals(1L, response.getUser().getUserId());
         assertEquals("01012345678", response.getUser().getPhone());
         assertEquals("LOCAL", response.getUser().getProvider());

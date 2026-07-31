@@ -49,7 +49,9 @@ class AuthControllerTest {
     void loginReturnsConfirmedResponseFormat() throws Exception {
         LoginUserResponseDTO user =
                 new LoginUserResponseDTO(1L, "01012345678", "홍길동", "G", null, "LOCAL");
-        when(authService.login(any())).thenReturn(new LoginResponseDTO("accessToken", user));
+        when(authService.login(any())).thenReturn(
+                new LoginResponseDTO("Bearer accessToken", user)
+        );
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -60,7 +62,7 @@ class AuthControllerTest {
 
         assertTrue(response.get("success").asBoolean());
         assertEquals("로그인이 완료되었습니다.", response.get("message").asText());
-        assertEquals("accessToken", response.at("/data/accessToken").asText());
+        assertEquals("Bearer accessToken", response.at("/data/accessToken").asText());
         assertEquals(1L, response.at("/data/user/userId").asLong());
         assertEquals("01012345678", response.at("/data/user/phone").asText());
         assertEquals("LOCAL", response.at("/data/user/provider").asText());

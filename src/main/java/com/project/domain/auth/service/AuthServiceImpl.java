@@ -94,7 +94,7 @@ public class AuthServiceImpl implements AuthService {
                 loginUser.getRole(),
                 loginUser.getProfileImage(),
                 loginUser.getProvider());
-        return new LoginResponseDTO(accessToken, user);
+        return new LoginResponseDTO("Bearer " + accessToken, user);
     }
 
     private void saveTermsAgreements(Long userId, SignupRequestDTO request) {
