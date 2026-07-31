@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.goal.mapper.GoalMapper">
+
+    <resultMap id="GoalResultMap"
+               type="com.project.domain.goal.domain.GoalVO">
+        <id property="id" column="id"/>
+        <result property="coupleId" column="couple_id"/>
+        <result property="name" column="name"/>
+        <result property="weddingDate" column="wedding_date"/>
+        <result property="region" column="region"/>
+        <result property="totalBudget" column="total_budget"/>
+        <result property="groomRatio" column="groom_ratio"/>
+        <result property="brideRatio" column="bride_ratio"/>
+        <result property="status" column="status"/>
+        <result property="isMain" column="is_main"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="GoalItemResultMap"
+               type="com.project.domain.goal.domain.GoalItemVO">
+        <id property="id" column="id"/>
+        <result property="goalId" column="goal_id"/>
+        <result property="category" column="category"/>
+        <result property="targetAmount" column="target_amount"/>
+        <result property="included" column="is_included"/>
+        <result property="completed" column="is_completed"/>
+        <result property="type" column="type"/>
+    </resultMap>
+
+    <insert id="insertGoal"
+            parameterType="com.project.domain.goal.domain.GoalVO"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO goal (
+            couple_id,
+            name,
+            wedding_date,
+            region,
+            total_budget,
+            groom_ratio,
+            bride_ratio,
+            created_at
+        ) VALUES (
+            #{coupleId},
+            #{name},
+            #{weddingDate},
+            #{region},
+            #{totalBudget},
+            #{groomRatio},
+            #{brideRatio},
+            #{createdAt}
+        )
+    </insert>
+
+    <insert id="insertGoalItems">
+        INSERT INTO goal_item (
+            goal_id,
+            category,
+            target_amount,
+            is_included,
+            type
+        )
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (
+                #{goalId},
+                #{item.category},
+                #{item.targetAmount},
+                #{item.included},
+                #{item.type}
+            )
+        </foreach>
+    </insert>
+
+    <select id="selectGoalsByCoupleId" resultMap="GoalResultMap">
+        SELECT
+            id,
+            couple_id,
+            name,
+            wedding_date,
+            region,
+            total_budget,
+            groom_ratio,
+            bride_ratio,
+            status,
+            is_main,
+            created_at
+        FROM goal
+        WHERE couple_id = #{coupleId}
+        ORDER BY
+            is_main DESC,
+            created_at DESC,
+            id DESC
+    </select>
+
+    <select id="selectGoalItemsByGoalIds" resultMap="GoalItemResultMap">
+        SELECT
+            id,
+            goal_id,
+            category,
+            target_amount,
+            is_included,
+            is_completed,
+            type
+        FROM goal_item
+        WHERE goal_id IN
+        <foreach collection="goalIds" item="goalId" open="(" separator="," close=")">
+            #{goalId}
+        </foreach>
+        ORDER BY
+            goal_id ASC,
+            id ASC
+    </select>
+</mapper>

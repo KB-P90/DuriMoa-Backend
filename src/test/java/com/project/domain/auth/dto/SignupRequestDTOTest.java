@@ -39,6 +39,20 @@ class SignupRequestDTOTest {
         assertEquals(6, violations.size());
     }
 
+    @Test
+    void nullTermsAgreementFieldsFailValidation() throws Exception {
+        SignupRequestDTO request =
+                createRequest(
+                        "010-1234-5678", "password123", "password123", "홍길동", "G");
+        setField(request, "serviceTermsAgreed", null);
+        setField(request, "privacyTermsAgreed", null);
+        setField(request, "marketingTermsAgreed", null);
+
+        Set<ConstraintViolation<SignupRequestDTO>> violations = validator.validate(request);
+
+        assertEquals(3, violations.size());
+    }
+
     private SignupRequestDTO createRequest(
             String phone,
             String password,
@@ -51,6 +65,9 @@ class SignupRequestDTOTest {
         setField(request, "passwordConfirm", passwordConfirm);
         setField(request, "name", name);
         setField(request, "role", role);
+        setField(request, "serviceTermsAgreed", true);
+        setField(request, "privacyTermsAgreed", true);
+        setField(request, "marketingTermsAgreed", false);
         return request;
     }
 

@@ -1,8 +1,8 @@
 package com.project.domain.strategy.card.service;
 
+import com.project.common.exception.CustomException;
 import com.project.domain.strategy.card.dto.CardDetailResponseDTO;
 import com.project.domain.strategy.card.dto.CardRecommendationResponseDTO;
-import com.project.domain.strategy.card.exception.CardStrategyException.CardAccessDeniedException;
 import com.project.domain.strategy.card.mapper.CardStrategyMapper;
 import com.project.domain.strategy.card.model.CardBenefitCalculator;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardOwnerRecord;
@@ -107,7 +107,7 @@ class CardStrategyServiceImplTest {
 
         Mockito.when(mapper.existsCardAccessInActiveCouple(1L, 10L)).thenReturn(0);
 
-        Assertions.assertThrows(CardAccessDeniedException.class, () -> service.getCardDetail(1L, 10L));
+        Assertions.assertThrows(CustomException.class, () -> service.getCardDetail(1L, 10L));
     }
 
     // 카드 상세 응답에 상품 기본 정보와 혜택 목록을 포함합니다.
