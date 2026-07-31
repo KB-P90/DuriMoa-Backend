@@ -2,7 +2,6 @@ package com.project.domain.onboarding;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
-import com.project.domain.codef.dto.CodefAccountItemDTO;
 import com.project.domain.onboarding.controller.OnboardingController;
 import com.project.domain.onboarding.dto.OnboardingQueryRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingQueryResponseDTO;
@@ -18,13 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.springframework.core.MethodParameter;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -73,18 +71,10 @@ class OnboardingControllerTest {
     @Test
     @DisplayName("1. 계좌/카드 등록 및 추가 API 컨트롤러 테스트")
     void registerOrAddAccount_ControllerTest() throws Exception {
-        CodefAccountItemDTO item = CodefAccountItemDTO.builder()
-                .countryCode("KR")
-                .businessType("BK")
-                .clientType("P")
-                .organization("0004")
-                .loginType("1")
+        OnboardingRegisterRequestDTO request = OnboardingRegisterRequestDTO.builder()
+                .company("KB국민은행")
                 .id("test_user")
                 .password("password123!")
-                .build();
-
-        OnboardingRegisterRequestDTO request = OnboardingRegisterRequestDTO.builder()
-                .accountItem(item)
                 .build();
 
         OnboardingRegisterResponseDTO response = OnboardingRegisterResponseDTO.builder()
@@ -111,11 +101,9 @@ class OnboardingControllerTest {
 
     @Test
     @DisplayName("2. 계좌/카드 목록 조회 API 컨트롤러 테스트")
-    void queryAccountsOrCards_ControllerTest() throws Exception {
+    void getAccountsOrCards_ControllerTest() throws Exception {
         OnboardingQueryRequestDTO request = OnboardingQueryRequestDTO.builder()
-                .businessType("BK")
-                .organization("0004")
-                .connectedId("demo_connected_id")
+                .company("KB국민은행")
                 .build();
 
         OnboardingQueryResponseDTO response = OnboardingQueryResponseDTO.builder()
@@ -140,10 +128,9 @@ class OnboardingControllerTest {
 
     @Test
     @DisplayName("3. 계좌/카드 선택 및 거래 내역 저장 API 컨트롤러 테스트")
-    void selectAndSyncTransactions_ControllerTest() throws Exception {
+    void selectAccountsOrCards_ControllerTest() throws Exception {
         OnboardingSelectRequestDTO request = OnboardingSelectRequestDTO.builder()
-                .businessType("BK")
-                .organization("0004")
+                .company("KB국민은행")
                 .selectedNumbers(Collections.singletonList("12345678901234"))
                 .startDate("20260701")
                 .endDate("20260731")

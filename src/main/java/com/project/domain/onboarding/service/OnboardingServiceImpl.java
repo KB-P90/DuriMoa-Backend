@@ -1,5 +1,6 @@
 package com.project.domain.onboarding.service;
 
+import com.project.common.config.CodefConfig;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.codef.dto.CodefAccountItemDTO;
@@ -17,6 +18,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
 import com.project.domain.onboarding.mapper.OnboardingMapper;
+import com.project.common.enums.CodefInstitution;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -31,8 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.project.common.config.CodefConfig;
-
 @Log4j2
 @Service
 @RequiredArgsConstructor
@@ -45,10 +45,31 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingRegisterResponseDTO registerOrAddAccount(Long userId, OnboardingRegisterRequestDTO requestDTO) {
-        CodefAccountItemDTO accountItem = requestDTO.getAccountItem();
-        String businessType = accountItem.getBusinessType();
-        String organization = accountItem.getOrganization();
-        String companyName = resolveCompanyName(organization, businessType);
+        String inputCompany = requestDTO.getCompany();
+        String loginId = requestDTO.getId();
+        String loginPassword = requestDTO.getPassword();
+
+        if (!StringUtils.hasText(loginId)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "아이디(id)를 입력해 주세요.");
+        }
+        if (!StringUtils.hasText(loginPassword)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "비밀번호(password)를 입력해 주세요.");
+        }
+
+        CodefInstitution inst = CodefInstitution.findByCompany(inputCompany);
+        String businessType = inst.getBusinessType();
+        String organization = inst.getOrganizationCode();
+        String companyName = inst.getOfficialName();
+
+        CodefAccountItemDTO accountItem = CodefAccountItemDTO.builder()
+                .countryCode("KR")
+                .businessType(businessType)
+                .clientType("P")
+                .organization(organization)
+                .loginType("1")
+                .id(loginId)
+                .password(loginPassword)
+                .build();
 
         // 1. 사용자의 기존 connected_id 조회
         String existingConnectedId = onboardingMapper.findConnectedIdByUserId(userId);
@@ -57,7 +78,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         if (!StringUtils.hasText(existingConnectedId)) {
             // [CASE 1] 커넥티드 ID가 없는 경우 -> CODEF 계정 등록 API 호출 (/v1/account/create)
-            log.info("사용자 [{}] 커넥티드 ID 미존재 -> CODEF 계정 등록 API 호출", userId);
+            log.info("사용자 [{}] 커넥티드 ID 미존재 -> CODEF 계정 등록 API 호출 ({})", userId, companyName);
             CodefConnectedIdRequestDTO createReq = CodefConnectedIdRequestDTO.builder()
                     .accountList(Collections.singletonList(accountItem))
                     .build();
@@ -70,7 +91,7 @@ public class OnboardingServiceImpl implements OnboardingService {
             onboardingMapper.updateUserConnectedId(userId, finalConnectedId);
         } else {
             // [CASE 2] 커넥티드 ID가 이미 존재하는 경우 -> CODEF 계정 추가 API 호출 (/v1/account/add)
-            log.info("사용자 [{}] 기존 커넥티드 ID [{}] 존재 -> CODEF 계정 추가 API 호출", userId, existingConnectedId);
+            log.info("사용자 [{}] 기존 커넥티드 ID [{}] 존재 -> CODEF 계정 추가 API 호출 ({})", userId, existingConnectedId, companyName);
             CodefConnectedIdAddRequestDTO addReq = CodefConnectedIdAddRequestDTO.builder()
                     .connectedId(existingConnectedId)
                     .accountList(Collections.singletonList(accountItem))
@@ -81,8 +102,8 @@ public class OnboardingServiceImpl implements OnboardingService {
             actionType = "ADDED";
         }
 
-        // 2. 계정 등록/추가 성공 시 입력받은 계정 정보(국민은행 등) 1개만 account 또는 card DB 테이블에 저장
-        saveRegisteredAccountOrCard(userId, businessType, organization, companyName, accountItem.getId());
+        // 2. 계정 등록/추가 성공 시 입력받은 계정 정보 1개만 account 또는 card DB 테이블에 저장
+        saveRegisteredAccountOrCard(userId, businessType, organization, companyName, loginId);
 
         return OnboardingRegisterResponseDTO.builder()
                 .connectedId(finalConnectedId)
@@ -129,28 +150,31 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Override
     public OnboardingQueryResponseDTO getAccountsOrCards(Long userId, OnboardingQueryRequestDTO requestDTO) {
-        String connectedId = requestDTO.getConnectedId();
-        if (!StringUtils.hasText(connectedId)) {
-            connectedId = onboardingMapper.findConnectedIdByUserId(userId);
-        }
+        String inputCompany = requestDTO.getCompany();
+        CodefInstitution inst = CodefInstitution.findByCompany(inputCompany);
+        String businessType = inst.getBusinessType();
+        String organization = inst.getOrganizationCode();
+        String companyName = inst.getOfficialName();
+
+        String connectedId = onboardingMapper.findConnectedIdByUserId(userId);
         if (!StringUtils.hasText(connectedId)) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "등록된 Connected ID가 없습니다. 먼저 계좌 또는 카드를 등록해주세요.");
         }
 
         Object resultData;
-        if ("BK".equalsIgnoreCase(requestDTO.getBusinessType())) {
-            log.info("사용자 [{}] 은행 계좌 목록 조회 요청 - connectedId: {}, org: {}", userId, connectedId, requestDTO.getOrganization());
+        if ("BK".equalsIgnoreCase(businessType)) {
+            log.info("사용자 [{}] 은행 계좌 목록 조회 요청 - company: {}, connectedId: {}, org: {}", userId, companyName, connectedId, organization);
             CodefAccountListRequestDTO req = CodefAccountListRequestDTO.builder()
                     .connectedId(connectedId)
-                    .organization(requestDTO.getOrganization())
+                    .organization(organization)
                     .build();
             CodefApiResponseDTO<Object> codefRes = codefService.getAccountList(req);
             resultData = codefRes.getData() != null ? codefRes.getData() : codefRes.getResult();
         } else {
-            log.info("사용자 [{}] 보유 카드 목록 조회 요청 - connectedId: {}, org: {}", userId, connectedId, requestDTO.getOrganization());
+            log.info("사용자 [{}] 보유 카드 목록 조회 요청 - company: {}, connectedId: {}, org: {}", userId, companyName, connectedId, organization);
             CodefCardListRequestDTO req = CodefCardListRequestDTO.builder()
                     .connectedId(connectedId)
-                    .organization(requestDTO.getOrganization())
+                    .organization(organization)
                     .build();
             CodefApiResponseDTO<Object> codefRes = codefService.getCardList(req);
             resultData = codefRes.getData() != null ? codefRes.getData() : codefRes.getResult();
@@ -158,8 +182,8 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         return OnboardingQueryResponseDTO.builder()
                 .connectedId(connectedId)
-                .businessType(requestDTO.getBusinessType())
-                .organization(requestDTO.getOrganization())
+                .businessType(businessType)
+                .organization(organization)
                 .itemList(resultData)
                 .build();
     }
@@ -167,6 +191,12 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingSelectResponseDTO selectAccountsOrCards(Long userId, OnboardingSelectRequestDTO requestDTO) {
+        String inputCompany = requestDTO.getCompany();
+        CodefInstitution inst = CodefInstitution.findByCompany(inputCompany);
+        String businessType = inst.getBusinessType();
+        String organization = inst.getOrganizationCode();
+        String companyName = inst.getOfficialName();
+
         String connectedId = onboardingMapper.findConnectedIdByUserId(userId);
         if (!StringUtils.hasText(connectedId)) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "등록된 Connected ID가 없습니다. 먼저 계좌 또는 카드를 등록해주세요.");
@@ -179,12 +209,11 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         int totalSaved = 0;
         List<String> processedNumbers = new ArrayList<>();
-        String companyName = resolveCompanyName(requestDTO.getOrganization(), requestDTO.getBusinessType());
 
         for (String numberStr : requestDTO.getSelectedNumbers()) {
             Long parsedNum = parseNumber(numberStr);
 
-            if ("BK".equalsIgnoreCase(requestDTO.getBusinessType())) {
+            if ("BK".equalsIgnoreCase(businessType)) {
                 // 기존 계좌 DB 레코드 조회 (number, account_id, 또는 company 매칭)
                 Long accountId = onboardingMapper.findAccountIdByUserAndNumber(userId, parsedNum, numberStr, companyName);
                 if (accountId == null) {
@@ -194,7 +223,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                 // CODEF 은행 계좌 거래내역 조회
                 Map<String, Object> paramMap = new HashMap<>();
                 paramMap.put("connectedId", connectedId);
-                paramMap.put("organization", requestDTO.getOrganization());
+                paramMap.put("organization", organization);
                 paramMap.put("account", numberStr);
                 paramMap.put("startDate", startDate);
                 paramMap.put("endDate", endDate);
@@ -230,7 +259,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                 // CODEF 카드 승인 내역 조회
                 Map<String, Object> paramMap = new HashMap<>();
                 paramMap.put("connectedId", connectedId);
-                paramMap.put("organization", requestDTO.getOrganization());
+                paramMap.put("organization", organization);
                 paramMap.put("startDate", startDate);
                 paramMap.put("endDate", endDate);
                 paramMap.put("inquireType", "1");
@@ -258,111 +287,11 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         return OnboardingSelectResponseDTO.builder()
-                .businessType(requestDTO.getBusinessType())
-                .organization(requestDTO.getOrganization())
+                .businessType(businessType)
+                .organization(organization)
                 .totalSavedRecords(totalSaved)
                 .processedNumbers(processedNumbers)
                 .build();
-    }
-
-    private int saveAccountRecords(Long accountId, Object dataObj) {
-        if (accountId == null || dataObj == null) return 0;
-        List<Map<String, Object>> itemList = extractListFromData(dataObj);
-        if (itemList.isEmpty()) {
-            log.info("CODEF 계좌 거래내역이 비어있습니다 (accountId: {})", accountId);
-            return 0;
-        }
-
-        int saved = 0;
-        for (Map<String, Object> item : itemList) {
-            String trDateRaw = String.valueOf(item.getOrDefault("resAccountTrDate",
-                    item.getOrDefault("resTrDate", item.getOrDefault("resUsedDate", ""))));
-            String trDate = formatDate(trDateRaw);
-            long outAmt = parseLong(item.get("resAccountOut"));
-            long inAmt = parseLong(item.get("resAccountIn"));
-            long amount = outAmt > 0 ? outAmt : (inAmt > 0 ? inAmt : parseLong(item.get("resAccountAmt")));
-
-            String type = outAmt > 0 ? "EXPENSE" : (inAmt > 0 ? "INCOME" : "EXPENSE");
-            String title = String.valueOf(item.getOrDefault("resAccountDesc1",
-                    item.getOrDefault("resAccountDesc3", item.getOrDefault("resAccountDesc2", item.getOrDefault("resAccountOut", item.getOrDefault("resAccountIn", "은행 거래"))))));
-            String memo = String.valueOf(item.getOrDefault("resAccountDesc2", item.getOrDefault("resAccountDesc4", "")));
-
-            Map<String, Object> recordParams = new HashMap<>();
-            recordParams.put("accountId", accountId);
-            recordParams.put("type", type);
-            recordParams.put("category", "개인소비");
-            recordParams.put("title", title.length() > 100 ? title.substring(0, 100) : title);
-            recordParams.put("amount", amount);
-            recordParams.put("recordDate", trDate);
-            recordParams.put("memo", memo);
-
-            onboardingMapper.insertAccountRecord(recordParams);
-            saved++;
-        }
-        return saved;
-    }
-
-    private int saveCardRecords(Long cardId, Object dataObj) {
-        if (cardId == null || dataObj == null) return 0;
-        List<Map<String, Object>> itemList = extractListFromData(dataObj);
-        if (itemList.isEmpty()) {
-            log.info("CODEF 카드 승인내역이 비어있습니다 (cardId: {})", cardId);
-            return 0;
-        }
-
-        int saved = 0;
-        for (Map<String, Object> item : itemList) {
-            String trDateRaw = String.valueOf(item.getOrDefault("resUsedDate",
-                    item.getOrDefault("resAccountTrDate", "")));
-            String trDate = formatDate(trDateRaw);
-            long amount = parseLong(item.get("resUsedAmount"));
-            if (amount <= 0) {
-                amount = parseLong(item.get("resApprovalAmt"));
-            }
-            String title = String.valueOf(item.getOrDefault("resMemberStoreName", "카드 결제"));
-            String memo = String.valueOf(item.getOrDefault("resApprovalNo", ""));
-
-            Map<String, Object> recordParams = new HashMap<>();
-            recordParams.put("cardId", cardId);
-            recordParams.put("type", "EXPENSE");
-            recordParams.put("category", "개인소비");
-            recordParams.put("title", title.length() > 100 ? title.substring(0, 100) : title);
-            recordParams.put("amount", amount);
-            recordParams.put("recordDate", trDate);
-            recordParams.put("memo", memo);
-
-            onboardingMapper.insertCardRecord(recordParams);
-            saved++;
-        }
-        return saved;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> extractListFromData(Object dataObj) {
-        if (dataObj == null) return Collections.emptyList();
-        if (dataObj instanceof List) {
-            return (List<Map<String, Object>>) dataObj;
-        } else if (dataObj instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) dataObj;
-            if (map.containsKey("resTrList") && map.get("resTrList") instanceof List) {
-                return (List<Map<String, Object>>) map.get("resTrList");
-            }
-            if (map.containsKey("resAccountTrList") && map.get("resAccountTrList") instanceof List) {
-                return (List<Map<String, Object>>) map.get("resAccountTrList");
-            }
-            if (map.containsKey("resApprovalList") && map.get("resApprovalList") instanceof List) {
-                return (List<Map<String, Object>>) map.get("resApprovalList");
-            }
-            if (map.containsKey("resCardApprovalList") && map.get("resCardApprovalList") instanceof List) {
-                return (List<Map<String, Object>>) map.get("resCardApprovalList");
-            }
-            for (Object val : map.values()) {
-                if (val instanceof List) {
-                    return (List<Map<String, Object>>) val;
-                }
-            }
-        }
-        return Collections.emptyList();
     }
 
     private String extractConnectedIdFromResponse(CodefApiResponseDTO<Object> responseDTO) {
@@ -386,6 +315,114 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 계정 연동 응답에서 Connected ID를 추출하지 못했습니다.");
+    }
+
+    private int saveAccountRecords(Long accountId, Object dataObj) {
+        if (dataObj == null) return 0;
+        List<Map<String, Object>> trList = extractListFromData(dataObj);
+        if (trList.isEmpty()) return 0;
+
+        int count = 0;
+        for (Map<String, Object> tr : trList) {
+            String dateRaw = String.valueOf(tr.getOrDefault("resAccountTrDate", tr.getOrDefault("resTrDate", "")));
+            String trDateStr = formatDate(dateRaw);
+
+            long outAmt = parseLong(tr.get("resAccountOut"));
+            long inAmt = parseLong(tr.get("resAccountIn"));
+
+            String type;
+            long amount;
+            if (outAmt > 0) {
+                type = "EXPENSE";
+                amount = outAmt;
+            } else if (inAmt > 0) {
+                type = "INCOME";
+                amount = inAmt;
+            } else {
+                long rawAmt = parseLong(tr.get("resAccountTrAmount"));
+                if (rawAmt < 0) {
+                    type = "EXPENSE";
+                    amount = Math.abs(rawAmt);
+                } else {
+                    type = "INCOME";
+                    amount = Math.abs(rawAmt);
+                }
+            }
+
+            String desc1 = String.valueOf(tr.getOrDefault("resAccountDesc1", ""));
+            String desc2 = String.valueOf(tr.getOrDefault("resAccountDesc2", ""));
+            String desc3 = String.valueOf(tr.getOrDefault("resAccountDesc3", ""));
+
+            String title = StringUtils.hasText(desc1) && !"null".equalsIgnoreCase(desc1) ? desc1 :
+                    (StringUtils.hasText(desc2) && !"null".equalsIgnoreCase(desc2) ? desc2 : "계좌 거래");
+            if (title.length() > 100) title = title.substring(0, 100);
+
+            String category = "개인소비";
+            String memo = StringUtils.hasText(desc3) && !"null".equalsIgnoreCase(desc3) ? desc3 : null;
+
+            Map<String, Object> recordParams = new HashMap<>();
+            recordParams.put("accountId", accountId);
+            recordParams.put("type", type);
+            recordParams.put("category", category);
+            recordParams.put("title", title);
+            recordParams.put("amount", amount);
+            recordParams.put("recordDate", trDateStr);
+            recordParams.put("memo", memo);
+
+            onboardingMapper.insertAccountRecord(recordParams);
+            count++;
+        }
+        return count;
+    }
+
+    private int saveCardRecords(Long cardId, Object dataObj) {
+        if (dataObj == null) return 0;
+        List<Map<String, Object>> trList = extractListFromData(dataObj);
+        if (trList.isEmpty()) return 0;
+
+        int count = 0;
+        for (Map<String, Object> tr : trList) {
+            String dateRaw = String.valueOf(tr.getOrDefault("resUsedDate", tr.getOrDefault("resApprovedDate", "")));
+            String trDateStr = formatDate(dateRaw);
+
+            long rawAmt = parseLong(tr.getOrDefault("resUsedAmount", tr.getOrDefault("resApprovedAmount", "0")));
+            String type = rawAmt < 0 ? "INCOME" : "EXPENSE";
+            long amount = Math.abs(rawAmt);
+
+            String storeName = String.valueOf(tr.getOrDefault("resMemberStoreName", tr.getOrDefault("resStoreName", "카드 지출")));
+            String title = StringUtils.hasText(storeName) && !"null".equalsIgnoreCase(storeName) ? storeName : "카드 지출";
+            if (title.length() > 100) title = title.substring(0, 100);
+
+            String category = "개인소비";
+
+            Map<String, Object> recordParams = new HashMap<>();
+            recordParams.put("cardId", cardId);
+            recordParams.put("type", type);
+            recordParams.put("category", category);
+            recordParams.put("title", title);
+            recordParams.put("amount", amount);
+            recordParams.put("recordDate", trDateStr);
+            recordParams.put("memo", null);
+
+            onboardingMapper.insertCardRecord(recordParams);
+            count++;
+        }
+        return count;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractListFromData(Object dataObj) {
+        if (dataObj instanceof List) {
+            return (List<Map<String, Object>>) dataObj;
+        } else if (dataObj instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) dataObj;
+            for (Object val : map.values()) {
+                if (val instanceof List) {
+                    return (List<Map<String, Object>>) val;
+                }
+            }
+        }
+        return Collections.emptyList();
     }
 
     private String formatDate(String dateRaw) {
@@ -412,54 +449,12 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     private long parseLong(Object obj) {
         if (obj == null) return 0L;
-        String str = String.valueOf(obj).replaceAll("[^0-9]", "");
+        String str = String.valueOf(obj).replaceAll("[^0-9-]", "");
         if (str.isEmpty()) return 0L;
         try {
             return Long.parseLong(str);
         } catch (NumberFormatException e) {
             return 0L;
-        }
-    }
-
-    private String resolveCompanyName(String org, String businessType) {
-        if (!StringUtils.hasText(org)) return "BK".equalsIgnoreCase(businessType) ? "은행" : "카드사";
-        switch (org) {
-            case "0004":
-                return "KB국민은행";
-            case "0088":
-                return "신한은행";
-            case "0020":
-                return "우리은행";
-            case "0081":
-                return "하나은행";
-            case "0011":
-                return "NH농협은행";
-            case "0003":
-                return "IBK기업은행";
-            case "0090":
-                return "카카오뱅크";
-            case "0089":
-                return "케이뱅크";
-            case "0092":
-                return "토스뱅크";
-            case "0301":
-                return "KB국민카드";
-            case "0306":
-                return "신한카드";
-            case "0302":
-                return "삼성카드";
-            case "0303":
-                return "현대카드";
-            case "0304":
-                return "롯데카드";
-            case "0313":
-                return "우리카드";
-            case "0314":
-                return "하나카드";
-            case "0311":
-                return "NH농협카드";
-            default:
-                return "BK".equalsIgnoreCase(businessType) ? "은행(" + org + ")" : "카드사(" + org + ")";
         }
     }
 

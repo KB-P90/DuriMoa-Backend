@@ -1,6 +1,5 @@
 package com.project.domain.onboarding;
 
-import com.project.domain.codef.dto.CodefAccountItemDTO;
 import com.project.domain.codef.dto.CodefApiResponseDTO;
 import com.project.domain.codef.service.CodefService;
 import com.project.domain.onboarding.dto.OnboardingQueryRequestDTO;
@@ -50,18 +49,10 @@ class OnboardingServiceTest {
     void registerOrAddAccount_CreatesNewConnectedId_WhenNotExists() {
         // given
         Long userId = 1L;
-        CodefAccountItemDTO item = CodefAccountItemDTO.builder()
-                .countryCode("KR")
-                .businessType("BK")
-                .clientType("P")
-                .organization("0004")
-                .loginType("1")
+        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
+                .company("KB국민은행")
                 .id("test_user_id")
                 .password("password123!")
-                .build();
-
-        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
-                .accountItem(item)
                 .build();
 
         when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn(null);
@@ -89,18 +80,10 @@ class OnboardingServiceTest {
     void registerOrAddAccount_AddsAccount_WhenConnectedIdExists() {
         // given
         Long userId = 1L;
-        CodefAccountItemDTO item = CodefAccountItemDTO.builder()
-                .countryCode("KR")
-                .businessType("CD")
-                .clientType("P")
-                .organization("0301")
-                .loginType("1")
+        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
+                .company("KB국민카드")
                 .id("test_user_id")
                 .password("password123!")
-                .build();
-
-        OnboardingRegisterRequestDTO requestDTO = OnboardingRegisterRequestDTO.builder()
-                .accountItem(item)
                 .build();
 
         when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("existing_connected_id");
@@ -122,15 +105,14 @@ class OnboardingServiceTest {
         // given
         Long userId = 1L;
         OnboardingQueryRequestDTO requestDTO = OnboardingQueryRequestDTO.builder()
-                .businessType("BK")
-                .organization("0004")
-                .connectedId("demo_connected_id")
+                .company("KB국민은행")
                 .build();
 
         CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
                 .data(Collections.singletonList(Collections.singletonMap("resAccount", "1234567890")))
                 .build();
 
+        when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("demo_connected_id");
         when(codefService.getAccountList(any())).thenReturn(codefRes);
 
         // when
@@ -149,8 +131,7 @@ class OnboardingServiceTest {
         // given
         Long userId = 1L;
         OnboardingSelectRequestDTO requestDTO = OnboardingSelectRequestDTO.builder()
-                .businessType("BK")
-                .organization("0004")
+                .company("KB국민은행")
                 .selectedNumbers(Collections.singletonList("12345678901234"))
                 .startDate("20260701")
                 .endDate("20260731")

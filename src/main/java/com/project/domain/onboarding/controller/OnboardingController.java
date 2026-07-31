@@ -28,60 +28,60 @@ import javax.validation.Valid;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/onboarding")
-@Api(tags = "Onboarding", description = "온보딩 계좌/카드 연동 및 거래내역 저장 API")
+@Api(tags = "Onboarding", description = "온보딩 API")
 public class OnboardingController {
 
     private final OnboardingService onboardingService;
 
     @ApiOperation(
             value = "계좌/카드 등록 및 추가 API",
-            notes = "입력받은 은행 또는 카드 계정 정보를 바탕으로, 사용자의 커넥티드 ID 존재 여부를 확인합니다.\n" +
+            notes = "입력받은 금융기관 이름(KB국민은행, KB국민카드 등)과 아이디/비밀번호를 바탕으로 기관 코드와 규격을 자동 매핑하여 CODEF 계정 연동을 진행합니다.\n" +
                     "- 커넥티드 ID 미존재 시: CODEF 계정 등록 API(/v1/account/create) 호출\n" +
                     "- 커넥티드 ID 존재 시: CODEF 계정 추가 API(/v1/account/add) 호출\n" +
-                    "등록/추가 완료 후 커넥티드 ID 및 등록된 금융기관 정보를 반환합니다."
+                    "등록 완료 후 커넥티드 ID 및 금융기관 정보 1건을 반환 및 DB에 저장합니다."
     )
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<OnboardingRegisterResponseDTO>> registerOrAddAccount(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody OnboardingRegisterRequestDTO requestDTO) {
-        Long authenticatedUserId = resolveUserId(userId);
-        log.info("온보딩 계좌/카드 등록 및 추가 요청 수신 - userId: {}", authenticatedUserId);
-        OnboardingRegisterResponseDTO response = onboardingService.registerOrAddAccount(authenticatedUserId, requestDTO);
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        }
+        log.info("온보딩 계좌/카드 등록 요청 수신 - userId: {}, company: {}", userId, requestDTO.getCompany());
+        OnboardingRegisterResponseDTO response = onboardingService.registerOrAddAccount(userId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("계정 등록/추가 성공", response));
     }
 
     @ApiOperation(
             value = "계좌/카드 목록 조회 API",
-            notes = "입력받은 은행/카드 업무 구분(BK, CD) 및 기관 코드(organization)와 사용자의 커넥티드 ID를 바탕으로 특정 기관의 보유 계좌 번호 또는 카드 목록을 조회하여 반환합니다."
+            notes = "입력받은 금융기관 이름(KB국민은행, KB국민카드 등)만 전달받아 백엔드에서 사용자 커넥티드 ID 및 기관 코드를 자동 매핑하여 보유 계좌/카드 목록을 조회합니다."
     )
     @PostMapping("/accounts")
     public ResponseEntity<ApiResponse<OnboardingQueryResponseDTO>> getAccountsOrCards(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody OnboardingQueryRequestDTO requestDTO) {
-        Long authenticatedUserId = resolveUserId(userId);
-        log.info("온보딩 계좌/카드 목록 조회 요청 수신 - userId: {}, org: {}", authenticatedUserId, requestDTO.getOrganization());
-        OnboardingQueryResponseDTO response = onboardingService.getAccountsOrCards(authenticatedUserId, requestDTO);
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        }
+        log.info("온보딩 계좌/카드 목록 조회 요청 수신 - userId: {}, company: {}", userId, requestDTO.getCompany());
+        OnboardingQueryResponseDTO response = onboardingService.getAccountsOrCards(userId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("특정 기관 계좌/카드 목록 조회 성공", response));
     }
 
     @ApiOperation(
             value = "계좌/카드 선택 API",
-            notes = "사용자가 선택한 특정 기관의 일부 계좌 번호 또는 카드 번호 목록을 입력받아, 해당 계좌/카드의 최근 거래 내역(승인 내역)만 수집하여 DB(account_record 또는 card_record)에 저장합니다."
+            notes = "사용자가 선택한 금융기관 이름과 계좌/카드 번호 목록을 전달받아, 사용자 커넥티드 ID로 거래 내역을 수집하고 DB에 저장합니다."
     )
     @PostMapping("/select")
     public ResponseEntity<ApiResponse<OnboardingSelectResponseDTO>> selectAccountsOrCards(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody OnboardingSelectRequestDTO requestDTO) {
-        Long authenticatedUserId = resolveUserId(userId);
-        log.info("온보딩 선택 계좌 거래 내역 동기화 요청 수신 - userId: {}, selectedNumbers: {}", authenticatedUserId, requestDTO.getSelectedNumbers());
-        OnboardingSelectResponseDTO response = onboardingService.selectAccountsOrCards(authenticatedUserId, requestDTO);
-        return ResponseEntity.ok(ApiResponse.success("선택 계좌 거래 내역 저장 완료", response));
-    }
-
-    private Long resolveUserId(Long userId) {
-        if (userId != null && userId > 0) {
-            return userId;
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
         }
-        throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        log.info("온보딩 선택 계좌 거래 내역 동기화 요청 수신 - userId: {}, company: {}, selectedNumbers: {}",
+                userId, requestDTO.getCompany(), requestDTO.getSelectedNumbers());
+        OnboardingSelectResponseDTO response = onboardingService.selectAccountsOrCards(userId, requestDTO);
+        return ResponseEntity.ok(ApiResponse.success("선택 계좌 거래 내역 저장 완료", response));
     }
 }
