@@ -18,5 +18,6 @@ Thumbs.db
 *.log
 logs/
 
-# DB
+# Properties / Config
 database.properties
+codef.properties

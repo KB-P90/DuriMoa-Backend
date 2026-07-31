@@ -1,0 +1,8 @@
+# CODEF API Configuration Template
+codef.client-id=YOUR_CODEF_CLIENT_ID
+codef.client-secret=YOUR_CODEF_CLIENT_SECRET
+codef.public-key=YOUR_CODEF_PUBLIC_KEY
+codef.oauth-url=https://oauth.codef.io/oauth/token
+codef.demo-url=https://development.codef.io
+codef.product-url=https://product.codef.io
+codef.service-type=DEMO
