@@ -50,6 +50,9 @@ class GoalServiceImplTest {
 
         assertEquals(100L, response.getGoalId());
         assertEquals("NORMAL", response.getStatus());
+        assertEquals(35_000_000L, response.getTotalBudget());
+        assertEquals(2, response.getItems().size());
+        assertEquals(false, response.getItems().get(0).getCompleted());
         ArgumentCaptor<GoalVO> goalCaptor = ArgumentCaptor.forClass(GoalVO.class);
         verify(goalMapper).insertGoal(goalCaptor.capture());
         assertEquals(10L, goalCaptor.getValue().getCoupleId());
@@ -86,7 +89,6 @@ class GoalServiceImplTest {
                 .name("결혼 예산")
                 .weddingDate(LocalDate.of(2099, 10, 9))
                 .region("서울(강남)")
-                .totalBudget(35_000_000L)
                 .groomRatio(60L)
                 .brideRatio(30L)
                 .items(validItems())
@@ -111,7 +113,6 @@ class GoalServiceImplTest {
                 .name("결혼 예산")
                 .weddingDate(LocalDate.of(2099, 10, 9))
                 .region("서울(강남)")
-                .totalBudget(35_000_000L)
                 .groomRatio(50L)
                 .brideRatio(50L)
                 .items(List.of(item("예식장", 18_000_000L, true), duplicate))
@@ -127,7 +128,7 @@ class GoalServiceImplTest {
     }
 
     @Test
-    void createGoalRejectsBudgetDifferentFromIncludedItemSum() {
+    void createGoalExcludesNonIncludedItemFromCalculatedBudget() {
         GoalMapper goalMapper = mock(GoalMapper.class);
         CoupleService coupleService = mock(CoupleService.class);
         GoalService service = new GoalServiceImpl(goalMapper, coupleService);
@@ -135,19 +136,28 @@ class GoalServiceImplTest {
                 .name("결혼 예산")
                 .weddingDate(LocalDate.of(2099, 10, 9))
                 .region("서울(강남)")
-                .totalBudget(40_000_000L)
                 .groomRatio(50L)
                 .brideRatio(50L)
-                .items(validItems())
+                .items(List.of(
+                        item("예식장", 18_000_000L, true),
+                        item("스튜디오", 40_000_000L, false)
+                ))
                 .build();
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
+            GoalVO goal = invocation.getArgument(0);
+            goal.setId(100L);
+            return 1;
+        });
+        when(goalMapper.insertGoalItems(eq(100L), anyList())).thenReturn(2);
 
-        CustomException exception = assertThrows(
-                CustomException.class,
-                () -> service.createGoal(1L, request)
-        );
+        GoalCreateResponseDTO response = service.createGoal(1L, request);
 
-        assertEquals(ErrorCode.INVALID_INPUT_VALUE, exception.getErrorCode());
-        verify(goalMapper, never()).insertGoal(any());
+        assertEquals(18_000_000L, response.getTotalBudget());
+        ArgumentCaptor<GoalVO> goalCaptor = ArgumentCaptor.forClass(GoalVO.class);
+        verify(goalMapper).insertGoal(goalCaptor.capture());
+        assertEquals(18_000_000L, goalCaptor.getValue().getTotalBudget());
     }
 
     @Test
@@ -159,7 +169,6 @@ class GoalServiceImplTest {
                 .name("결혼 예산")
                 .weddingDate(LocalDate.of(2020, 1, 1))
                 .region("서울(강남)")
-                .totalBudget(35_000_000L)
                 .groomRatio(50L)
                 .brideRatio(50L)
                 .items(validItems())
@@ -224,7 +233,6 @@ class GoalServiceImplTest {
                 .name("균형형 결혼 예산")
                 .weddingDate(LocalDate.of(2099, 10, 9))
                 .region("서울(강남)")
-                .totalBudget(35_000_000L)
                 .groomRatio(50L)
                 .brideRatio(50L)
                 .items(validItems())

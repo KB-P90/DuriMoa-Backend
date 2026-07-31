@@ -11,6 +11,7 @@ import com.project.domain.goal.domain.GoalStatus;
 import com.project.domain.goal.domain.GoalVO;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
+import com.project.domain.goal.dto.GoalCreateItemResponseDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
@@ -50,14 +51,14 @@ public class GoalServiceImpl implements GoalService {
     @Transactional
     public GoalCreateResponseDTO createGoal(
             Long authenticatedUserId,
-            GoalCreateRequestDTO request
+        GoalCreateRequestDTO request
     ) {
         validateAuthenticatedUser(authenticatedUserId);
-        validateRequest(request);
+        Long totalBudget = validateRequest(request);
         CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
 
         LocalDateTime createdAt = LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
-        GoalVO goal = buildGoal(couple.getId(), request, createdAt);
+        GoalVO goal = buildGoal(couple.getId(), request, totalBudget, createdAt);
         Integer insertedGoalCount = goalMapper.insertGoal(goal);
         if (insertedGoalCount == null || insertedGoalCount != 1 || goal.getId() == null) {
             throw new CustomException(
@@ -79,8 +80,17 @@ public class GoalServiceImpl implements GoalService {
 
         return GoalCreateResponseDTO.builder()
                 .goalId(goal.getId())
+                .name(goal.getName())
+                .weddingDate(goal.getWeddingDate())
+                .region(goal.getRegion())
+                .totalBudget(goal.getTotalBudget())
+                .groomRatio(goal.getGroomRatio())
+                .brideRatio(goal.getBrideRatio())
                 .status(GoalStatus.NORMAL.name())
                 .createdAt(createdAt)
+                .items(request.getItems().stream()
+                        .map(GoalCreateItemResponseDTO::from)
+                        .collect(Collectors.toList()))
                 .build();
     }
 
@@ -121,7 +131,7 @@ public class GoalServiceImpl implements GoalService {
         }
     }
 
-    private void validateRequest(GoalCreateRequestDTO request) {
+    private Long validateRequest(GoalCreateRequestDTO request) {
         if (request == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "요청 정보가 필요합니다.");
         }
@@ -129,7 +139,7 @@ public class GoalServiceImpl implements GoalService {
         validateText(request.getRegion(), 50, "결혼식 지역");
         validateWeddingDate(request.getWeddingDate());
         validateRatios(request.getGroomRatio(), request.getBrideRatio());
-        validateItems(request.getItems(), request.getTotalBudget());
+        return calculateTotalBudget(request.getItems());
     }
 
     private void validateText(String value, Integer maxLength, String fieldName) {
@@ -168,7 +178,7 @@ public class GoalServiceImpl implements GoalService {
         }
     }
 
-    private void validateItems(List<GoalItemCreateRequestDTO> items, Long totalBudget) {
+    private Long calculateTotalBudget(List<GoalItemCreateRequestDTO> items) {
         if (items == null || items.isEmpty()) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT_VALUE,
@@ -197,12 +207,7 @@ public class GoalServiceImpl implements GoalService {
                 }
             }
         }
-        if (totalBudget == null || totalBudget < 0 || !totalBudget.equals(includedAmountSum)) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT_VALUE,
-                    "총예산은 예산에 포함된 목표 항목 금액의 합계와 같아야 합니다."
-            );
-        }
+        return includedAmountSum;
     }
 
     private void validateItem(GoalItemCreateRequestDTO item) {
@@ -236,13 +241,18 @@ public class GoalServiceImpl implements GoalService {
         }
     }
 
-    private GoalVO buildGoal(Long coupleId, GoalCreateRequestDTO request, LocalDateTime createdAt) {
+    private GoalVO buildGoal(
+            Long coupleId,
+            GoalCreateRequestDTO request,
+            Long totalBudget,
+            LocalDateTime createdAt
+    ) {
         return GoalVO.builder()
                 .coupleId(coupleId)
                 .name(request.getName().trim())
                 .weddingDate(request.getWeddingDate())
                 .region(request.getRegion().trim())
-                .totalBudget(request.getTotalBudget())
+                .totalBudget(totalBudget)
                 .groomRatio(request.getGroomRatio())
                 .brideRatio(request.getBrideRatio())
                 .createdAt(createdAt)

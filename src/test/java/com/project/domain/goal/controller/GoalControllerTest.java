@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.domain.goal.dto.GoalCreateItemResponseDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
@@ -65,8 +66,21 @@ class GoalControllerTest {
         when(goalService.createGoal(eq(1L), any()))
                 .thenReturn(GoalCreateResponseDTO.builder()
                         .goalId(100L)
+                        .name("균형형 결혼 예산")
+                        .weddingDate(LocalDate.of(2099, 10, 9))
+                        .region("서울(강남)")
+                        .totalBudget(35_000_000L)
+                        .groomRatio(50L)
+                        .brideRatio(50L)
                         .status("NORMAL")
                         .createdAt(LocalDateTime.of(2026, 7, 30, 10, 30))
+                        .items(List.of(GoalCreateItemResponseDTO.builder()
+                                .category("예식장")
+                                .targetAmount(35_000_000L)
+                                .included(true)
+                                .completed(false)
+                                .type("균형형")
+                                .build()))
                         .build());
 
         MvcResult result = mockMvc.perform(post("/api/goal")
@@ -79,8 +93,11 @@ class GoalControllerTest {
         assertTrue(response.get("success").asBoolean());
         assertEquals("결혼 목표가 저장되었습니다.", response.get("message").asText());
         assertEquals(100L, response.at("/data/goalId").asLong());
+        assertEquals("균형형 결혼 예산", response.at("/data/name").asText());
+        assertEquals(35_000_000L, response.at("/data/totalBudget").asLong());
         assertEquals("NORMAL", response.at("/data/status").asText());
         assertEquals("2026-07-30 10:30:00", response.at("/data/createdAt").asText());
+        assertEquals(false, response.at("/data/items/0/completed").asBoolean());
         verify(goalService).createGoal(eq(1L), any());
     }
 
@@ -171,7 +188,6 @@ class GoalControllerTest {
                 + "\"name\":\"균형형 결혼 예산\","
                 + "\"weddingDate\":\"2099-10-09\","
                 + "\"region\":\"서울(강남)\","
-                + "\"totalBudget\":35000000,"
                 + "\"groomRatio\":50,"
                 + "\"brideRatio\":50,"
                 + "\"items\":[{"

@@ -12,7 +12,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.PositiveOrZero;
 import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,11 +40,6 @@ public class GoalCreateRequestDTO {
     @Size(max = 50, message = "결혼식 지역은 50자 이하여야 합니다.")
     @ApiModelProperty(value = "결혼식 지역", example = "서울(강남)", required = true)
     private String region;
-
-    @NotNull(message = "총예산은 필수입니다.")
-    @PositiveOrZero(message = "총예산은 0 이상이어야 합니다.")
-    @ApiModelProperty(value = "총예산", example = "35000000", required = true)
-    private Long totalBudget;
 
     @NotNull(message = "신랑 분담 비율은 필수입니다.")
     @Min(value = 0, message = "신랑 분담 비율은 0 이상이어야 합니다.")
