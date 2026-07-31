@@ -3,16 +3,7 @@ package com.project.domain.codef.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.config.CodefConfig;
-import com.project.domain.codef.dto.CodefAccountListRequestDTO;
-import com.project.domain.codef.dto.CodefApiResponseDTO;
-import com.project.domain.codef.dto.CodefCardListRequestDTO;
-import com.project.domain.codef.dto.CodefConnectedIdRequestDTO;
-import com.project.domain.codef.dto.CodefPasswordEncryptRequestDTO;
-import com.project.domain.codef.dto.CodefPasswordEncryptResponseDTO;
-import com.project.domain.codef.dto.CodefProductRequestDTO;
-import com.project.domain.codef.dto.CodefResultDTO;
-import com.project.domain.codef.dto.CodefTokenRequestDTO;
-import com.project.domain.codef.dto.CodefTokenResponseDTO;
+import com.project.domain.codef.dto.*;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -182,20 +173,17 @@ public class CodefServiceImpl implements CodefService {
         return executeProductRequest("/v1/account/connectedId-list", codefConfig.getServiceType(), new HashMap<>());
     }
 
-    private void encryptAccountListPasswords(List<Map<String, Object>> accountList) {
+    private void encryptAccountListPasswords(List<CodefAccountItemDTO> accountList) {
         if (accountList == null || accountList.isEmpty()) {
             return;
         }
         String publicKeyPem = codefConfig.getPublicKey();
-        for (Map<String, Object> account : accountList) {
-            Object pwObj = account.get("password");
-            if (pwObj != null) {
-                String passwordStr = String.valueOf(pwObj);
-                if (StringUtils.hasText(passwordStr) && passwordStr.length() < 100) {
-                    log.info("계정 목록 내 평문 비밀번호 자동 RSA 암호화 수행");
-                    String encryptedPw = encryptRsaPassword(passwordStr, publicKeyPem);
-                    account.put("password", encryptedPw);
-                }
+        for (CodefAccountItemDTO account : accountList) {
+            String passwordStr = account.getPassword();
+            if (StringUtils.hasText(passwordStr) && passwordStr.length() < 100) {
+                log.info("계정 목록 내 평문 비밀번호 자동 RSA 암호화 수행");
+                String encryptedPw = encryptRsaPassword(passwordStr, publicKeyPem);
+                account.setPassword(encryptedPw);
             }
         }
     }

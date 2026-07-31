@@ -8,10 +8,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import java.util.List;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -26,6 +26,7 @@ public class CodefConnectedIdUpdateRequestDTO {
     private String connectedId;
 
     @NotEmpty(message = "수정할 계정 정보 목록은 필수입니다.")
+    @Valid
     @ApiModelProperty(value = "수정할 금융기관 계정 정보 목록", required = true)
-    private List<Map<String, Object>> accountList;
+    private List<CodefAccountItemDTO> accountList;
 }
