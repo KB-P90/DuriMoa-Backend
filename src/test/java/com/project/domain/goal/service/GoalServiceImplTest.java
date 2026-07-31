@@ -18,8 +18,10 @@ import com.project.domain.goal.domain.GoalItemVO;
 import com.project.domain.goal.domain.GoalVO;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
+import com.project.domain.goal.dto.GoalDecisionRequestDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
+import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -226,6 +228,143 @@ class GoalServiceImplTest {
 
         assertEquals(Collections.emptyList(), response);
         verify(goalMapper, never()).selectGoalItemsByGoalIds(anyList());
+    }
+
+    @Test
+    void requestMainGoalChangesNormalGoalToPending() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L))
+                .thenReturn(List.of(goal(1L, "일반 예산", "NORMAL", false)));
+        when(goalMapper.updateGoalRequest(eq(1L), eq(1L), any(LocalDateTime.class)))
+                .thenReturn(1);
+
+        GoalStatusUpdateResponseDTO response = service.requestMainGoal(1L, 1L);
+
+        assertEquals("PENDING", response.getStatus());
+        assertEquals(false, response.getIsMain());
+        assertEquals(true, response.getRequestedByMe());
+        verify(goalMapper).updateGoalRequest(eq(1L), eq(1L), any(LocalDateTime.class));
+    }
+
+    @Test
+    void requestMainGoalRejectsWhenAnotherGoalIsPending() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        GoalVO pendingGoal = goal(2L, "대기 예산", "PENDING", false);
+        pendingGoal.setRequestedBy(2L);
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(
+                goal(1L, "일반 예산", "NORMAL", false),
+                pendingGoal
+        ));
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                () -> service.requestMainGoal(1L, 1L)
+        );
+
+        assertEquals(ErrorCode.INVALID_INPUT_VALUE, exception.getErrorCode());
+        verify(goalMapper, never()).updateGoalRequest(any(), any(), any());
+    }
+
+    @Test
+    void cancelMainGoalRequestAllowsRequester() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalVO pendingGoal = goal(1L, "대기 예산", "PENDING", false);
+        pendingGoal.setRequestedBy(1L);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(pendingGoal));
+        when(goalMapper.cancelGoalRequest(1L, 1L)).thenReturn(1);
+
+        GoalStatusUpdateResponseDTO response = service.cancelMainGoalRequest(1L, 1L);
+
+        assertEquals("NORMAL", response.getStatus());
+        assertEquals(false, response.getRequestedByMe());
+        verify(goalMapper).cancelGoalRequest(1L, 1L);
+    }
+
+    @Test
+    void decideMainGoalRequestApprovesPartnerRequestAndReplacesMainGoal() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalVO pendingGoal = goal(2L, "신규 메인", "PENDING", false);
+        pendingGoal.setRequestedBy(1L);
+        when(coupleService.getConnectedCoupleByUserId(2L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(
+                goal(1L, "기존 메인", "CONFIRMED", true),
+                pendingGoal
+        ));
+        when(goalMapper.confirmGoal(2L)).thenReturn(1);
+
+        GoalStatusUpdateResponseDTO response = service.decideMainGoalRequest(
+                2L,
+                2L,
+                new GoalDecisionRequestDTO("APPROVE")
+        );
+
+        assertEquals("CONFIRMED", response.getStatus());
+        assertEquals(true, response.getIsMain());
+        verify(goalMapper).clearMainGoal(10L, 2L);
+        verify(goalMapper).confirmGoal(2L);
+    }
+
+    @Test
+    void decideMainGoalRequestRejectsPartnerRequest() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalVO pendingGoal = goal(2L, "대기 예산", "PENDING", false);
+        pendingGoal.setRequestedBy(1L);
+        when(coupleService.getConnectedCoupleByUserId(2L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(pendingGoal));
+        when(goalMapper.rejectGoalRequest(2L)).thenReturn(1);
+
+        GoalStatusUpdateResponseDTO response = service.decideMainGoalRequest(
+                2L,
+                2L,
+                new GoalDecisionRequestDTO("REJECT")
+        );
+
+        assertEquals("NORMAL", response.getStatus());
+        assertEquals(false, response.getIsMain());
+        verify(goalMapper).rejectGoalRequest(2L);
+        verify(goalMapper, never()).confirmGoal(any());
+    }
+
+    @Test
+    void decideMainGoalRequestRejectsRequesterDecision() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalVO pendingGoal = goal(2L, "대기 예산", "PENDING", false);
+        pendingGoal.setRequestedBy(1L);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(pendingGoal));
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                () -> service.decideMainGoalRequest(
+                        1L,
+                        2L,
+                        new GoalDecisionRequestDTO("APPROVE")
+                )
+        );
+
+        assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
+        verify(goalMapper, never()).confirmGoal(any());
     }
 
     private GoalCreateRequestDTO validRequest() {

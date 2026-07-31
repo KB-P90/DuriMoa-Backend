@@ -48,6 +48,13 @@ public class GoalResponseDTO {
     @ApiModelProperty(value = "메인 목표 여부", example = "false")
     private Boolean isMain;
 
+    @ApiModelProperty(value = "현재 사용자의 메인 시안 요청 여부", example = "false")
+    private Boolean requestedByMe;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @ApiModelProperty(value = "메인 시안 승인 요청 일시", example = "2026-07-31 14:00:00")
+    private LocalDateTime requestedAt;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @ApiModelProperty(value = "생성 일시", example = "2026-07-30 10:30:00")
     private LocalDateTime createdAt;
@@ -57,8 +64,11 @@ public class GoalResponseDTO {
 
     public static GoalResponseDTO from(
             GoalVO goal,
-            List<GoalItemResponseDTO> items
+            List<GoalItemResponseDTO> items,
+            Long authenticatedUserId
     ) {
+        Boolean requestedByMe = "PENDING".equals(goal.getStatus())
+                && authenticatedUserId.equals(goal.getRequestedBy());
         return GoalResponseDTO.builder()
                 .goalId(goal.getId())
                 .name(goal.getName())
@@ -69,6 +79,8 @@ public class GoalResponseDTO {
                 .brideRatio(goal.getBrideRatio())
                 .status(goal.getStatus())
                 .isMain(goal.getIsMain())
+                .requestedByMe(requestedByMe)
+                .requestedAt(goal.getRequestedAt())
                 .createdAt(goal.getCreatedAt())
                 .items(items)
                 .build();

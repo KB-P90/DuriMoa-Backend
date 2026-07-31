@@ -12,9 +12,11 @@ import com.project.domain.goal.domain.GoalVO;
 import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalCreateItemResponseDTO;
+import com.project.domain.goal.dto.GoalDecisionRequestDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
+import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -23,6 +25,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -120,15 +123,193 @@ public class GoalServiceImpl implements GoalService {
         return goals.stream()
                 .map(goal -> GoalResponseDTO.from(
                         goal,
-                        itemsByGoalId.getOrDefault(goal.getId(), Collections.emptyList())
+                        itemsByGoalId.getOrDefault(goal.getId(), Collections.emptyList()),
+                        authenticatedUserId
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public GoalStatusUpdateResponseDTO requestMainGoal(
+            Long authenticatedUserId,
+            Long goalId
+    ) {
+        validateAuthenticatedUser(authenticatedUserId);
+        validateGoalId(goalId);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        List<GoalVO> goals = lockCoupleGoals(couple.getId());
+        GoalVO goal = findGoal(goals, goalId);
+
+        if (!GoalStatus.NORMAL.name().equals(goal.getStatus())
+                || Boolean.TRUE.equals(goal.getIsMain())) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "일반 상태의 시안만 메인 시안으로 요청할 수 있습니다."
+            );
+        }
+        boolean hasPendingGoal = goals.stream()
+                .anyMatch(candidate -> GoalStatus.PENDING.name().equals(candidate.getStatus()));
+        if (hasPendingGoal) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "이미 승인 대기 중인 메인 시안이 있습니다."
+            );
+        }
+
+        LocalDateTime requestedAt = now();
+        ensureSingleRowUpdated(
+                goalMapper.updateGoalRequest(goalId, authenticatedUserId, requestedAt),
+                "메인 시안 승인 요청에 실패했습니다."
+        );
+        return buildStatusResponse(
+                goalId,
+                GoalStatus.PENDING,
+                false,
+                true,
+                requestedAt
+        );
+    }
+
+    @Override
+    @Transactional
+    public GoalStatusUpdateResponseDTO cancelMainGoalRequest(
+            Long authenticatedUserId,
+            Long goalId
+    ) {
+        validateAuthenticatedUser(authenticatedUserId);
+        validateGoalId(goalId);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        GoalVO goal = findGoal(lockCoupleGoals(couple.getId()), goalId);
+
+        if (!GoalStatus.PENDING.name().equals(goal.getStatus())) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "승인 대기 중인 시안만 요청을 취소할 수 있습니다."
+            );
+        }
+        if (!authenticatedUserId.equals(goal.getRequestedBy())) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN,
+                    "메인 시안을 요청한 사용자만 요청을 취소할 수 있습니다."
+            );
+        }
+
+        ensureSingleRowUpdated(
+                goalMapper.cancelGoalRequest(goalId, authenticatedUserId),
+                "메인 시안 승인 요청 취소에 실패했습니다."
+        );
+        return buildStatusResponse(goalId, GoalStatus.NORMAL, false, false, null);
+    }
+
+    @Override
+    @Transactional
+    public GoalStatusUpdateResponseDTO decideMainGoalRequest(
+            Long authenticatedUserId,
+            Long goalId,
+            GoalDecisionRequestDTO request
+    ) {
+        validateAuthenticatedUser(authenticatedUserId);
+        validateGoalId(goalId);
+        String decision = validateDecision(request);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        GoalVO goal = findGoal(lockCoupleGoals(couple.getId()), goalId);
+
+        if (!GoalStatus.PENDING.name().equals(goal.getStatus())
+                || goal.getRequestedBy() == null) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "승인 대기 중인 시안만 승인 또는 거절할 수 있습니다."
+            );
+        }
+        if (authenticatedUserId.equals(goal.getRequestedBy())) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN,
+                    "메인 시안을 요청한 사용자는 직접 승인하거나 거절할 수 없습니다."
+            );
+        }
+
+        if ("REJECT".equals(decision)) {
+            ensureSingleRowUpdated(
+                    goalMapper.rejectGoalRequest(goalId),
+                    "메인 시안 승인 요청 거절에 실패했습니다."
+            );
+            return buildStatusResponse(goalId, GoalStatus.NORMAL, false, false, null);
+        }
+
+        goalMapper.clearMainGoal(couple.getId(), goalId);
+        ensureSingleRowUpdated(
+                goalMapper.confirmGoal(goalId),
+                "메인 시안 승인에 실패했습니다."
+        );
+        return buildStatusResponse(goalId, GoalStatus.CONFIRMED, true, false, null);
     }
 
     private void validateAuthenticatedUser(Long authenticatedUserId) {
         if (authenticatedUserId == null || authenticatedUserId <= 0) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
+    }
+
+    private void validateGoalId(Long goalId) {
+        if (goalId == null || goalId <= 0) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "목표 ID가 올바르지 않습니다.");
+        }
+    }
+
+    private List<GoalVO> lockCoupleGoals(Long coupleId) {
+        List<GoalVO> goals = goalMapper.selectGoalsByCoupleIdForUpdate(coupleId);
+        return goals == null ? Collections.emptyList() : goals;
+    }
+
+    private GoalVO findGoal(List<GoalVO> goals, Long goalId) {
+        return goals.stream()
+                .filter(goal -> goalId.equals(goal.getId()))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.RESOURCE_NOT_FOUND,
+                        "결혼 목표를 찾을 수 없습니다."
+                ));
+    }
+
+    private String validateDecision(GoalDecisionRequestDTO request) {
+        if (request == null || request.getDecision() == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "승인 여부는 필수입니다.");
+        }
+        String decision = request.getDecision().trim().toUpperCase(Locale.ROOT);
+        if (!"APPROVE".equals(decision) && !"REJECT".equals(decision)) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "승인 여부는 APPROVE 또는 REJECT여야 합니다."
+            );
+        }
+        return decision;
+    }
+
+    private void ensureSingleRowUpdated(Integer updatedCount, String message) {
+        if (updatedCount == null || updatedCount != 1) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, message);
+        }
+    }
+
+    private GoalStatusUpdateResponseDTO buildStatusResponse(
+            Long goalId,
+            GoalStatus status,
+            Boolean isMain,
+            Boolean requestedByMe,
+            LocalDateTime requestedAt
+    ) {
+        return GoalStatusUpdateResponseDTO.builder()
+                .goalId(goalId)
+                .status(status.name())
+                .isMain(isMain)
+                .requestedByMe(requestedByMe)
+                .requestedAt(requestedAt)
+                .build();
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
     }
 
     private Long validateRequest(GoalCreateRequestDTO request) {

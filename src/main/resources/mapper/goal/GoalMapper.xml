@@ -15,6 +15,8 @@
         <result property="brideRatio" column="bride_ratio"/>
         <result property="status" column="status"/>
         <result property="isMain" column="is_main"/>
+        <result property="requestedBy" column="requested_by"/>
+        <result property="requestedAt" column="requested_at"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -86,6 +88,8 @@
             bride_ratio,
             status,
             is_main,
+            requested_by,
+            requested_at,
             created_at
         FROM goal
         WHERE couple_id = #{coupleId}
@@ -93,6 +97,27 @@
             is_main DESC,
             created_at DESC,
             id DESC
+    </select>
+
+    <select id="selectGoalsByCoupleIdForUpdate" resultMap="GoalResultMap">
+        SELECT
+            id,
+            couple_id,
+            name,
+            wedding_date,
+            region,
+            total_budget,
+            groom_ratio,
+            bride_ratio,
+            status,
+            is_main,
+            requested_by,
+            requested_at,
+            created_at
+        FROM goal
+        WHERE couple_id = #{coupleId}
+        ORDER BY id ASC
+        FOR UPDATE
     </select>
 
     <select id="selectGoalItemsByGoalIds" resultMap="GoalItemResultMap">
@@ -113,4 +138,55 @@
             goal_id ASC,
             id ASC
     </select>
+
+    <update id="updateGoalRequest">
+        UPDATE goal
+        SET status = 'PENDING',
+            requested_by = #{requestedBy},
+            requested_at = #{requestedAt}
+        WHERE id = #{goalId}
+          AND status = 'NORMAL'
+          AND is_main = FALSE
+    </update>
+
+    <update id="cancelGoalRequest">
+        UPDATE goal
+        SET status = 'NORMAL',
+            requested_by = NULL,
+            requested_at = NULL
+        WHERE id = #{goalId}
+          AND status = 'PENDING'
+          AND requested_by = #{requestedBy}
+    </update>
+
+    <update id="rejectGoalRequest">
+        UPDATE goal
+        SET status = 'NORMAL',
+            requested_by = NULL,
+            requested_at = NULL
+        WHERE id = #{goalId}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="clearMainGoal">
+        UPDATE goal
+        SET status = 'NORMAL',
+            is_main = FALSE,
+            requested_by = NULL,
+            requested_at = NULL
+        WHERE couple_id = #{coupleId}
+          AND id != #{excludedGoalId}
+          AND is_main = TRUE
+    </update>
+
+    <update id="confirmGoal">
+        UPDATE goal
+        SET status = 'CONFIRMED',
+            is_main = TRUE,
+            requested_by = NULL,
+            requested_at = NULL
+        WHERE id = #{goalId}
+          AND status = 'PENDING'
+          AND is_main = FALSE
+    </update>
 </mapper>
