@@ -18,7 +18,7 @@ import java.util.List;
 
 @Api(tags = "Couple", description = "커플 연결 API")
 @RestController
-@RequestMapping("/couple")
+@RequestMapping("/api/couples")
 @RequiredArgsConstructor
 public class CoupleController {
 
