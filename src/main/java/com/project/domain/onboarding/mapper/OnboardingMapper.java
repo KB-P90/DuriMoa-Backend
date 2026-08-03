@@ -1,9 +1,11 @@
 package com.project.domain.onboarding.mapper;
 
+import com.project.domain.onboarding.dto.OnboardingAccountCreateRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingAccountRecordCreateRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingCardCreateRequestDTO;
+import com.project.domain.onboarding.dto.OnboardingCardRecordCreateRequestDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
-import java.util.Map;
 
 @Mapper
 public interface OnboardingMapper {
@@ -15,10 +17,10 @@ public interface OnboardingMapper {
     int updateUserConnectedId(@Param("userId") Long userId, @Param("connectedId") String connectedId);
 
     // 계좌(account) 정보 등록
-    int insertAccount(Map<String, Object> params);
+    int insertAccount(OnboardingAccountCreateRequestDTO requestDTO);
 
     // 카드(card) 정보 등록
-    int insertCard(Map<String, Object> params);
+    int insertCard(OnboardingCardCreateRequestDTO requestDTO);
 
     // 계좌 ID (PK) 조회
     Long findAccountIdByUserAndNumber(
@@ -35,8 +37,8 @@ public interface OnboardingMapper {
             @Param("company") String company);
 
     // account_record 테이블 거래내역 저장
-    int insertAccountRecord(Map<String, Object> params);
+    int insertAccountRecord(OnboardingAccountRecordCreateRequestDTO requestDTO);
 
     // card_record 테이블 카드 승인 거래내역 저장
-    int insertCardRecord(Map<String, Object> params);
+    int insertCardRecord(OnboardingCardRecordCreateRequestDTO requestDTO);
 }

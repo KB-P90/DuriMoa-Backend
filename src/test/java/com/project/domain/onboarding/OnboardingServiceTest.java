@@ -56,11 +56,14 @@ class OnboardingServiceTest {
                 .build();
 
         when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn(null);
+        when(codefService.encryptPassword(any())).thenReturn("encrypted_pw");
 
-        Map<String, Object> dataMap = new HashMap<>();
-        dataMap.put("connectedId", "new_demo_connected_id");
-        CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
-                .data(dataMap)
+        com.project.domain.codef.dto.CodefConnectedIdResponseDTO idResponse = com.project.domain.codef.dto.CodefConnectedIdResponseDTO.builder()
+                .connectedId("new_demo_connected_id")
+                .build();
+        CodefApiResponseDTO<com.project.domain.codef.dto.CodefConnectedIdResponseDTO> codefRes = CodefApiResponseDTO.<com.project.domain.codef.dto.CodefConnectedIdResponseDTO>builder()
+                .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
+                .data(idResponse)
                 .build();
         when(codefService.createConnectedId(any())).thenReturn(codefRes);
 
@@ -109,6 +112,7 @@ class OnboardingServiceTest {
                 .build();
 
         CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
+                .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
                 .data(Collections.singletonList(Collections.singletonMap("resAccount", "1234567890")))
                 .build();
 
@@ -140,15 +144,21 @@ class OnboardingServiceTest {
         when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("demo_connected_id");
         when(onboardingMapper.findAccountIdByUserAndNumber(userId, 12345678901234L, "12345678901234", "KB국민은행")).thenReturn(10L);
 
-        Map<String, Object> trMap = new HashMap<>();
-        trMap.put("resAccountTrDate", "20260715");
-        trMap.put("resAccountOut", "50000");
-        trMap.put("resAccountDesc1", "식비 지출");
-
-        CodefApiResponseDTO<Object> codefRes = CodefApiResponseDTO.builder()
-                .data(Collections.singletonList(trMap))
+        com.project.domain.codef.dto.CodefBankTransactionItemDTO item = com.project.domain.codef.dto.CodefBankTransactionItemDTO.builder()
+                .transactionDate("20260715")
+                .outAmount(50000L)
+                .description1("식비 지출")
                 .build();
-        when(codefService.requestProduct(any())).thenReturn(codefRes);
+
+        com.project.domain.codef.dto.CodefBankTransactionResponseDTO bankResponseData = com.project.domain.codef.dto.CodefBankTransactionResponseDTO.builder()
+                .items(Collections.singletonList(item))
+                .build();
+
+        CodefApiResponseDTO<com.project.domain.codef.dto.CodefBankTransactionResponseDTO> codefRes = CodefApiResponseDTO.<com.project.domain.codef.dto.CodefBankTransactionResponseDTO>builder()
+                .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
+                .data(bankResponseData)
+                .build();
+        when(codefService.getBankTransactionList(any())).thenReturn(codefRes);
 
         // when
         OnboardingSelectResponseDTO result = onboardingService.selectAccountsOrCards(userId, requestDTO);

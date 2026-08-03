@@ -10,11 +10,14 @@ import lombok.Setter;
 
 import javax.validation.constraints.NotBlank;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @ApiModel(description = "CODEF 보유 계좌 목록 조회 요청 DTO")
 public class CodefAccountListRequestDTO {
 

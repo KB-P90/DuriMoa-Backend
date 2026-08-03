@@ -27,9 +27,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,79 +96,73 @@ public class CodefServiceImpl implements CodefService {
     }
 
     @Override
-    public CodefApiResponseDTO<Object> createConnectedId(CodefConnectedIdRequestDTO requestDTO) {
+    public String encryptPassword(String plainPassword) {
+        return encryptRsaPassword(plainPassword, codefConfig.getPublicKey());
+    }
+
+    @Override
+    public CodefApiResponseDTO<CodefConnectedIdResponseDTO> createConnectedId(CodefConnectedIdRequestDTO requestDTO) {
         encryptAccountListPasswords(requestDTO.getAccountList());
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("accountList", requestDTO.getAccountList());
-        
-        return executeProductRequest("/v1/account/create", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/account/create", codefConfig.getServiceType(), requestDTO, CodefConnectedIdResponseDTO.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> getAccountList(CodefAccountListRequestDTO requestDTO) {
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        if (StringUtils.hasText(requestDTO.getOrganization())) {
-            paramMap.put("organization", requestDTO.getOrganization());
-        }
-        
-        return executeProductRequest("/v1/kr/bank/p/account/account-list", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/kr/bank/p/account/account-list", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> getCardList(CodefCardListRequestDTO requestDTO) {
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        if (StringUtils.hasText(requestDTO.getOrganization())) {
-            paramMap.put("organization", requestDTO.getOrganization());
-        }
-
-        return executeProductRequest("/v1/kr/card/p/account/card-list", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/kr/card/p/account/card-list", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
-    public CodefApiResponseDTO<Object> requestProduct(CodefProductRequestDTO requestDTO) {
-        String serviceType = StringUtils.hasText(requestDTO.getServiceType())
-                ? requestDTO.getServiceType() : codefConfig.getServiceType();
-        return executeProductRequest(requestDTO.getProductUrl(), serviceType, requestDTO.getParameterMap());
+    public CodefApiResponseDTO<CodefBankTransactionResponseDTO> getBankTransactionList(CodefBankTransactionListRequestDTO requestDTO) {
+        CodefApiResponseDTO<Object> rawRes = executeProductRequest("/v1/kr/bank/p/account/transaction-list", codefConfig.getServiceType(), requestDTO, Object.class);
+        CodefBankTransactionResponseDTO typedData = CodefBankTransactionResponseDTO.fromData(rawRes != null ? rawRes.getData() : null, objectMapper);
+
+        return CodefApiResponseDTO.<CodefBankTransactionResponseDTO>builder()
+                .result(rawRes != null ? rawRes.getResult() : null)
+                .data(typedData)
+                .build();
+    }
+
+    @Override
+    public CodefApiResponseDTO<CodefCardApprovalResponseDTO> getCardApprovalList(CodefCardApprovalListRequestDTO requestDTO) {
+        CodefApiResponseDTO<Object> rawRes = executeProductRequest("/v1/kr/card/p/account/approval-list", codefConfig.getServiceType(), requestDTO, Object.class);
+        CodefCardApprovalResponseDTO typedData = CodefCardApprovalResponseDTO.fromData(rawRes != null ? rawRes.getData() : null, objectMapper);
+
+        return CodefApiResponseDTO.<CodefCardApprovalResponseDTO>builder()
+                .result(rawRes != null ? rawRes.getResult() : null)
+                .data(typedData)
+                .build();
     }
 
     @Override
     public CodefApiResponseDTO<Object> addConnectedAccount(com.project.domain.codef.dto.CodefConnectedIdAddRequestDTO requestDTO) {
         encryptAccountListPasswords(requestDTO.getAccountList());
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        paramMap.put("accountList", requestDTO.getAccountList());
-        return executeProductRequest("/v1/account/add", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/account/add", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> updateConnectedAccount(com.project.domain.codef.dto.CodefConnectedIdUpdateRequestDTO requestDTO) {
         encryptAccountListPasswords(requestDTO.getAccountList());
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        paramMap.put("accountList", requestDTO.getAccountList());
-        return executeProductRequest("/v1/account/update", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/account/update", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> deleteConnectedAccount(com.project.domain.codef.dto.CodefConnectedIdDeleteRequestDTO requestDTO) {
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        paramMap.put("accountList", requestDTO.getAccountList());
-        return executeProductRequest("/v1/account/delete", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/account/delete", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> getConnectedAccountList(com.project.domain.codef.dto.CodefConnectedIdAccountListRequestDTO requestDTO) {
-        Map<String, Object> paramMap = new HashMap<>();
-        paramMap.put("connectedId", requestDTO.getConnectedId());
-        return executeProductRequest("/v1/account/list", codefConfig.getServiceType(), paramMap);
+        return executeProductRequest("/v1/account/list", codefConfig.getServiceType(), requestDTO, Object.class);
     }
 
     @Override
     public CodefApiResponseDTO<Object> getConnectedIdList() {
-        return executeProductRequest("/v1/account/connectedId-list", codefConfig.getServiceType(), new HashMap<>());
+        return executeProductRequest("/v1/account/connectedId-list", codefConfig.getServiceType(), new HashMap<>(), Object.class);
     }
 
     private void encryptAccountListPasswords(List<CodefAccountItemDTO> accountList) {
@@ -218,7 +210,8 @@ public class CodefServiceImpl implements CodefService {
         }
     }
 
-    private CodefApiResponseDTO<Object> executeProductRequest(String productUrl, String serviceType, Map<String, Object> paramMap) {
+    @SuppressWarnings("unchecked")
+    private <T> CodefApiResponseDTO<T> executeProductRequest(String productUrl, String serviceType, Object requestPayload, Class<T> dataType) {
         CodefTokenResponseDTO tokenDTO = getAccessToken(null);
         String accessToken = tokenDTO.getAccessToken();
 
@@ -236,8 +229,8 @@ public class CodefServiceImpl implements CodefService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + accessToken);
 
-            String requestBodyJson = objectMapper.writeValueAsString(paramMap != null ? paramMap : new HashMap<>());
-            String decodedBodyJson = URLDecoder.decode(requestBodyJson, StandardCharsets.UTF_8.name());
+            String requestBodyJson = objectMapper.writeValueAsString(requestPayload != null ? requestPayload : new HashMap<>());
+            String decodedBodyJson = URLDecoder.decode(requestBodyJson, StandardCharsets.UTF_8);
 
             HttpEntity<String> entity = new HttpEntity<>(decodedBodyJson, headers);
 
@@ -247,11 +240,12 @@ public class CodefServiceImpl implements CodefService {
 
             String responseBody = response.getBody();
             if (responseBody != null && (responseBody.startsWith("%") || responseBody.contains("%7B") || responseBody.contains("%22"))) {
-                responseBody = URLDecoder.decode(responseBody, StandardCharsets.UTF_8.name());
+                responseBody = URLDecoder.decode(responseBody, StandardCharsets.UTF_8);
             }
 
             Map<String, Object> rawResultMap = objectMapper.readValue(
-                    responseBody != null ? responseBody : "{}", new TypeReference<Map<String, Object>>() {});
+                    responseBody != null ? responseBody : "{}", new TypeReference<>() {
+                    });
 
             CodefResultDTO resultDTO = null;
             if (rawResultMap.containsKey("result")) {
@@ -259,14 +253,22 @@ public class CodefServiceImpl implements CodefService {
             }
 
             Object dataObj = rawResultMap.get("data");
+            T typedData = null;
+            if (dataObj != null) {
+                if (dataType != null && !dataType.equals(Object.class)) {
+                    typedData = objectMapper.convertValue(dataObj, dataType);
+                } else {
+                    typedData = (T) dataObj;
+                }
+            }
 
             log.info("CODEF API 응답 완료: [Code: {}, Message: {}]",
                     resultDTO != null ? resultDTO.getCode() : "N/A",
                     resultDTO != null ? resultDTO.getMessage() : "N/A");
 
-            return CodefApiResponseDTO.builder()
+            return CodefApiResponseDTO.<T>builder()
                     .result(resultDTO)
-                    .data(dataObj)
+                    .data(typedData)
                     .build();
         } catch (Exception e) {
             log.error("CODEF API 상품 요청 중 오류 발생: {}", e.getMessage());

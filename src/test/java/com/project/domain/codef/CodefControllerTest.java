@@ -66,4 +66,109 @@ class CodefControllerTest {
         assertNotNull(responseContent);
         assertTrue(responseContent.contains("mock_access_token"));
     }
+
+    @Test
+    @DisplayName("CODEF 은행 거래내역 조회 API 요청 컨트롤러 테스트")
+    void getBankTransactionList_ControllerTest() throws Exception {
+        // given
+        com.project.domain.codef.dto.CodefBankTransactionResponseDTO bankData = com.project.domain.codef.dto.CodefBankTransactionResponseDTO.builder()
+                .items(java.util.Collections.emptyList())
+                .build();
+        com.project.domain.codef.dto.CodefApiResponseDTO<com.project.domain.codef.dto.CodefBankTransactionResponseDTO> mockResponse =
+                com.project.domain.codef.dto.CodefApiResponseDTO.<com.project.domain.codef.dto.CodefBankTransactionResponseDTO>builder()
+                        .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
+                        .data(bankData)
+                        .build();
+
+        when(codefService.getBankTransactionList(any())).thenReturn(mockResponse);
+
+        com.project.domain.codef.dto.CodefBankTransactionListRequestDTO requestDTO = com.project.domain.codef.dto.CodefBankTransactionListRequestDTO.builder()
+                .connectedId("demo_connected_id")
+                .account("1234567890")
+                .build();
+
+        // when & then
+        MvcResult mvcResult = mockMvc.perform(post("/api/codef/bank/transaction-list")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseContent = mvcResult.getResponse().getContentAsString();
+        assertNotNull(responseContent);
+        assertTrue(responseContent.contains("CF-00000"));
+    }
+
+    @Test
+    @DisplayName("CODEF 카드 승인내역 조회 API 요청 컨트롤러 테스트")
+    void getCardApprovalList_ControllerTest() throws Exception {
+        // given
+        com.project.domain.codef.dto.CodefCardApprovalResponseDTO cardData = com.project.domain.codef.dto.CodefCardApprovalResponseDTO.builder()
+                .items(java.util.Collections.emptyList())
+                .build();
+        com.project.domain.codef.dto.CodefApiResponseDTO<com.project.domain.codef.dto.CodefCardApprovalResponseDTO> mockResponse =
+                com.project.domain.codef.dto.CodefApiResponseDTO.<com.project.domain.codef.dto.CodefCardApprovalResponseDTO>builder()
+                        .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
+                        .data(cardData)
+                        .build();
+
+        when(codefService.getCardApprovalList(any())).thenReturn(mockResponse);
+
+        com.project.domain.codef.dto.CodefCardApprovalListRequestDTO requestDTO = com.project.domain.codef.dto.CodefCardApprovalListRequestDTO.builder()
+                .connectedId("demo_connected_id")
+                .build();
+
+        // when & then
+        MvcResult mvcResult = mockMvc.perform(post("/api/codef/card/approval-list")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseContent = mvcResult.getResponse().getContentAsString();
+        assertNotNull(responseContent);
+        assertTrue(responseContent.contains("CF-00000"));
+    }
+
+    @Test
+    @DisplayName("CODEF Connected ID 생성 API 요청 컨트롤러 테스트")
+    void createConnectedId_ControllerTest() throws Exception {
+        // given
+        com.project.domain.codef.dto.CodefConnectedIdResponseDTO idResponse = com.project.domain.codef.dto.CodefConnectedIdResponseDTO.builder()
+                .connectedId("mock_connected_id")
+                .build();
+
+        com.project.domain.codef.dto.CodefApiResponseDTO<com.project.domain.codef.dto.CodefConnectedIdResponseDTO> mockResponse =
+                com.project.domain.codef.dto.CodefApiResponseDTO.<com.project.domain.codef.dto.CodefConnectedIdResponseDTO>builder()
+                        .result(com.project.domain.codef.dto.CodefResultDTO.builder().code("CF-00000").message("성공").build())
+                        .data(idResponse)
+                        .build();
+
+        when(codefService.createConnectedId(any())).thenReturn(mockResponse);
+
+        com.project.domain.codef.dto.CodefConnectedIdRequestDTO requestDTO = com.project.domain.codef.dto.CodefConnectedIdRequestDTO.builder()
+                .accountList(java.util.Collections.singletonList(
+                        com.project.domain.codef.dto.CodefAccountItemDTO.builder()
+                                .countryCode("KR")
+                                .businessType("BK")
+                                .clientType("P")
+                                .organization("0004")
+                                .loginType("1")
+                                .id("test_id")
+                                .password("test_pw")
+                                .build()
+                ))
+                .build();
+
+        // when & then
+        MvcResult mvcResult = mockMvc.perform(post("/api/codef/connected-id")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseContent = mvcResult.getResponse().getContentAsString();
+        assertNotNull(responseContent);
+        assertTrue(responseContent.contains("mock_connected_id"));
+    }
 }
