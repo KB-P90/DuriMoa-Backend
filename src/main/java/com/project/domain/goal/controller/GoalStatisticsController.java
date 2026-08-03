@@ -1,6 +1,7 @@
 package com.project.domain.goal.controller;
 
 import com.project.common.response.ApiResponse;
+import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.service.GoalStatisticsService;
 import io.swagger.annotations.Api;
@@ -33,6 +34,23 @@ public class GoalStatisticsController {
                 goalStatisticsService.findGoalStatistics(region, category);
         return ResponseEntity.ok(
                 ApiResponse.success("결혼 통계 정보 조회에 성공했습니다.", response)
+        );
+    }
+
+    @ApiOperation(
+            value = "유형별 예상 결혼 예산 조회",
+            notes = "지역별 예식장, 스튜디오, 드레스, 메이크업 통계를 합산하여 "
+                    + "알뜰형, 균형형, 플렉스형 예상 금액을 조회합니다."
+    )
+    @GetMapping("/stat/estimate")
+    public ResponseEntity<ApiResponse<GoalBudgetEstimateResponseDTO>> getGoalBudgetEstimate(
+            @ApiParam(value = "지역", example = "서울(강남)", required = true)
+            @RequestParam("region") String region
+    ) {
+        GoalBudgetEstimateResponseDTO response =
+                goalStatisticsService.findGoalBudgetEstimate(region);
+        return ResponseEntity.ok(
+                ApiResponse.success("유형별 예상 결혼 예산 조회에 성공했습니다.", response)
         );
     }
 }

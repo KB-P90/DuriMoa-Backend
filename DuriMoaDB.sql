@@ -155,14 +155,21 @@ CREATE TABLE `goal` (
                         `bride_ratio`  BIGINT      NOT NULL DEFAULT 50 COMMENT '신부 분담 비율',
                         `status`       VARCHAR(30) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL, PENDING, CONFIRMED',
                         `is_main`      BOOLEAN     NOT NULL DEFAULT FALSE COMMENT '공동 목표 여부',
+                        `requested_by` BIGINT      NULL COMMENT '메인 시안 승인 요청자 ID',
+                        `requested_at` DATETIME    NULL COMMENT '메인 시안 승인 요청 일시',
                         `created_at`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                         PRIMARY KEY (`id`),
                         KEY `idx_goal_couple_id` (`couple_id`),
                         KEY `idx_goal_couple_main` (`couple_id`, `is_main`),
+                        KEY `idx_goal_couple_status` (`couple_id`, `status`),
+                        KEY `idx_goal_requested_by` (`requested_by`),
                         CONSTRAINT `fk_goal_couple`
                             FOREIGN KEY (`couple_id`) REFERENCES `couple` (`id`)
                                 ON UPDATE CASCADE ON DELETE CASCADE,
+                        CONSTRAINT `fk_goal_requested_by`
+                            FOREIGN KEY (`requested_by`) REFERENCES `user` (`id`)
+                                ON UPDATE CASCADE ON DELETE SET NULL,
                         CONSTRAINT `chk_goal_total_budget`
                             CHECK (`total_budget` >= 0)
 );

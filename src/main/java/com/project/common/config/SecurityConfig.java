@@ -43,8 +43,13 @@ public class SecurityConfig {
                         "/v2/api-docs",
                         "/webjars/**")
                     .permitAll()
-                .antMatchers(HttpMethod.GET, "/api/goal/stat")
+                .antMatchers(
+                        HttpMethod.GET,
+                        "/api/goal/stat",
+                        "/api/goal/stat/estimate")
                     .permitAll()
+                .antMatchers("/api/notifications/**", "/api/notification-settings/**")
+                    .authenticated()
                 .antMatchers("/api/goal", "/api/goal/**")
                     .authenticated()
                 // 로그인해야 볼 수 있는 API는 아래처럼 이 위치에 추가하세요.

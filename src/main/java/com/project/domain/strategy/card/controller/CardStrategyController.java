@@ -11,10 +11,9 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,11 +32,9 @@ public class CardStrategyController {
     @GetMapping
     public ResponseEntity<ApiResponse<CardRecommendationResponseDTO>> recommendCards(
             @RequestParam(value = "amount", required = false) String amount,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            Authentication authentication
+            @AuthenticationPrincipal Long authenticatedUserId
     ) {
         Long paymentAmount = CardPaymentAmountValidator.validate(amount);
-        Long authenticatedUserId = resolveAuthenticatedUserId(authentication, userIdHeader);
         CardRecommendationResponseDTO response = cardStrategyService.recommendCards(authenticatedUserId, paymentAmount);
         return ResponseEntity.ok(ApiResponse.success("카드 추천 조회에 성공했습니다.", response));
     }
@@ -47,42 +44,11 @@ public class CardStrategyController {
     @GetMapping("/{userCardKey}")
     public ResponseEntity<ApiResponse<CardDetailResponseDTO>> getCardDetail(
             @PathVariable("userCardKey") String userCardKeyText,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            Authentication authentication
+            @AuthenticationPrincipal Long authenticatedUserId
     ) {
-        Long authenticatedUserId = resolveAuthenticatedUserId(authentication, userIdHeader);
         Long userCardKey = parseUserCardKey(userCardKeyText);
         CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, userCardKey);
         return ResponseEntity.ok(ApiResponse.success("카드 상세 조회에 성공했습니다.", response));
-    }
-
-    // Spring Security 인증 정보 또는 개발용 헤더에서 사용자 ID를 추출합니다.
-    private Long resolveAuthenticatedUserId(Authentication authentication, String userIdHeader) {
-        Long authenticationUserId = parseAuthenticationName(authentication);
-        if (authenticationUserId != null) {
-            return authenticationUserId;
-        }
-        if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
-            return parsePositiveLong(userIdHeader, new CustomException(ErrorCode.UNAUTHORIZED));
-        }
-        throw new CustomException(ErrorCode.UNAUTHORIZED);
-    }
-
-    // Authentication 이름이 숫자 사용자 ID일 때 Long으로 변환합니다.
-    private Long parseAuthenticationName(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-        String principalName = authentication.getName();
-        if (principalName == null || "anonymousUser".equals(principalName)) {
-            return null;
-        }
-        try {
-            Long userId = Long.valueOf(principalName);
-            return userId > 0 ? userId : null;
-        } catch (NumberFormatException exception) {
-            return null;
-        }
     }
 
     // 상세 조회의 사용자 카드 식별자를 양수 Long으로 변환합니다.
