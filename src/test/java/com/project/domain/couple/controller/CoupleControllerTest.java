@@ -66,7 +66,7 @@ class CoupleControllerTest {
                         new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"),
                         new CoupleInvitationDTO(5L, "박서연", "B", "WAIT")));
 
-        MvcResult result = mockMvc.perform(get("/couple/status"))
+        MvcResult result = mockMvc.perform(get("/api/couples/status"))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);
@@ -82,7 +82,7 @@ class CoupleControllerTest {
         when(coupleInvitationService.invite(eq(AUTHENTICATED_USER_ID), eq("XYZ789")))
                 .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "WAIT"));
 
-        MvcResult result = mockMvc.perform(post("/couple/invite")
+        MvcResult result = mockMvc.perform(post("/api/couples/invite")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"inviteCode\":\"XYZ789\"}"))
                 .andExpect(status().isOk())
@@ -100,7 +100,7 @@ class CoupleControllerTest {
         when(coupleInvitationService.accept(eq(AUTHENTICATED_USER_ID), eq(1L)))
                 .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", "CONNECTED"));
 
-        MvcResult result = mockMvc.perform(post("/couple/accept")
+        MvcResult result = mockMvc.perform(post("/api/couples/accept")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"partnerUserId\":1}"))
                 .andExpect(status().isOk())
@@ -116,7 +116,7 @@ class CoupleControllerTest {
         when(coupleInvitationService.disconnect(AUTHENTICATED_USER_ID))
                 .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", "DISCONNECTED"));
 
-        MvcResult result = mockMvc.perform(post("/couple/disconnect"))
+        MvcResult result = mockMvc.perform(post("/api/couples/disconnect"))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);

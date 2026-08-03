@@ -5,6 +5,8 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleInvitationDTO;
 import com.project.domain.couple.mapper.CoupleInvitationMapper;
+import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +20,12 @@ import java.util.List;
 public class CoupleInvitationServiceImpl implements CoupleInvitationService {
 
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final String COUPLE_NOTIFICATION_TYPE = "COUPLE";
+    private static final String COUPLE_REQUEST_TITLE = "커플 연결 요청";
+    private static final String COUPLE_CONNECTED_TITLE = "커플 연결 완료";
 
     private final CoupleInvitationMapper coupleInvitationMapper;
+    private final NotificationService notificationService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     // 회원가입 직후 호출: 코드 중복될 때까지 재생성 후 30일 유효로 발급
@@ -74,6 +80,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         if (status == null) {
             coupleInvitationMapper.insertCouple(groomId, brideId);
             coupleInvitationMapper.requestInvitation(inviteCode, currentUserId);
+            createCoupleRequestNotification(currentUser, partner);
             return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), CoupleStatus.WAIT.getStatus());
         }
 
@@ -84,6 +91,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             coupleInvitationMapper.acceptOwnInvitation(currentUserId, partner.getUserId());
             coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
             coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partner.getUserId());
+            createCoupleConnectedNotifications(currentUser, partner);
             return new CoupleInvitationDTO(partner.getUserId(), partner.getName(), partner.getRole(), CoupleStatus.CONNECTED.getStatus());
         }
 
@@ -125,6 +133,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         coupleInvitationMapper.acceptOwnInvitation(currentUserId, partnerUserId);
         coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
         coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partnerUserId);
+        createCoupleConnectedNotification(couple, currentUser);
 
         return new CoupleInvitationDTO(couple.getUserId(), couple.getName(), couple.getRole(), CoupleStatus.CONNECTED.getStatus());
     }
@@ -181,5 +190,46 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             code.append(CODE_CHARACTERS.charAt(secureRandom.nextInt(CODE_CHARACTERS.length())));
         }
         return code.toString();
+    }
+
+    private void createCoupleRequestNotification(
+            CoupleInvitationDTO requester,
+            CoupleInvitationDTO receiver
+    ) {
+        createNotification(
+                receiver.getUserId(),
+                COUPLE_REQUEST_TITLE,
+                requester.getName() + "님이 커플 연결을 요청했습니다."
+        );
+    }
+
+    private void createCoupleConnectedNotifications(
+            CoupleInvitationDTO currentUser,
+            CoupleInvitationDTO partner
+    ) {
+        createCoupleConnectedNotification(currentUser, partner);
+        createCoupleConnectedNotification(partner, currentUser);
+    }
+
+    private void createCoupleConnectedNotification(
+            CoupleInvitationDTO receiver,
+            CoupleInvitationDTO partner
+    ) {
+        createNotification(
+                receiver.getUserId(),
+                COUPLE_CONNECTED_TITLE,
+                partner.getName() + "님과 커플 연결이 완료되었습니다."
+        );
+    }
+
+    private void createNotification(Long userId, String title, String content) {
+        notificationService.createNotification(
+                NotificationCreateRequestDTO.builder()
+                        .userId(userId)
+                        .type(COUPLE_NOTIFICATION_TYPE)
+                        .title(title)
+                        .content(content)
+                        .build()
+        );
     }
 }
