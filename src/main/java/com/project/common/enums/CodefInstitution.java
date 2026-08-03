@@ -22,12 +22,12 @@ public enum CodefInstitution {
     // 카드 (CD)
     KB_CARD("KB국민카드", "0301", "CD"),
     SHINHAN_CARD("신한카드", "0306", "CD"),
-    SAMSUNG_CARD("삼성카드", "0302", "CD"),
-    HYUNDAI_CARD("현대카드", "0303", "CD"),
-    LOTTE_CARD("롯데카드", "0304", "CD"),
-    WOORI_CARD("우리카드", "0313", "CD"),
-    HANA_CARD("하나카드", "0314", "CD"),
-    NH_CARD("NH농협카드", "0311", "CD");
+    SAMSUNG_CARD("삼성카드", "0303", "CD"),
+    HYUNDAI_CARD("현대카드", "0302", "CD"),
+    LOTTE_CARD("롯데카드", "0311", "CD"),
+    WOORI_CARD("우리카드", "0309", "CD"),
+    HANA_CARD("하나카드", "0313", "CD"),
+    NH_CARD("NH농협카드", "0304", "CD");
 
     private final String officialName;
     private final String organizationCode;

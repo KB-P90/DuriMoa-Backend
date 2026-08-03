@@ -117,7 +117,13 @@ public class OnboardingServiceImpl implements OnboardingService {
                     .accountList(Collections.singletonList(accountItem))
                     .build();
 
-            codefService.addConnectedAccount(addReq);
+            CodefApiResponseDTO<Object> addRes = codefService.addConnectedAccount(addReq);
+            if (addRes == null || !addRes.isSuccess()) {
+                String code = (addRes != null && addRes.getResult() != null) ? addRes.getResult().getCode() : "UNKNOWN";
+                String msg = (addRes != null && addRes.getResult() != null) ? addRes.getResult().getMessage() : "CODEF 계정 추가 실패";
+                log.error("CODEF 계정 추가 실패 - Code: {}, Message: {}", code, msg);
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 계정 추가 실패 [" + code + "]: " + msg);
+            }
             finalConnectedId = existingConnectedId;
             actionType = "ADDED";
         }
@@ -241,16 +247,28 @@ public class OnboardingServiceImpl implements OnboardingService {
             }
         } else if (rawData instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) rawData;
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
-                Object val = entry.getValue();
-                if (val instanceof List) {
-                    List<?> subList = (List<?>) val;
-                    for (Object item : subList) {
-                        if (item instanceof Map) {
-                            Map<String, Object> cleaned = cleanAccountOrCardItem((Map<String, Object>) item);
-                            if (cleaned != null) {
-                                flatList.add(cleaned);
+            // 1) map 자체가 단일 계좌/카드 객체인 경우
+            Map<String, Object> selfCleaned = cleanAccountOrCardItem(map);
+            if (selfCleaned != null) {
+                flatList.add(selfCleaned);
+            } else {
+                // 2) map 내부의 계좌/카드 리스트 또는 하위 객체 탐색
+                for (Map.Entry<String, Object> entry : map.entrySet()) {
+                    Object val = entry.getValue();
+                    if (val instanceof List) {
+                        List<?> subList = (List<?>) val;
+                        for (Object item : subList) {
+                            if (item instanceof Map) {
+                                Map<String, Object> cleaned = cleanAccountOrCardItem((Map<String, Object>) item);
+                                if (cleaned != null) {
+                                    flatList.add(cleaned);
+                                }
                             }
+                        }
+                    } else if (val instanceof Map) {
+                        Map<String, Object> cleaned = cleanAccountOrCardItem((Map<String, Object>) val);
+                        if (cleaned != null) {
+                            flatList.add(cleaned);
                         }
                     }
                 }
