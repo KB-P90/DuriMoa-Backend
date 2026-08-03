@@ -102,28 +102,20 @@ class OnboardingControllerTest {
     @Test
     @DisplayName("2. 계좌/카드 목록 조회 API 컨트롤러 테스트")
     void getAccountsOrCards_ControllerTest() throws Exception {
-        OnboardingQueryRequestDTO request = OnboardingQueryRequestDTO.builder()
-                .company("KB국민은행")
-                .build();
-
         OnboardingQueryResponseDTO response = OnboardingQueryResponseDTO.builder()
-                .connectedId("demo_connected_id")
-                .businessType("BK")
-                .organization("0004")
                 .itemList(Collections.singletonList("계좌데이터"))
                 .build();
 
         when(onboardingService.getAccountsOrCards(any(), any())).thenReturn(response);
 
-        MvcResult result = mockMvc.perform(post("/api/onboarding/accounts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/onboarding/accounts")
+                        .param("company", "KB국민은행"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        String body = result.getResponse().getContentAsString();
+        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertNotNull(body);
-        assertTrue(body.contains("demo_connected_id"));
+        assertTrue(body.contains("계좌데이터"));
     }
 
     @Test

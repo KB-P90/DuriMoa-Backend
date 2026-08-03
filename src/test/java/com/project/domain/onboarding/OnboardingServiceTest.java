@@ -124,8 +124,6 @@ class OnboardingServiceTest {
 
         // then
         assertNotNull(result);
-        assertEquals("demo_connected_id", result.getConnectedId());
-        assertEquals("BK", result.getBusinessType());
         assertNotNull(result.getItemList());
     }
 

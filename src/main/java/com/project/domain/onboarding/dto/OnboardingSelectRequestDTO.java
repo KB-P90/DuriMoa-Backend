@@ -25,7 +25,7 @@ public class OnboardingSelectRequestDTO {
     private String company;
 
     @NotEmpty(message = "선택한 계좌/카드 번호 목록은 필수입니다.")
-    @ApiModelProperty(value = "사용자가 선택한 계좌번호 또는 카드번호 목록", required = true, example = "[\"05520204230452\"]")
+    @ApiModelProperty(value = "사용자가 선택한 계좌번호 또는 카드번호 목록", required = true, example = "[\"110123456789\"]")
     private List<String> selectedNumbers;
 
     @ApiModelProperty(value = "조회 시작일 (YYYYMMDD, 미입력 시 최근 3개월 전)", example = "20260501")

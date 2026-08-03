@@ -23,7 +23,7 @@ public class OnboardingRegisterRequestDTO {
     private String company;
 
     @NotBlank(message = "아이디(id)는 필수입니다.")
-    @ApiModelProperty(value = "사용자 금융기관 로그인 아이디", required = true, example = "clara0830")
+    @ApiModelProperty(value = "사용자 금융기관 로그인 아이디", required = true, example = "user1234")
     private String id;
 
     @NotBlank(message = "비밀번호(password)는 필수입니다.")

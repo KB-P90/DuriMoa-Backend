@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Log4j2
 @Service
@@ -214,12 +215,87 @@ public class OnboardingServiceImpl implements OnboardingService {
             resultData = codefRes.getData();
         }
 
+        List<Map<String, Object>> flatItemList = extractFlatItemList(resultData);
+
         return OnboardingQueryResponseDTO.builder()
-                .connectedId(connectedId)
-                .businessType(businessType)
-                .organization(organization)
-                .itemList(resultData)
+                .itemList(flatItemList)
                 .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractFlatItemList(Object rawData) {
+        List<Map<String, Object>> flatList = new ArrayList<>();
+        if (rawData == null) {
+            return flatList;
+        }
+
+        if (rawData instanceof List) {
+            List<?> list = (List<?>) rawData;
+            for (Object item : list) {
+                if (item instanceof Map) {
+                    Map<String, Object> cleaned = cleanAccountOrCardItem((Map<String, Object>) item);
+                    if (cleaned != null) {
+                        flatList.add(cleaned);
+                    }
+                }
+            }
+        } else if (rawData instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) rawData;
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                Object val = entry.getValue();
+                if (val instanceof List) {
+                    List<?> subList = (List<?>) val;
+                    for (Object item : subList) {
+                        if (item instanceof Map) {
+                            Map<String, Object> cleaned = cleanAccountOrCardItem((Map<String, Object>) item);
+                            if (cleaned != null) {
+                                flatList.add(cleaned);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return flatList;
+    }
+
+    private Map<String, Object> cleanAccountOrCardItem(Map<String, Object> itemMap) {
+        String accountNum = getStringFromMap(itemMap, "resAccount", "resAccountNo", "resCardNo", "resDepositAccountList");
+
+        // 계좌/카드 번호 원본이 없거나 안내/에러 문구인 항목은 스킵
+        if (!StringUtils.hasText(accountNum)) {
+            return null;
+        }
+
+        Map<String, Object> cleaned = new java.util.LinkedHashMap<>();
+        String balance = getStringFromMap(itemMap, "resAccountBalance", "resBalance");
+        String name = getStringFromMap(itemMap, "resAccountName", "resCardName", "resAccountNickName");
+        String display = getStringFromMap(itemMap, "resAccountDisplay", "resCardNo");
+
+        cleaned.put("resAccount", accountNum);
+        if (StringUtils.hasText(balance)) {
+            cleaned.put("resAccountBalance", balance);
+        }
+        if (StringUtils.hasText(name)) {
+            cleaned.put("resAccountName", name);
+        }
+        if (StringUtils.hasText(display)) {
+            cleaned.put("resAccountDisplay", display);
+        }
+
+        return cleaned;
+    }
+
+    private String getStringFromMap(Map<String, Object> map, String... keys) {
+        for (String key : keys) {
+            if (map.containsKey(key) && map.get(key) != null) {
+                String val = String.valueOf(map.get(key));
+                if (StringUtils.hasText(val)) {
+                    return val;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
