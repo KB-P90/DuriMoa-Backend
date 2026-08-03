@@ -142,7 +142,7 @@ class OnboardingServiceTest {
                 .build();
 
         when(onboardingMapper.findConnectedIdByUserId(userId)).thenReturn("demo_connected_id");
-        when(onboardingMapper.findAccountIdByUserAndNumber(userId, 12345678901234L, "12345678901234", "KB국민은행")).thenReturn(10L);
+        when(onboardingMapper.findAccountIdByUserAndNumber(userId, "12345678901234", "KB국민은행")).thenReturn(10L);
 
         com.project.domain.codef.dto.CodefBankTransactionItemDTO item = com.project.domain.codef.dto.CodefBankTransactionItemDTO.builder()
                 .transactionDate("20260715")

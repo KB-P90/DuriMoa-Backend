@@ -32,7 +32,7 @@
         WHERE user_id = #{userId}
           AND (
             number = #{number}
-            OR account_id = #{numberStr}
+            OR account_id = #{number}
             OR company = #{company}
           )
         ORDER BY id DESC LIMIT 1
@@ -43,7 +43,7 @@
         WHERE user_id = #{userId}
           AND (
             number = #{number}
-            OR card_id = #{numberStr}
+            OR card_id = #{number}
             OR company = #{company}
           )
         ORDER BY id DESC LIMIT 1

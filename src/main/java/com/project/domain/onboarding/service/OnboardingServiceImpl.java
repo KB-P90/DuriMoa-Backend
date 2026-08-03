@@ -84,6 +84,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         String finalConnectedId;
         String actionType;
 
+        String realNumberStr = null;
         if (!StringUtils.hasText(existingConnectedId)) {
             CodefConnectedIdRequestDTO createReq = CodefConnectedIdRequestDTO.builder()
                     .accountList(Collections.singletonList(accountItem))
@@ -98,6 +99,12 @@ public class OnboardingServiceImpl implements OnboardingService {
             }
             finalConnectedId = codefRes.getData().getConnectedId();
             actionType = "CREATED";
+
+            if ("BK".equalsIgnoreCase(businessType)) {
+                realNumberStr = codefRes.getData().getFirstAccountNumber();
+            } else {
+                realNumberStr = codefRes.getData().getFirstCardNumber();
+            }
 
             // user 테이블에 생성된 connected_id 업데이트 저장
             onboardingMapper.updateUserConnectedId(userId, finalConnectedId);
@@ -115,7 +122,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         // 2. 계정 등록/추가 성공 시 입력받은 계정 정보 1개만 account 또는 card DB 테이블에 저장
-        saveRegisteredAccountOrCard(userId, businessType, companyName, loginId, loginPassword);
+        saveRegisteredAccountOrCard(userId, businessType, companyName, loginId, loginPassword, realNumberStr);
 
         return OnboardingRegisterResponseDTO.builder()
                 .connectedId(finalConnectedId)
@@ -126,39 +133,41 @@ public class OnboardingServiceImpl implements OnboardingService {
                 .build();
     }
 
-    private void saveRegisteredAccountOrCard(Long userId, String businessType, String companyName, String loginId, String loginPassword) {
+    private void saveRegisteredAccountOrCard(Long userId, String businessType, String companyName, String loginId, String loginPassword, String realNumberStr) {
         if (!StringUtils.hasText(loginId)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "계정 연동을 위한 아이디 정보가 비어있습니다.");
         }
 
         String encryptedPassword = StringUtils.hasText(loginPassword) ? codefService.encryptPassword(loginPassword) : null;
+        String accountNumber = StringUtils.hasText(realNumberStr) ? realNumberStr : loginId;
 
         if ("BK".equalsIgnoreCase(businessType)) {
-            Long existingId = onboardingMapper.findAccountIdByUserAndNumber(userId, null, loginId, companyName);
+            Long existingId = onboardingMapper.findAccountIdByUserAndNumber(userId, accountNumber, companyName);
             if (existingId == null) {
                 OnboardingAccountCreateRequestDTO accountReq = OnboardingAccountCreateRequestDTO.builder()
                         .userId(userId)
                         .company(companyName)
+                        .number(accountNumber)
                         .cardName(companyName + " 계좌")
                         .accountId(loginId)
                         .accountPassword(encryptedPassword)
                         .build();
                 onboardingMapper.insertAccount(accountReq);
-                log.info("사용자 [{}] 입력 계정 기반 account DB 저장 완료 - company: {}, accountId: {}", userId, companyName, loginId);
+                log.info("사용자 [{}] 입력 계정 기반 account DB 저장 완료 - company: {}, number: {}, accountId: {}", userId, companyName, accountNumber, loginId);
             }
         } else {
-            Long existingId = onboardingMapper.findCardIdByUserAndNumber(userId, null, loginId, companyName);
+            Long existingId = onboardingMapper.findCardIdByUserAndNumber(userId, accountNumber, companyName);
             if (existingId == null) {
                 OnboardingCardCreateRequestDTO cardReq = OnboardingCardCreateRequestDTO.builder()
                         .userId(userId)
-                        .cardProductId(null)
                         .company(companyName)
+                        .number(accountNumber)
                         .cardName(companyName + " 카드")
                         .cardId(loginId)
                         .cardPassword(encryptedPassword)
                         .build();
                 onboardingMapper.insertCard(cardReq);
-                log.info("사용자 [{}] 입력 계정 기반 card DB 저장 완료 - company: {}, cardId: {}", userId, companyName, loginId);
+                log.info("사용자 [{}] 입력 계정 기반 card DB 저장 완료 - company: {}, number: {}, cardId: {}", userId, companyName, accountNumber, loginId);
             }
         }
     }
@@ -239,20 +248,10 @@ public class OnboardingServiceImpl implements OnboardingService {
             if (!StringUtils.hasText(numberStr)) {
                 throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "선택한 계좌/카드 번호가 비어있습니다.");
             }
-            String cleanNumber = numberStr.replaceAll("[^0-9]", "");
-            if (!StringUtils.hasText(cleanNumber)) {
-                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "유효한 숫자 형식의 계좌/카드 번호가 아닙니다: " + numberStr);
-            }
-            Long parsedNum;
-            try {
-                parsedNum = Long.parseLong(cleanNumber.length() > 18 ? cleanNumber.substring(0, 18) : cleanNumber);
-            } catch (NumberFormatException e) {
-                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "숫자로 변환할 수 없는 번호 형식입니다: " + numberStr);
-            }
 
             if ("BK".equalsIgnoreCase(businessType)) {
                 // 기존 계좌 DB 레코드 조회 (number, account_id, 또는 company 매칭)
-                Long accountId = onboardingMapper.findAccountIdByUserAndNumber(userId, parsedNum, numberStr, companyName);
+                Long accountId = onboardingMapper.findAccountIdByUserAndNumber(userId, numberStr, companyName);
                 if (accountId == null) {
                     throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "선택한 계좌(" + numberStr + ") 정보가 DB에 존재하지 않습니다. 먼저 계좌를 등록해 주세요.");
                 }
@@ -285,7 +284,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                 processedNumbers.add(numberStr);
             } else {
                 // 기존 카드 DB 레코드 조회 (number, card_id, 또는 company 매칭)
-                Long cardId = onboardingMapper.findCardIdByUserAndNumber(userId, parsedNum, numberStr, companyName);
+                Long cardId = onboardingMapper.findCardIdByUserAndNumber(userId, numberStr, companyName);
                 if (cardId == null) {
                     throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "선택한 카드(" + numberStr + ") 정보가 DB에 존재하지 않습니다. 먼저 카드를 등록해 주세요.");
                 }

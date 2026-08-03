@@ -16,6 +16,9 @@ import lombok.Setter;
 @ApiModel(description = "온보딩 카드 등록 DB 저장 요청 DTO")
 public class OnboardingCardCreateRequestDTO {
 
+    @ApiModelProperty(value = "카드 ID (PK, 자동 생성)")
+    private Long id;
+
     @ApiModelProperty(value = "사용자 ID", required = true)
     private Long userId;
 
@@ -25,8 +28,8 @@ public class OnboardingCardCreateRequestDTO {
     @ApiModelProperty(value = "카드사명")
     private String company;
 
-    @ApiModelProperty(value = "카드 번호 (숫자)")
-    private Long number;
+    @ApiModelProperty(value = "카드 번호")
+    private String number;
 
     @ApiModelProperty(value = "카드 별칭/명칭")
     private String cardName;

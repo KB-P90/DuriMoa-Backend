@@ -16,6 +16,9 @@ import lombok.Setter;
 @ApiModel(description = "온보딩 계좌 거래 내역 DB 저장 요청 DTO")
 public class OnboardingAccountRecordCreateRequestDTO {
 
+    @ApiModelProperty(value = "거래내역 ID (PK, 자동 생성)")
+    private Long id;
+
     @ApiModelProperty(value = "계좌 PK (account_id)", required = true)
     private Long accountId;
 

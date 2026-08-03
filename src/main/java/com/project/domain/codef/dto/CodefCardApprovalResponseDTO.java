@@ -43,7 +43,9 @@ public class CodefCardApprovalResponseDTO {
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(CodefCardApprovalResponseDTO.class)
+                    .error("[CODEF-PARSE-ERROR] 카드 승인내역 데이터 DTO 변환 중 오류 발생: {}", e.getMessage(), e);
         }
         return CodefCardApprovalResponseDTO.builder()
                 .items(itemList != null ? itemList : Collections.emptyList())

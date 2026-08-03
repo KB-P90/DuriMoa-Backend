@@ -25,15 +25,13 @@ public interface OnboardingMapper {
     // 계좌 ID (PK) 조회
     Long findAccountIdByUserAndNumber(
             @Param("userId") Long userId,
-            @Param("number") Long number,
-            @Param("numberStr") String numberStr,
+            @Param("number") String number,
             @Param("company") String company);
 
     // 카드 ID (PK) 조회
     Long findCardIdByUserAndNumber(
             @Param("userId") Long userId,
-            @Param("number") Long number,
-            @Param("numberStr") String numberStr,
+            @Param("number") String number,
             @Param("company") String company);
 
     // account_record 테이블 거래내역 저장
