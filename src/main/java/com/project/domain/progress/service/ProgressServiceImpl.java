@@ -92,9 +92,10 @@ public class ProgressServiceImpl implements ProgressService {
                         CategoryExpenseDTO::getCategoryCode,
                         expense -> defaultAmount(expense.getExpenseAmount()),
                         Long::sum
-                ));
+        ));
 
         List<GoalItemProgressDTO> items = goalItems.stream()
+                // service_record는 ExpenseCategory 코드 기준이고, goal_item은 표시명으로 저장될 수 있다.
                 .map(item -> buildGoalItem(item, expenseByCategory))
                 .collect(Collectors.toList());
         int completedItemCount = (int) items.stream()
@@ -115,6 +116,7 @@ public class ProgressServiceImpl implements ProgressService {
             GoalItemSourceDTO item,
             Map<String, Long> expenseByCategory
     ) {
+        // goal_item.category를 service_record 카테고리 코드와 매칭하기 전에 정규화한다.
         ExpenseCategory category = resolveExpenseCategory(item.getCategory());
         Long currentAmount = expenseByCategory.getOrDefault(category.name(), 0L);
         Integer progressRate = currentAmount == 0L
@@ -174,6 +176,7 @@ public class ProgressServiceImpl implements ProgressService {
         Long currentAmount = defaultAmount(member.getAsset());
         Double progressRate = calculateDecimalRate(currentAmount, targetAmount);
 
+        // 자산 비공개 사용자는 금액만 숨기고, 목표 금액과 달성률은 그대로 제공한다.
         return MemberProgressDTO.builder()
                 .userId(member.getUserId())
                 .name(member.getName())
@@ -213,6 +216,8 @@ public class ProgressServiceImpl implements ProgressService {
 
         List<MonthlyProgressItemDTO> months = new ArrayList<>();
         Long cumulativeExpenseAmount = 0L;
+        // DB는 지출이 있는 월만 반환하므로 목표 생성월부터 현재월까지 직접 채운다.
+        // 월별 달성률은 누적 기준이므로 지출이 없는 월도 이전 누적률을 유지한다.
         for (YearMonth month = startMonth;
              !month.isAfter(currentMonth);
              month = month.plusMonths(1)) {
