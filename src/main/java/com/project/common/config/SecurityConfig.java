@@ -4,6 +4,7 @@ import com.project.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -42,6 +43,15 @@ public class SecurityConfig {
                         "/v2/api-docs",
                         "/webjars/**")
                     .permitAll()
+                .antMatchers(
+                        HttpMethod.GET,
+                        "/api/goal/stat",
+                        "/api/goal/stat/estimate")
+                    .permitAll()
+                .antMatchers("/api/notifications/**", "/api/notification-settings/**")
+                    .authenticated()
+                .antMatchers("/api/goal", "/api/goal/**")
+                    .authenticated()
                 // 로그인해야 볼 수 있는 API는 아래처럼 이 위치에 추가하세요.
                 // 예: .antMatchers("/api/members/**").authenticated()
                 // 로그인 없이 볼 수 있는 API는 위의 permitAll() 목록에 추가하세요.

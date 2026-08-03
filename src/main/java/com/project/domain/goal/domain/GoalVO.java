@@ -25,5 +25,7 @@ public class GoalVO {
     private Long brideRatio;
     private String status;
     private Boolean isMain;
+    private Long requestedBy;
+    private LocalDateTime requestedAt;
     private LocalDateTime createdAt;
 }
