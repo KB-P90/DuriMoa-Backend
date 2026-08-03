@@ -2,7 +2,9 @@ package com.project.domain.goal.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,6 +68,24 @@ class GoalStatisticsServiceImplTest {
                 () -> service.findGoalStatistics("없는지역", "예식장")
         );
         assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void findGoalStatisticsReturnsZeroAmountsForUnsupportedCategory() {
+        GoalStatisticsMapper mapper = mock(GoalStatisticsMapper.class);
+        GoalStatisticsService service = new GoalStatisticsServiceImpl(mapper);
+
+        GoalStatisticsResponseDTO response =
+                service.findGoalStatistics(" 서울(강남) ", " 신혼여행 ");
+
+        assertEquals("서울(강남)", response.getRegion());
+        assertEquals("신혼여행", response.getCategory());
+        assertEquals(0L, response.getUpper10());
+        assertEquals(0L, response.getUpper25());
+        assertEquals(0L, response.getMedian());
+        assertEquals(0L, response.getLower25());
+        assertEquals(0L, response.getLower10());
+        verify(mapper, never()).selectGoalStatistics(anyString(), anyString());
     }
 
     @Test

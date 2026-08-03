@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +19,7 @@ import com.project.domain.goal.dto.GoalCreateItemResponseDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
+import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
 import com.project.domain.goal.service.GoalService;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -183,6 +185,77 @@ class GoalControllerTest {
         assertEquals(0, response.get("data").size());
     }
 
+    @Test
+    void requestMainGoalReturnsPendingStatus() throws Exception {
+        authenticate(1L);
+        when(goalService.requestMainGoal(1L, 2L)).thenReturn(
+                statusResponse(2L, "PENDING", false, true)
+        );
+
+        MvcResult result = mockMvc.perform(patch("/api/goal/2/request"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertTrue(response.get("success").asBoolean());
+        assertEquals("메인 시안 승인 요청을 전송했습니다.", response.get("message").asText());
+        assertEquals("PENDING", response.at("/data/status").asText());
+        assertTrue(response.at("/data/requestedByMe").asBoolean());
+        verify(goalService).requestMainGoal(1L, 2L);
+    }
+
+    @Test
+    void cancelMainGoalRequestReturnsNormalStatus() throws Exception {
+        authenticate(1L);
+        when(goalService.cancelMainGoalRequest(1L, 2L)).thenReturn(
+                statusResponse(2L, "NORMAL", false, false)
+        );
+
+        MvcResult result = mockMvc.perform(patch("/api/goal/2/cancel"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals("메인 시안 승인 요청을 취소했습니다.", response.get("message").asText());
+        assertEquals("NORMAL", response.at("/data/status").asText());
+        verify(goalService).cancelMainGoalRequest(1L, 2L);
+    }
+
+    @Test
+    void decideMainGoalRequestReturnsConfirmedStatus() throws Exception {
+        authenticate(2L);
+        when(goalService.decideMainGoalRequest(eq(2L), eq(2L), any())).thenReturn(
+                statusResponse(2L, "CONFIRMED", true, false)
+        );
+
+        MvcResult result = mockMvc.perform(patch("/api/goal/2/decision")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"APPROVE\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals("메인 시안 승인 요청을 수락했습니다.", response.get("message").asText());
+        assertEquals("CONFIRMED", response.at("/data/status").asText());
+        assertTrue(response.at("/data/isMain").asBoolean());
+        verify(goalService).decideMainGoalRequest(eq(2L), eq(2L), any());
+    }
+
+    @Test
+    void decideMainGoalRequestRejectsBlankDecision() throws Exception {
+        authenticate(2L);
+
+        MvcResult result = mockMvc.perform(patch("/api/goal/2/decision")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertFalse(response.get("success").asBoolean());
+        assertEquals("승인 여부는 필수입니다.", response.get("message").asText());
+    }
+
     private String validJson() {
         return "{"
                 + "\"name\":\"균형형 결혼 예산\","
@@ -197,6 +270,30 @@ class GoalControllerTest {
                 + "\"type\":\"균형형\""
                 + "}]"
                 + "}";
+    }
+
+    private void authenticate(Long userId) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        Collections.emptyList()
+                )
+        );
+    }
+
+    private GoalStatusUpdateResponseDTO statusResponse(
+            Long goalId,
+            String status,
+            Boolean isMain,
+            Boolean requestedByMe
+    ) {
+        return GoalStatusUpdateResponseDTO.builder()
+                .goalId(goalId)
+                .status(status)
+                .isMain(isMain)
+                .requestedByMe(requestedByMe)
+                .build();
     }
 
     private GoalResponseDTO goalResponse() {
