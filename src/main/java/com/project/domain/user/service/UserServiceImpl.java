@@ -49,5 +49,21 @@ public class UserServiceImpl implements UserService {
         return userMapper.get(profile.getId());
     }
 
+    @Override
+    public boolean updateIsShared(Long no) {
+        UserProfileDto profile = userMapper.get(no);
+        if (profile == null) {
+            throw new UsernameNotFoundException("존재하지 않는 회원입니다." + no);
+        }
+
+        boolean result = userMapper.updateIsShared(no);
+
+        if (!result) {
+            throw new IllegalArgumentException("수정을 실패했습니다.");
+        }
+        
+        return result;
+    }
+
 
 }
