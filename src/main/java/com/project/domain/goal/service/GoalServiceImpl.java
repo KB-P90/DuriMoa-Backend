@@ -38,13 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoalServiceImpl implements GoalService {
 
     private static final Long RATIO_TOTAL = 100L;
-    private static final Set<ExpenseCategory> ALLOWED_CATEGORIES = Set.of(
-            ExpenseCategory.WEDDINGHALL,
-            ExpenseCategory.STUDIO,
-            ExpenseCategory.DRESS,
-            ExpenseCategory.MAKEUP,
-            ExpenseCategory.EMERGENCY
-    );
 
     private final GoalMapper goalMapper;
     private final CoupleService coupleService;
@@ -396,7 +389,7 @@ public class GoalServiceImpl implements GoalService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "목표 항목이 올바르지 않습니다.");
         }
         ExpenseCategory category = ExpenseCategory.fromKorean(trim(item.getCategory()));
-        if (!ALLOWED_CATEGORIES.contains(category)) {
+        if (!category.isWedding()) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT_VALUE,
                     "허용되지 않은 결혼 목표 카테고리입니다."

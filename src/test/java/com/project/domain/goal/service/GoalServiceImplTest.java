@@ -163,6 +163,34 @@ class GoalServiceImplTest {
     }
 
     @Test
+    void createGoalAllowsJewelryWeddingCategory() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalCreateRequestDTO request = GoalCreateRequestDTO.builder()
+                .name("예물 포함 결혼 예산")
+                .weddingDate(LocalDate.of(2099, 10, 9))
+                .region("서울(강남)")
+                .groomRatio(50L)
+                .brideRatio(50L)
+                .items(List.of(item("예물", 5_000_000L, true)))
+                .build();
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
+            GoalVO goal = invocation.getArgument(0);
+            goal.setId(100L);
+            return 1;
+        });
+        when(goalMapper.insertGoalItems(eq(100L), anyList())).thenReturn(1);
+
+        GoalCreateResponseDTO response = service.createGoal(1L, request);
+
+        assertEquals(5_000_000L, response.getTotalBudget());
+        assertEquals("예물", response.getItems().get(0).getCategory());
+    }
+
+    @Test
     void createGoalRejectsPastWeddingDate() {
         GoalMapper goalMapper = mock(GoalMapper.class);
         CoupleService coupleService = mock(CoupleService.class);

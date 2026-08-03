@@ -1,5 +1,6 @@
 package com.project.domain.goal.service;
 
+import com.project.common.enums.ExpenseCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.goal.domain.GoalStatisticsVO;
@@ -21,8 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoalStatisticsServiceImpl implements GoalStatisticsService {
 
     private static final Long ZERO_AMOUNT = 0L;
+    private static final List<ExpenseCategory> STATISTICS_CATEGORIES = Arrays.asList(
+            ExpenseCategory.WEDDINGHALL,
+            ExpenseCategory.STUDIO,
+            ExpenseCategory.DRESS,
+            ExpenseCategory.MAKEUP
+    );
     private static final List<String> ESTIMATE_CATEGORIES =
-            Arrays.asList("예식장", "스튜디오", "드레스", "메이크업");
+            STATISTICS_CATEGORIES.stream()
+                    .map(ExpenseCategory::getCategoryName)
+                    .collect(Collectors.toList());
 
     private final GoalStatisticsMapper goalStatisticsMapper;
 
