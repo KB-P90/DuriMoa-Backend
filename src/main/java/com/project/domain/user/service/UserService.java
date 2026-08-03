@@ -6,4 +6,6 @@ public interface UserService {
     public UserProfileDto getProfile(Long no);
 
     public UserProfileDto updateProfile(UserProfileDto profile);
+
+    public boolean updateIsShared(Long no);
 }

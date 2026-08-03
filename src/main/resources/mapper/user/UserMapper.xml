@@ -38,6 +38,15 @@
 
     </update>
 
+    <update id="updateIsShared"
+            parameterType="long">
+
+        UPDATE user
+        SET is_shared = NOT is_shared
+        WHERE id = #{no}
+
+    </update>
+
     <select id="get"
             parameterType="long"
             resultMap="userProfileResultMap">
