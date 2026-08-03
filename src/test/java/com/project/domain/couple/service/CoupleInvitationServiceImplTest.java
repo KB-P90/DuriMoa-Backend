@@ -3,6 +3,8 @@ package com.project.domain.couple.service;
 import com.project.common.exception.CustomException;
 import com.project.domain.couple.dto.CoupleInvitationDTO;
 import com.project.domain.couple.mapper.CoupleInvitationMapper;
+import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,11 +32,15 @@ class CoupleInvitationServiceImplTest {
     @Mock
     private CoupleInvitationMapper coupleInvitationMapper;
 
+    @Mock
+    private NotificationService notificationService;
+
     private CoupleInvitationServiceImpl coupleInvitationService;
 
     @BeforeEach
     void setUp() {
-        coupleInvitationService = new CoupleInvitationServiceImpl(coupleInvitationMapper);
+        coupleInvitationService =
+                new CoupleInvitationServiceImpl(coupleInvitationMapper, notificationService);
     }
 
     @Test
@@ -121,6 +127,7 @@ class CoupleInvitationServiceImplTest {
         CoupleInvitationDTO result = coupleInvitationService.invite(3L, "AAA111");
 
         verify(coupleInvitationMapper).insertCouple(1L, 3L);
+        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("WAIT", result.getStatus());
     }
 
@@ -138,6 +145,7 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).insertCouple(1L, 2L);
         verify(coupleInvitationMapper).requestInvitation("XYZ789", 1L);
         verify(coupleInvitationMapper, never()).connectCouple(any(), any());
+        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("WAIT", result.getStatus());
         assertEquals("이유진", result.getName());
     }
@@ -159,6 +167,7 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
         verify(coupleInvitationMapper, never()).insertCouple(any(), any());
+        verify(notificationService, times(2)).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("CONNECTED", result.getStatus());
     }
 
@@ -196,6 +205,7 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).acceptOwnInvitation(2L, 1L);
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
+        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }
