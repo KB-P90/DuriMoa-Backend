@@ -109,7 +109,8 @@ CREATE TABLE `invitation` (
                               `created_at`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                               PRIMARY KEY (`id`),
-                              UNIQUE KEY `uk_invitation_invite_code` (`invite_code`),
+                              UNIQUE KEY `uk_invitation_inviter_invitee` (`inviter_id`, `invitee_id`),
+                              KEY `idx_invitation_invite_code` (`invite_code`),
                               KEY `idx_invitation_inviter_id` (`inviter_id`),
                               KEY `idx_invitation_invitee_id` (`invitee_id`),
                               KEY `idx_invitation_status_expired_at` (`status`, `expired_at`),
@@ -130,6 +131,7 @@ CREATE TABLE `couple` (
                           `created_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                           PRIMARY KEY (`id`),
+                          UNIQUE KEY `uk_couple_groom_bride` (`groom_id`, `bride_id`),
                           KEY `idx_couple_groom_id` (`groom_id`),
                           KEY `idx_couple_bride_id` (`bride_id`),
                           CONSTRAINT `fk_couple_groom`
@@ -145,12 +147,12 @@ CREATE TABLE `goal` (
                         `id`           BIGINT      NOT NULL AUTO_INCREMENT COMMENT '목표 ID',
                         `couple_id`    BIGINT      NOT NULL COMMENT '커플 ID',
                         `name`         VARCHAR(50) NOT NULL COMMENT '시안 제목',
-                        `wedding_date` DATETIME    NOT NULL COMMENT '결혼식 날짜',
+                        `wedding_date` DATE        NOT NULL COMMENT '결혼식 날짜',
                         `region`       VARCHAR(50) NOT NULL COMMENT '결혼식 지역',
                         `total_budget` BIGINT      NOT NULL DEFAULT 0 COMMENT '총 예산 비용',
                         `groom_ratio`  BIGINT      NOT NULL DEFAULT 50 COMMENT '신랑 분담 비율',
                         `bride_ratio`  BIGINT      NOT NULL DEFAULT 50 COMMENT '신부 분담 비율',
-                        `status`       VARCHAR(30) NOT NULL DEFAULT 'DRAFT' COMMENT 'NORMAL, DRAFT, CONFIRMED',
+                        `status`       VARCHAR(30) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL, PENDING, CONFIRMED',
                         `is_main`      BOOLEAN     NOT NULL DEFAULT FALSE COMMENT '공동 목표 여부',
                         `created_at`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
@@ -169,7 +171,6 @@ CREATE TABLE `goal_item` (
                              `id`            BIGINT      NOT NULL AUTO_INCREMENT COMMENT '목표 항목 ID',
                              `goal_id`       BIGINT      NOT NULL COMMENT '목표 ID',
                              `category`      VARCHAR(30) NOT NULL COMMENT '카테고리',
-                             `importance`    INT         NOT NULL DEFAULT 0 COMMENT '중요도',
                              `target_amount` BIGINT      NOT NULL DEFAULT 0 COMMENT '타깃 금액',
                              `is_included`   BOOLEAN     NOT NULL DEFAULT TRUE COMMENT '예산 포함 여부',
                              `is_completed`  BOOLEAN     NOT NULL DEFAULT FALSE COMMENT '완료 여부',
@@ -182,8 +183,6 @@ CREATE TABLE `goal_item` (
                              CONSTRAINT `fk_goal_item_goal`
                                  FOREIGN KEY (`goal_id`) REFERENCES `goal` (`id`)
                                      ON UPDATE CASCADE ON DELETE CASCADE,
-                             CONSTRAINT `chk_goal_item_importance`
-                                 CHECK (`importance` >= 0),
                              CONSTRAINT `chk_goal_item_target_amount`
                                  CHECK (`target_amount` >= 0)
 );

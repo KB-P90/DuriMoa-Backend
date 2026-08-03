@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.goal.mapper.GoalStatisticsMapper">
+
+    <resultMap id="GoalStatisticsResultMap"
+               type="com.project.domain.goal.domain.GoalStatisticsVO">
+        <id property="id" column="id"/>
+        <result property="region" column="region"/>
+        <result property="category" column="category"/>
+        <result property="high10" column="high_10"/>
+        <result property="high25" column="high_25"/>
+        <result property="mid50" column="mid_50"/>
+        <result property="low25" column="low_25"/>
+        <result property="low10" column="low_10"/>
+    </resultMap>
+
+    <select id="selectGoalStatistics" resultMap="GoalStatisticsResultMap">
+        SELECT
+            id,
+            region,
+            category,
+            high_10,
+            high_25,
+            mid_50,
+            low_25,
+            low_10
+        FROM wedding_statistics
+        WHERE region = #{region}
+          AND category = #{category}
+    </select>
+
+    <select id="selectGoalStatisticsForEstimate" resultMap="GoalStatisticsResultMap">
+        SELECT
+            id,
+            region,
+            category,
+            high_10,
+            high_25,
+            mid_50,
+            low_25,
+            low_10
+        FROM wedding_statistics
+        WHERE region = #{region}
+          AND category IN
+          <foreach collection="categories" item="category" open="(" separator="," close=")">
+              #{category}
+          </foreach>
+    </select>
+
+    <insert id="upsertGoalStatistics">
+        INSERT INTO wedding_statistics (
+            region,
+            category,
+            high_10,
+            high_25,
+            mid_50,
+            low_25,
+            low_10
+        )
+        VALUES
+        <foreach collection="statistics" item="statistic" separator=",">
+            (
+                #{statistic.region},
+                #{statistic.category},
+                #{statistic.high10},
+                #{statistic.high25},
+                #{statistic.mid50},
+                #{statistic.low25},
+                #{statistic.low10}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            high_10 = VALUES(high_10),
+            high_25 = VALUES(high_25),
+            mid_50 = VALUES(mid_50),
+            low_25 = VALUES(low_25),
+            low_10 = VALUES(low_10)
+    </insert>
+</mapper>

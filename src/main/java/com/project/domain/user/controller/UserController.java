@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @Log4j2
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/user")
+@RequestMapping("/api/users")
 @Api(tags = "User", description = "유저 API")
 public class UserController {
 

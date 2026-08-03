@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.notification.mapper.NotificationMapper">
+
+    <resultMap id="NotificationResponseMap"
+               type="com.project.domain.notification.dto.NotificationResponseDTO">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="isRead" column="is_read"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="NotificationSettingResponseMap"
+               type="com.project.domain.notification.dto.NotificationSettingResponseDTO">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="pushEnabled" column="is_push_enabled"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="selectNotificationsByUserId" resultMap="NotificationResponseMap">
+        SELECT
+            id,
+            user_id,
+            type,
+            title,
+            content,
+            is_read,
+            created_at
+        FROM notification
+        WHERE user_id = #{userId}
+        ORDER BY
+            created_at DESC,
+            id DESC
+    </select>
+
+    <select id="countUnreadNotifications" resultType="java.lang.Integer">
+        SELECT
+            COUNT(id)
+        FROM notification
+        WHERE user_id = #{userId}
+          AND is_read = FALSE
+    </select>
+
+    <update id="updateNotificationRead">
+        UPDATE notification
+        SET is_read = TRUE
+        WHERE id = #{notificationId}
+          AND user_id = #{userId}
+          AND is_read = FALSE
+    </update>
+
+    <update id="updateAllNotificationsRead">
+        UPDATE notification
+        SET is_read = TRUE
+        WHERE user_id = #{userId}
+          AND is_read = FALSE
+    </update>
+
+    <select id="selectNotificationSettingsByUserId"
+            resultMap="NotificationSettingResponseMap">
+        SELECT
+            id,
+            user_id,
+            type,
+            is_push_enabled,
+            created_at
+        FROM notification_setting
+        WHERE user_id = #{userId}
+        ORDER BY
+            type ASC,
+            id ASC
+    </select>
+
+    <select id="selectNotificationSettingEnabled" resultType="java.lang.Boolean">
+        SELECT
+            is_push_enabled
+        FROM notification_setting
+        WHERE user_id = #{userId}
+          AND type = #{type}
+    </select>
+
+    <insert id="upsertNotificationSetting">
+        INSERT INTO notification_setting (
+            user_id,
+            type,
+            is_push_enabled
+        ) VALUES (
+            #{userId},
+            #{type},
+            #{pushEnabled}
+        )
+        ON DUPLICATE KEY UPDATE
+            is_push_enabled = VALUES(is_push_enabled)
+    </insert>
+
+    <insert id="insertNotification"
+            parameterType="com.project.domain.notification.domain.NotificationVO"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO notification (
+            user_id,
+            type,
+            title,
+            content
+        ) VALUES (
+            #{userId},
+            #{type},
+            #{title},
+            #{content}
+        )
+    </insert>
+</mapper>
