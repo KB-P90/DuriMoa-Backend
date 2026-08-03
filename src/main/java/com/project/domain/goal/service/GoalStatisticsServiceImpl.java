@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GoalStatisticsServiceImpl implements GoalStatisticsService {
 
+    private static final Long ZERO_AMOUNT = 0L;
     private static final List<String> ESTIMATE_CATEGORIES =
             Arrays.asList("예식장", "스튜디오", "드레스", "메이크업");
 
@@ -31,6 +32,10 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
         String normalizedRegion = normalizeRequired(region, "지역을 입력해 주세요.");
         String normalizedCategory = normalizeRequired(category, "카테고리를 입력해 주세요.");
 
+        if (!ESTIMATE_CATEGORIES.contains(normalizedCategory)) {
+            return buildEmptyStatistics(normalizedRegion, normalizedCategory);
+        }
+
         GoalStatisticsVO statistics =
                 goalStatisticsMapper.selectGoalStatistics(normalizedRegion, normalizedCategory);
         if (statistics == null) {
@@ -40,6 +45,18 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
             );
         }
         return GoalStatisticsResponseDTO.from(statistics);
+    }
+
+    private GoalStatisticsResponseDTO buildEmptyStatistics(String region, String category) {
+        return GoalStatisticsResponseDTO.builder()
+                .region(region)
+                .category(category)
+                .upper10(ZERO_AMOUNT)
+                .upper25(ZERO_AMOUNT)
+                .median(ZERO_AMOUNT)
+                .lower25(ZERO_AMOUNT)
+                .lower10(ZERO_AMOUNT)
+                .build();
     }
 
     @Override
