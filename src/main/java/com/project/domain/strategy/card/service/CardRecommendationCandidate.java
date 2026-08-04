@@ -12,7 +12,7 @@ class CardRecommendationCandidate {
     private final Integer rank;
 
     // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
-    private final Long userCardKey;
+    private final Long cardId;
 
     // 연결된 카드 상품 ID입니다.
     private final Long cardProductId;
@@ -81,7 +81,7 @@ class CardRecommendationCandidate {
     CardRecommendationCandidate withRank(Integer nextRank) {
         return CardRecommendationCandidate.builder()
                 .rank(nextRank)
-                .userCardKey(userCardKey)
+                .cardId(cardId)
                 .cardProductId(cardProductId)
                 .userId(userId)
                 .ownerType(ownerType)

@@ -122,17 +122,17 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     // 사용자 카드 식별자로 권한 검증 후 카드 상세 정보를 조회합니다.
     @Override
     @Transactional(readOnly = true)
-    public CardDetailResponseDTO getCardDetail(Long authenticatedUserId, Long userCardKey) {
+    public CardDetailResponseDTO getCardDetail(Long authenticatedUserId, Long cardId) {
         validateAuthenticatedUser(authenticatedUserId);
-        if (userCardKey == null || userCardKey <= 0) {
+        if (cardId == null || cardId <= 0) {
             throw resourceNotFound("카드 정보를 찾을 수 없습니다.");
         }
 
-        Integer accessCount = cardStrategyMapper.existsCardAccessInActiveCouple(authenticatedUserId, userCardKey);
+        Integer accessCount = cardStrategyMapper.existsCardAccessInActiveCouple(authenticatedUserId, cardId);
         if (accessCount == null || accessCount <= 0) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
-        CardProductRecord cardDetail = cardStrategyMapper.selectCardDetailByUserCardKey(userCardKey);
+        CardProductRecord cardDetail = cardStrategyMapper.selectCardDetailByCardId(cardId);
         if (cardDetail == null) {
             throw resourceNotFound("카드 정보를 찾을 수 없습니다.");
         }
@@ -152,7 +152,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         );
 
         return CardDetailResponseDTO.builder()
-                .userCardKey(cardDetail.getUserCardKey())
+                .cardId(cardDetail.getCardId())
                 .cardProductId(cardDetail.getCardProductId())
                 .company(cardDetail.getCompany())
                 .cardName(cardDetail.getCardName())
@@ -195,18 +195,18 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         }
 
         // 현재 월 실적 조회에 사용할 사용자 카드 식별자 목록입니다.
-        List<Long> userCardKeys = userCards.stream()
-                .map(UserCardRecord::getUserCardKey)
+        List<Long> cardIds = userCards.stream()
+                .map(UserCardRecord::getCardId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-        if (userCardKeys.isEmpty()) {
+        if (cardIds.isEmpty()) {
             return Collections.emptyMap();
         }
 
         // 실적 산정 기간의 마지막 날로 사용하는 오늘 날짜입니다.
         LocalDate today = LocalDate.now(clock);
         List<CardPerformanceRecord> performanceRecords = cardStrategyMapper.selectCurrentMonthPerformances(
-                userCardKeys,
+                cardIds,
                 today.withDayOfMonth(1),
                 today
         );
@@ -217,7 +217,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         Map<Long, Long> performanceAmountByCardKey = new HashMap<>();
         for (CardPerformanceRecord performanceRecord : performanceRecords) {
             performanceAmountByCardKey.put(
-                    performanceRecord.getUserCardKey(),
+                    performanceRecord.getCardId(),
                     Math.max(nullToZero(performanceRecord.getRecognizedPerformanceAmount()), 0L)
             );
         }
@@ -235,7 +235,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         // 카드 상품 혜택 JSON과 조건 문구에서 추출한 계산 규칙입니다.
         List<CardBenefitRule> benefitRules = CardBenefitCatalog.parse(card.getBenefit(), card.getConditionText());
         // 취소·환불 차감 후 카드별 현재 월 인정 실적입니다.
-        Long currentPerformanceAmount = performanceAmountByCardKey.getOrDefault(card.getUserCardKey(), 0L);
+        Long currentPerformanceAmount = performanceAmountByCardKey.getOrDefault(card.getCardId(), 0L);
         // 결제 예정 금액 기준 예상 혜택과 다음 구간 계산 결과입니다.
         CardBenefitCalculation calculation = cardBenefitCalculator.calculate(
                 paymentAmount,
@@ -257,7 +257,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
 
         return CardRecommendationCandidate.builder()
                 .rank(0)
-                .userCardKey(card.getUserCardKey())
+                .cardId(card.getCardId())
                 .cardProductId(card.getCardProductId())
                 .userId(card.getUserId())
                 .ownerType(card.getUserId().equals(authenticatedUserId) ? "SELF" : "PARTNER")
@@ -313,7 +313,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     private CardRecommendationCardResponseDTO buildCardResponse(CardRecommendationCandidate candidate) {
         return CardRecommendationCardResponseDTO.builder()
                 .rank(candidate.getRank())
-                .userCardKey(candidate.getUserCardKey())
+                .cardId(candidate.getCardId())
                 .cardProductId(candidate.getCardProductId())
                 .company(candidate.getCompany())
                 .cardName(candidate.getCardName())
@@ -337,7 +337,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     // 후보 정보를 전체 최적 카드 응답으로 변환합니다.
     private BestCardResponseDTO buildBestCardResponse(CardRecommendationCandidate candidate) {
         return BestCardResponseDTO.builder()
-                .userCardKey(candidate.getUserCardKey())
+                .cardId(candidate.getCardId())
                 .ownerType(candidate.getOwnerType())
                 .ownerName(candidate.getOwnerName())
                 .company(candidate.getCompany())
@@ -375,7 +375,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .thenComparing(candidate -> nullToMax(candidate.getShortageAmount()))
                 .thenComparing(candidate -> safeText(candidate.getCompany()))
                 .thenComparing(candidate -> safeText(candidate.getCardName()))
-                .thenComparing(CardRecommendationCandidate::getUserCardKey);
+                .thenComparing(CardRecommendationCandidate::getCardId);
     }
 
     // LocalDateTime 값을 API 포맷 문자열로 변환합니다.

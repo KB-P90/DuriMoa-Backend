@@ -58,7 +58,7 @@ class CardStrategyServiceImplTest {
         Assertions.assertEquals(300_000L, response.getPaymentAmount());
         Assertions.assertEquals(2, response.getOwners().size());
         Assertions.assertEquals("PARTNER", response.getBestCard().getOwnerType());
-        Assertions.assertEquals(20L, response.getBestCard().getUserCardKey());
+        Assertions.assertEquals(20L, response.getBestCard().getCardId());
         Assertions.assertEquals(6_000L, response.getBestCard().getExpectedBenefitAmount());
         Assertions.assertEquals(2, response.getOwners().get(0).getCardCount());
         Assertions.assertEquals(1, response.getOwners().get(0).getCards().get(0).getRank());
@@ -91,13 +91,13 @@ class CardStrategyServiceImplTest {
 
         CardRecommendationResponseDTO response = service.recommendCards(1L, 100_000L);
 
-        Assertions.assertEquals(10L, response.getBestCard().getUserCardKey());
+        Assertions.assertEquals(10L, response.getBestCard().getCardId());
         Assertions.assertEquals("NEEDS_REVIEW", response.getOwners().get(0).getCards().get(1).getRecommendableStatus());
     }
 
     // 활성 커플 권한이 있는 사용자 카드만 상세 조회를 허용합니다.
     @Test
-    void getCardDetailRejectsUnauthorizedUserCardKey() {
+    void getCardDetailRejectsUnauthorizedCardId() {
         CardStrategyMapper mapper = Mockito.mock(CardStrategyMapper.class);
         CardStrategyServiceImpl service = new CardStrategyServiceImpl(
                 mapper,
@@ -120,7 +120,7 @@ class CardStrategyServiceImplTest {
                 fixedClock()
         );
 
-        Mockito.when(mapper.selectCardDetailByUserCardKey(10L)).thenReturn(cardDetail(10L));
+        Mockito.when(mapper.selectCardDetailByCardId(10L)).thenReturn(cardDetail(10L));
         Mockito.when(mapper.existsCardAccessInActiveCouple(1L, 10L)).thenReturn(1);
 
         CardDetailResponseDTO response = service.getCardDetail(1L, 10L);
@@ -148,7 +148,7 @@ class CardStrategyServiceImplTest {
 
     // 사용자 보유 카드 테스트 데이터를 만듭니다.
     private UserCardRecord userCard(
-            Long userCardKey,
+            Long cardId,
             Long userId,
             String ownerName,
             String company,
@@ -158,11 +158,11 @@ class CardStrategyServiceImplTest {
             Long minimumSpend
     ) {
         UserCardRecord card = new UserCardRecord();
-        card.setUserCardKey(userCardKey);
+        card.setCardId(cardId);
         card.setUserId(userId);
         card.setOwnerName(ownerName);
         card.setOwnerRole(userId.equals(1L) ? "G" : "B");
-        card.setCardProductId(userCardKey + 100L);
+        card.setCardProductId(cardId + 100L);
         card.setCompany(company);
         card.setCardName(cardName);
         card.setAnnualFee(10_000);
@@ -177,17 +177,17 @@ class CardStrategyServiceImplTest {
     }
 
     // 카드 인정 실적 테스트 데이터를 만듭니다.
-    private CardPerformanceRecord performance(Long userCardKey, Long amount) {
+    private CardPerformanceRecord performance(Long cardId, Long amount) {
         CardPerformanceRecord performance = new CardPerformanceRecord();
-        performance.setUserCardKey(userCardKey);
+        performance.setCardId(cardId);
         performance.setRecognizedPerformanceAmount(amount);
         return performance;
     }
 
     // 카드 상세 테스트 데이터를 만듭니다.
-    private CardProductRecord cardDetail(Long userCardKey) {
+    private CardProductRecord cardDetail(Long cardId) {
         CardProductRecord cardDetail = new CardProductRecord();
-        cardDetail.setUserCardKey(userCardKey);
+        cardDetail.setCardId(cardId);
         cardDetail.setCardProductId(100L);
         cardDetail.setCompany("KB국민");
         cardDetail.setCardName("KB 웨딩");
