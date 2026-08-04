@@ -67,6 +67,7 @@ class MonthlyControllerTest {
         MonthlyExpenseResponseDTO responseDTO = MonthlyExpenseResponseDTO.builder()
                 .year(2026)
                 .month(7)
+                .totalAmount(3200000L)
                 .expenseCategories(Collections.emptyList())
                 .build();
 

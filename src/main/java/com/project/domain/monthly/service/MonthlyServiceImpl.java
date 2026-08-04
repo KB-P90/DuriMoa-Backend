@@ -46,9 +46,14 @@ public class MonthlyServiceImpl implements MonthlyService {
             categories = Collections.emptyList();
         }
 
+        long totalAmount = categories.stream()
+                .mapToLong(c -> c.getAmount() != null ? c.getAmount() : 0L)
+                .sum();
+
         return MonthlyExpenseResponseDTO.builder()
                 .year(year)
                 .month(month)
+                .totalAmount(totalAmount)
                 .expenseCategories(categories)
                 .build();
     }

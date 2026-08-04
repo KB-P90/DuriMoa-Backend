@@ -22,6 +22,9 @@ public class MonthlyExpenseResponseDTO {
     @ApiModelProperty(value = "조회 월", example = "7")
     private Integer month;
 
+    @ApiModelProperty(value = "월 총 지출 금액", example = "3200000")
+    private Long totalAmount;
+
     @ApiModelProperty(value = "카테고리별 지출 목록")
     private List<ExpenseCategoryDTO> expenseCategories;
 }
