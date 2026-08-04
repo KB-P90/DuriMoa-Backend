@@ -41,6 +41,8 @@ class GoalServiceImplTest {
 
         when(coupleService.getConnectedCoupleByUserId(1L))
                 .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectCoupleIdForUpdate(10L)).thenReturn(10L);
+        when(goalMapper.existsGoalByCoupleId(10L)).thenReturn(false);
         when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
             GoalVO goal = invocation.getArgument(0);
             goal.setId(100L);
@@ -59,12 +61,38 @@ class GoalServiceImplTest {
         verify(goalMapper).insertGoal(goalCaptor.capture());
         assertEquals(10L, goalCaptor.getValue().getCoupleId());
         assertEquals(35_000_000L, goalCaptor.getValue().getTotalBudget());
+        assertEquals(true, goalCaptor.getValue().getIsMain());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<GoalItemVO>> itemsCaptor = ArgumentCaptor.forClass(List.class);
         verify(goalMapper).insertGoalItems(eq(100L), itemsCaptor.capture());
         assertEquals(2, itemsCaptor.getValue().size());
         assertEquals("예식장", itemsCaptor.getValue().get(0).getCategory());
+    }
+
+    @Test
+    void createGoalStoresAdditionalGoalAsNonMainForConnectedCouple() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+
+        when(coupleService.getConnectedCoupleByUserId(2L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectCoupleIdForUpdate(10L)).thenReturn(10L);
+        when(goalMapper.existsGoalByCoupleId(10L)).thenReturn(true);
+        when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
+            GoalVO goal = invocation.getArgument(0);
+            goal.setId(101L);
+            return 1;
+        });
+        when(goalMapper.insertGoalItems(eq(101L), anyList())).thenReturn(2);
+
+        service.createGoal(2L, validRequest());
+
+        ArgumentCaptor<GoalVO> goalCaptor = ArgumentCaptor.forClass(GoalVO.class);
+        verify(goalMapper).selectCoupleIdForUpdate(10L);
+        verify(goalMapper).insertGoal(goalCaptor.capture());
+        assertEquals(false, goalCaptor.getValue().getIsMain());
     }
 
     @Test

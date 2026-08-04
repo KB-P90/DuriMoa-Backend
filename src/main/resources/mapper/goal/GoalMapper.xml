@@ -31,6 +31,21 @@
         <result property="type" column="type"/>
     </resultMap>
 
+    <select id="selectCoupleIdForUpdate" resultType="java.lang.Long">
+        SELECT id
+        FROM couple
+        WHERE id = #{coupleId}
+        FOR UPDATE
+    </select>
+
+    <select id="existsGoalByCoupleId" resultType="java.lang.Boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM goal
+            WHERE couple_id = #{coupleId}
+        )
+    </select>
+
     <insert id="insertGoal"
             parameterType="com.project.domain.goal.domain.GoalVO"
             useGeneratedKeys="true"
@@ -43,6 +58,7 @@
             total_budget,
             groom_ratio,
             bride_ratio,
+            is_main,
             created_at
         ) VALUES (
             #{coupleId},
@@ -52,6 +68,7 @@
             #{totalBudget},
             #{groomRatio},
             #{brideRatio},
+            #{isMain},
             #{createdAt}
         )
     </insert>

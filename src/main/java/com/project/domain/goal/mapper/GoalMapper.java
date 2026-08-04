@@ -8,6 +8,10 @@ import org.apache.ibatis.annotations.Param;
 
 public interface GoalMapper {
 
+    Long selectCoupleIdForUpdate(@Param("coupleId") Long coupleId);
+
+    Boolean existsGoalByCoupleId(@Param("coupleId") Long coupleId);
+
     Integer insertGoal(GoalVO goal);
 
     Integer insertGoalItems(

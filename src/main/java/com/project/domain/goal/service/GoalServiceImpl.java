@@ -47,14 +47,24 @@ public class GoalServiceImpl implements GoalService {
     @Transactional
     public GoalCreateResponseDTO createGoal(
             Long authenticatedUserId,
-        GoalCreateRequestDTO request
+            GoalCreateRequestDTO request
     ) {
         validateAuthenticatedUser(authenticatedUserId);
         Long totalBudget = validateRequest(request);
         CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        goalMapper.selectCoupleIdForUpdate(couple.getId());
+        boolean isFirstGoal = !Boolean.TRUE.equals(
+                goalMapper.existsGoalByCoupleId(couple.getId())
+        );
 
         LocalDateTime createdAt = LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
-        GoalVO goal = buildGoal(couple.getId(), request, totalBudget, createdAt);
+        GoalVO goal = buildGoal(
+                couple.getId(),
+                request,
+                totalBudget,
+                isFirstGoal,
+                createdAt
+        );
         Integer insertedGoalCount = goalMapper.insertGoal(goal);
         if (insertedGoalCount == null || insertedGoalCount != 1 || goal.getId() == null) {
             throw new CustomException(
@@ -419,6 +429,7 @@ public class GoalServiceImpl implements GoalService {
             Long coupleId,
             GoalCreateRequestDTO request,
             Long totalBudget,
+            Boolean isMain,
             LocalDateTime createdAt
     ) {
         return GoalVO.builder()
@@ -429,6 +440,7 @@ public class GoalServiceImpl implements GoalService {
                 .totalBudget(totalBudget)
                 .groomRatio(request.getGroomRatio())
                 .brideRatio(request.getBrideRatio())
+                .isMain(isMain)
                 .createdAt(createdAt)
                 .build();
     }
