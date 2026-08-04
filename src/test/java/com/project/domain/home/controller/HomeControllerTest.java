@@ -81,7 +81,7 @@ class HomeControllerTest {
         JsonNode response = readResponse(result);
         Assertions.assertFalse(response.get("success").asBoolean());
         Assertions.assertEquals("인증이 필요합니다.", response.get("message").asText());
-        Assertions.assertTrue(response.get("data").isNull());
+        Assertions.assertTrue(response.path("data").isMissingNode() || response.path("data").isNull());
     }
 
     // 홈 Controller 테스트용 최소 응답을 만듭니다.

@@ -44,7 +44,7 @@
         LIMIT 1
     </select>
 
-    <select id="selectChecklistEvidence" resultType="com.project.domain.home.model.HomeRecord$HomeChecklistEvidenceRecord">
+    <select id="selectAccountLinked" resultType="java.lang.Boolean">
         SELECT
             CASE
                 WHEN EXISTS (
@@ -66,27 +66,24 @@
                       )
                 ) THEN TRUE
                 ELSE FALSE
-            END AS account_linked,
-            CASE
-                WHEN main_goal.id IS NOT NULL THEN TRUE
-                ELSE FALSE
-            END AS wedding_goal_created,
-            CASE
-                WHEN main_goal.id IS NOT NULL
-                 AND NULLIF(TRIM(main_goal.region), '') IS NOT NULL THEN TRUE
-                ELSE FALSE
-            END AS region_selected,
+            END
+    </select>
+
+    <select id="selectChecklistEvidence" resultType="com.project.domain.home.model.HomeRecord$HomeChecklistEvidenceRecord">
+        SELECT
             CASE
                 WHEN EXISTS (
                     SELECT 1
-                    FROM account a
-                    INNER JOIN account_record ar
-                        ON ar.account_id = a.id
-                    WHERE a.user_id IN (#{groomId}, #{brideId})
-                      AND ar.type = 'SAVING'
+                    FROM goal g
+                    WHERE g.couple_id = #{coupleId}
+                      AND g.status IN ('NORMAL', 'PENDING', 'CONFIRMED')
                 ) THEN TRUE
                 ELSE FALSE
-            END AS first_saving_recorded,
+            END AS wedding_goal_created,
+            CASE
+                WHEN main_goal.id IS NOT NULL THEN TRUE
+                ELSE FALSE
+            END AS main_plan_selected,
             main_goal.id AS main_goal_id,
             main_goal.status AS main_goal_status,
             DATE_FORMAT(main_goal.wedding_date, '%Y-%m-%d') AS wedding_date,
@@ -100,16 +97,116 @@
                 FROM goal g
                 WHERE g.couple_id = #{coupleId}
                   AND g.is_main = TRUE
-                  AND g.status IN ('NORMAL', 'DRAFT', 'CONFIRMED')
+                  AND g.status = 'CONFIRMED'
                 ORDER BY
-                    CASE g.status
-                        WHEN 'CONFIRMED' THEN 0
-                        WHEN 'NORMAL' THEN 1
-                        ELSE 2
-                    END,
                     g.id DESC
                 LIMIT 1
             )
+    </select>
+
+    <select id="selectAssetSummary" resultType="com.project.domain.home.model.HomeRecord$HomeAssetSummaryRecord">
+        SELECT
+            g.total_budget AS total_budget_amount,
+            COALESCE(total_saving.total_saved_amount, 0) AS total_saved_amount,
+            COALESCE(personal_saving.personal_saved_amount, 0) AS personal_saved_amount,
+            CAST(FLOOR(
+                g.total_budget
+                * CASE
+                    WHEN #{userId} = #{groomId} THEN g.groom_ratio
+                    ELSE g.bride_ratio
+                  END
+                / 100
+            ) AS SIGNED) AS personal_target_amount,
+            COALESCE(expense.wedding_expense_amount, 0) AS wedding_expense_amount,
+            GREATEST(
+                g.total_budget - COALESCE(total_saving.total_saved_amount, 0),
+                0
+            ) AS remaining_wedding_fund_amount,
+            DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS base_date
+        FROM goal g
+        LEFT JOIN (
+            SELECT
+                COALESCE(SUM(ar.amount), 0) AS total_saved_amount
+            FROM account a
+            INNER JOIN account_record ar
+                ON ar.account_id = a.id
+            WHERE a.user_id IN (#{groomId}, #{brideId})
+              AND ar.type = 'SAVING'
+        ) total_saving
+            ON 1 = 1
+        LEFT JOIN (
+            SELECT
+                COALESCE(SUM(ar.amount), 0) AS personal_saved_amount
+            FROM account a
+            INNER JOIN account_record ar
+                ON ar.account_id = a.id
+            WHERE a.user_id = #{userId}
+              AND ar.type = 'SAVING'
+        ) personal_saving
+            ON 1 = 1
+        LEFT JOIN (
+            SELECT
+                COALESCE(account_expense.account_expense_amount, 0)
+                + COALESCE(card_expense.card_expense_amount, 0) AS wedding_expense_amount
+            FROM (
+                SELECT 1 AS expense_base
+            ) expense_base
+            LEFT JOIN (
+                SELECT
+                    COALESCE(SUM(ar.amount), 0) AS account_expense_amount
+                FROM account a
+                INNER JOIN account_record ar
+                    ON ar.account_id = a.id
+                WHERE a.user_id IN (#{groomId}, #{brideId})
+                  AND ar.type = 'EXPENSE'
+                  AND ar.category = '결혼비용'
+            ) account_expense
+                ON 1 = 1
+            LEFT JOIN (
+                SELECT
+                    COALESCE(SUM(cr.amount), 0) AS card_expense_amount
+                FROM card cd
+                INNER JOIN card_record cr
+                    ON cr.card_id = cd.id
+                WHERE cd.user_id IN (#{groomId}, #{brideId})
+                  AND cr.type = 'EXPENSE'
+                  AND cr.category = '결혼비용'
+            ) card_expense
+                ON 1 = 1
+        ) expense
+            ON 1 = 1
+        WHERE g.id = #{goalId}
+    </select>
+
+    <select id="selectExpectedBudgetPreviewRegions" resultType="com.project.domain.home.model.HomeRecord$HomeBudgetPreviewRecord">
+        SELECT
+            ws.region AS region,
+            CASE ws.region
+                WHEN '서울(강남)' THEN '서울'
+                WHEN '서울(강남외)' THEN '서울'
+                WHEN '경기도' THEN '경기'
+                ELSE ws.region
+            END AS display_region,
+            SUM(ws.mid_50) AS balanced_amount
+        FROM wedding_statistics ws
+        WHERE ws.category IN ('예식장', '스튜디오', '드레스', '메이크업')
+          AND ws.region IN ('서울(강남)', '경기도', '인천', '부산', '대구', '광주', '대전')
+        GROUP BY ws.region
+        HAVING COUNT(DISTINCT ws.category) = 4
+        ORDER BY
+            CASE
+                WHEN ws.region = '서울(강남)' THEN 1
+                WHEN ws.region = '경기도' THEN 2
+                WHEN ws.region = '인천' THEN 3
+                WHEN ws.region = '부산' THEN 4
+                WHEN ws.region = '대구' THEN 5
+                WHEN ws.region = '광주' THEN 6
+                WHEN ws.region = '대전' THEN 7
+                ELSE 99
+            END,
+            SUM(ws.mid_50) DESC,
+            ws.region ASC
+        LIMIT 7
     </select>
 
     <select id="selectSavingMissionSummary" resultType="com.project.domain.home.model.HomeRecord$HomeSavingMissionSummaryRecord">

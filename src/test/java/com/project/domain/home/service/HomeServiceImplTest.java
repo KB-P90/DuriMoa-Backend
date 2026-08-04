@@ -4,11 +4,14 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.mapper.HomeMapper;
+import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
+import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
 import com.project.domain.home.model.HomeSetupChecklistCalculator;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,22 +29,57 @@ class HomeServiceImplTest {
 
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
         Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
+        Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(false);
+        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(List.of(budgetPreviewRegion()));
 
         HomeResponseDTO response = service.getHome(1L);
 
         Assertions.assertEquals(0, response.getSetupChecklist().getCompletedCount());
         Assertions.assertEquals(1, response.getSetupChecklist().getCurrentStep());
+        Assertions.assertFalse(response.getSetupCompleted());
+        Assertions.assertNotNull(response.getExpectedBudgetPreview());
+        Assertions.assertEquals("균형형", response.getExpectedBudgetPreview().getBudgetType());
+        Assertions.assertEquals("MID_50", response.getExpectedBudgetPreview().getAmountBasis());
+        Assertions.assertEquals(1, response.getExpectedBudgetPreview().getRegions().size());
+        Assertions.assertEquals("서울", response.getExpectedBudgetPreview().getRegions().get(0).getDisplayRegion());
+        Assertions.assertEquals(11_790_000L,
+                response.getExpectedBudgetPreview().getRegions().get(0).getBalancedAmount());
+        Assertions.assertNull(response.getAssetSummary());
+        Assertions.assertNull(response.getGoalSummary());
+        Assertions.assertNull(response.getSavingMissionSummary());
         Assertions.assertEquals(1L, response.getCouple().getUserId());
         Assertions.assertNull(response.getCouple().getCoupleId());
-        Assertions.assertEquals(0L, response.getSavingMissionSummary().getTotalExpectedSavingAmount());
-        Assertions.assertEquals("월별지출관리 페이지로 이동",
-                response.getSavingMissionSummary().getNavigationMessage());
         Mockito.verify(mapper, Mockito.never()).selectChecklistEvidence(
                 Mockito.anyLong(),
                 Mockito.anyLong(),
                 Mockito.anyLong(),
                 Mockito.anyLong()
         );
+        Mockito.verify(mapper, Mockito.never()).selectSavingMissionSummary(
+                Mockito.anyLong(),
+                Mockito.anyInt(),
+                Mockito.anyInt()
+        );
+    }
+
+    // 계좌 연결만 완료된 사용자는 커플 연결 단계가 현재 단계가 됩니다.
+    @Test
+    void getHomeMovesCurrentStepToCoupleWhenOnlyAccountLinked() {
+        HomeMapper mapper = Mockito.mock(HomeMapper.class);
+        HomeServiceImpl service = new HomeServiceImpl(mapper, new HomeSetupChecklistCalculator());
+
+        Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
+        Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
+        Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
+        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(List.of(budgetPreviewRegion()));
+
+        HomeResponseDTO response = service.getHome(1L);
+
+        Assertions.assertEquals(1, response.getSetupChecklist().getCompletedCount());
+        Assertions.assertEquals(2, response.getSetupChecklist().getCurrentStep());
+        Assertions.assertFalse(response.getSetupCompleted());
+        Assertions.assertEquals("ACCOUNT_LINKED", response.getSetupChecklist().getSteps().get(0).getCode());
+        Assertions.assertEquals("COUPLE_CONNECTED", response.getSetupChecklist().getSteps().get(1).getCode());
     }
 
     // 실제 수행 근거가 모두 있으면 다섯 단계가 모두 완료됩니다.
@@ -52,7 +90,9 @@ class HomeServiceImplTest {
 
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
         Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(couple());
+        Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
         Mockito.when(mapper.selectChecklistEvidence(1L, 100L, 1L, 2L)).thenReturn(fullEvidence());
+        Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
         Mockito.when(mapper.selectSavingMissionSummary(
                 Mockito.eq(1L),
                 Mockito.anyInt(),
@@ -63,11 +103,20 @@ class HomeServiceImplTest {
 
         Assertions.assertEquals(5, response.getSetupChecklist().getCompletedCount());
         Assertions.assertNull(response.getSetupChecklist().getCurrentStep());
+        Assertions.assertTrue(response.getSetupCompleted());
+        Assertions.assertNull(response.getExpectedBudgetPreview());
         Assertions.assertEquals(30L, response.getCouple().getGoalId());
         Assertions.assertEquals("2026-12-20", response.getCouple().getWeddingDate());
         Assertions.assertEquals(30L, response.getGoalSummary().getJointGoal().getGoalId());
         Assertions.assertFalse(response.getGoalSummary().getJointGoal().getSetupRequired());
-        Assertions.assertNull(response.getAssetSummary().getTotalSavedAmount());
+        Assertions.assertEquals(50_000_000L, response.getAssetSummary().getTotalBudgetAmount());
+        Assertions.assertEquals(31_190_000L, response.getAssetSummary().getTotalSavedAmount());
+        Assertions.assertEquals(18_810_000L, response.getAssetSummary().getRemainingWeddingFundAmount());
+        Assertions.assertEquals(31_190_000L, response.getGoalSummary().getJointGoal().getCurrentAmount());
+        Assertions.assertEquals(62, response.getGoalSummary().getJointGoal().getAchievementRate());
+        Assertions.assertEquals(30_000_000L, response.getGoalSummary().getPersonalGoal().getTargetAmount());
+        Assertions.assertEquals(11_900_000L, response.getGoalSummary().getPersonalGoal().getCurrentAmount());
+        Assertions.assertEquals(39, response.getGoalSummary().getPersonalGoal().getAchievementRate());
         Assertions.assertEquals(70000L, response.getSavingMissionSummary().getTotalExpectedSavingAmount());
         Assertions.assertEquals(1, response.getSavingMissionSummary().getInProgressMissionCount());
         Assertions.assertEquals(1, response.getSavingMissionSummary().getCompletedMissionCount());
@@ -119,15 +168,35 @@ class HomeServiceImplTest {
     // 전체 완료 상태의 체크리스트 근거 테스트 데이터를 만듭니다.
     private HomeChecklistEvidenceRecord fullEvidence() {
         HomeChecklistEvidenceRecord evidence = new HomeChecklistEvidenceRecord();
-        evidence.setAccountLinked(true);
         evidence.setWeddingGoalCreated(true);
-        evidence.setRegionSelected(true);
-        evidence.setFirstSavingRecorded(true);
+        evidence.setMainPlanSelected(true);
         evidence.setMainGoalId(30L);
         evidence.setMainGoalStatus("CONFIRMED");
         evidence.setWeddingDate("2026-12-20");
         evidence.setRegion("서울");
         return evidence;
+    }
+
+    // 미완료 홈의 예상 예산 미리보기 테스트 데이터를 만듭니다.
+    private HomeBudgetPreviewRecord budgetPreviewRegion() {
+        HomeBudgetPreviewRecord record = new HomeBudgetPreviewRecord();
+        record.setRegion("서울(강남)");
+        record.setDisplayRegion("서울");
+        record.setBalancedAmount(11_790_000L);
+        return record;
+    }
+
+    // 메인 홈의 자산 요약 테스트 데이터를 만듭니다.
+    private HomeAssetSummaryRecord assetSummary() {
+        HomeAssetSummaryRecord summary = new HomeAssetSummaryRecord();
+        summary.setTotalBudgetAmount(50_000_000L);
+        summary.setTotalSavedAmount(31_190_000L);
+        summary.setPersonalSavedAmount(11_900_000L);
+        summary.setPersonalTargetAmount(30_000_000L);
+        summary.setWeddingExpenseAmount(1_000_000L);
+        summary.setRemainingWeddingFundAmount(18_810_000L);
+        summary.setBaseDate("2026-08-03");
+        return summary;
     }
 
     // 홈 도전중 절약미션 표시와 완료 미션 수 요약 테스트 데이터를 만듭니다.

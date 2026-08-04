@@ -20,17 +20,17 @@ class HomeSetupChecklistCalculatorTest {
         Assertions.assertEquals(Status.LOCKED, result.getSteps().get(1).getStatus());
     }
 
-    // 커플 연결만 완료되면 계좌 연결 단계가 현재 단계가 됩니다.
+    // 계좌 연결만 완료되면 커플 연결 단계가 현재 단계가 됩니다.
     @Test
-    void calculateMovesCurrentStepAfterCoupleConnected() {
+    void calculateMovesCurrentStepAfterAccountLinked() {
         HomeSetupChecklistCalculator calculator = new HomeSetupChecklistCalculator();
 
         HomeSetupChecklistResult result = calculator.calculate(HomeSetupChecklistEvidence.builder()
-                .coupleConnected(true)
-                .accountLinked(false)
+                .accountLinked(true)
+                .coupleConnected(false)
                 .weddingGoalCreated(false)
-                .regionSelected(false)
-                .firstSavingRecorded(false)
+                .mainPlanSelected(false)
+                .firstStepStarted(false)
                 .build());
 
         Assertions.assertEquals(1, result.getCompletedCount());
@@ -45,15 +45,15 @@ class HomeSetupChecklistCalculatorTest {
         HomeSetupChecklistCalculator calculator = new HomeSetupChecklistCalculator();
 
         HomeSetupChecklistResult result = calculator.calculate(HomeSetupChecklistEvidence.builder()
-                .coupleConnected(true)
                 .accountLinked(false)
+                .coupleConnected(true)
                 .weddingGoalCreated(true)
-                .regionSelected(true)
-                .firstSavingRecorded(true)
+                .mainPlanSelected(true)
+                .firstStepStarted(true)
                 .build());
 
-        Assertions.assertEquals(1, result.getCompletedCount());
-        Assertions.assertEquals(2, result.getCurrentStep());
+        Assertions.assertEquals(0, result.getCompletedCount());
+        Assertions.assertEquals(1, result.getCurrentStep());
         Assertions.assertFalse(result.getSteps().get(2).getCompleted());
         Assertions.assertEquals(Status.LOCKED, result.getSteps().get(2).getStatus());
         Assertions.assertEquals(Status.LOCKED, result.getSteps().get(4).getStatus());
@@ -65,11 +65,11 @@ class HomeSetupChecklistCalculatorTest {
         HomeSetupChecklistCalculator calculator = new HomeSetupChecklistCalculator();
 
         HomeSetupChecklistResult result = calculator.calculate(HomeSetupChecklistEvidence.builder()
-                .coupleConnected(true)
                 .accountLinked(true)
+                .coupleConnected(true)
                 .weddingGoalCreated(true)
-                .regionSelected(true)
-                .firstSavingRecorded(true)
+                .mainPlanSelected(true)
+                .firstStepStarted(true)
                 .build());
 
         Assertions.assertEquals(5, result.getCompletedCount());
