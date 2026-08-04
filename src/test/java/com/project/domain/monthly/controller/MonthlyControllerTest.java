@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
-import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
@@ -138,24 +137,21 @@ class MonthlyControllerTest {
     void startSavingMission_Success_WithAuth() throws Exception {
         Long userId = 1L;
         Long missionId = 101L;
-        SavingMissionChallengeRequestDTO requestDTO = new SavingMissionChallengeRequestDTO();
 
-        Mockito.doNothing().when(monthlyService).startSavingMission(eq(userId), eq(missionId), any(SavingMissionChallengeRequestDTO.class));
+        Mockito.doNothing().when(monthlyService).startSavingMission(eq(userId), eq(missionId));
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        MvcResult result = mockMvc.perform(post("/api/expense/saving-missions/{missionId}", missionId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDTO)))
+        MvcResult result = mockMvc.perform(post("/api/expense/saving-missions/{missionId}", missionId))
                 .andExpect(status().isOk())
                 .andReturn();
 
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
         Assertions.assertEquals("절약 미션 도전을 시작했습니다.", response.get("message").asText());
-        Mockito.verify(monthlyService).startSavingMission(eq(userId), eq(missionId), any(SavingMissionChallengeRequestDTO.class));
+        Mockito.verify(monthlyService).startSavingMission(eq(userId), eq(missionId));
     }
 
     @Test

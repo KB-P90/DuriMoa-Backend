@@ -4,7 +4,6 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
-import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
@@ -87,18 +86,17 @@ public class MonthlyController {
 
     @ApiOperation(
             value = "절약 미션 도전",
-            notes = "미션 ID와 년월(yearMonth)을 입력받아 절약 미션 상태를 '도전하기'에서 '도전중'으로 변경합니다."
+            notes = "미션 ID를 입력받아 절약 미션 상태를 '도전하기'에서 '도전중'으로 변경합니다."
     )
     @PostMapping("/saving-missions/{missionId}")
     public ResponseEntity<ApiResponse<Void>> startSavingMission(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication,
             @ApiParam(value = "절약 미션 ID", example = "101", required = true)
-            @PathVariable("missionId") Long missionId,
-            @RequestBody SavingMissionChallengeRequestDTO requestDTO
+            @PathVariable("missionId") Long missionId
     ) {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
-        monthlyService.startSavingMission(authenticatedUserId, missionId, requestDTO);
+        monthlyService.startSavingMission(authenticatedUserId, missionId);
         return ResponseEntity.ok(ApiResponse.success("절약 미션 도전을 시작했습니다."));
     }
 
