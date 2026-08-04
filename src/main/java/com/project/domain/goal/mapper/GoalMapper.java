@@ -8,6 +8,10 @@ import org.apache.ibatis.annotations.Param;
 
 public interface GoalMapper {
 
+    Long selectCoupleIdForUpdate(@Param("coupleId") Long coupleId);
+
+    Boolean existsGoalByCoupleId(@Param("coupleId") Long coupleId);
+
     Integer insertGoal(GoalVO goal);
 
     Integer insertGoalItems(
@@ -20,6 +24,15 @@ public interface GoalMapper {
     List<GoalVO> selectGoalsByCoupleIdForUpdate(@Param("coupleId") Long coupleId);
 
     List<GoalItemVO> selectGoalItemsByGoalIds(@Param("goalIds") List<Long> goalIds);
+
+    Integer updateGoal(GoalVO goal);
+
+    Integer deleteGoalItems(@Param("goalId") Long goalId);
+
+    Integer deleteGoal(
+            @Param("goalId") Long goalId,
+            @Param("coupleId") Long coupleId
+    );
 
     Integer updateGoalRequest(
             @Param("goalId") Long goalId,

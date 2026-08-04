@@ -22,6 +22,9 @@ import com.project.domain.goal.dto.GoalDecisionRequestDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
+import com.project.domain.goal.dto.GoalUpdateRequestDTO;
+import com.project.domain.goal.dto.GoalUpdateResponseDTO;
+import com.project.domain.goal.dto.GoalDeleteResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,6 +44,8 @@ class GoalServiceImplTest {
 
         when(coupleService.getConnectedCoupleByUserId(1L))
                 .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectCoupleIdForUpdate(10L)).thenReturn(10L);
+        when(goalMapper.existsGoalByCoupleId(10L)).thenReturn(false);
         when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
             GoalVO goal = invocation.getArgument(0);
             goal.setId(100L);
@@ -59,12 +64,38 @@ class GoalServiceImplTest {
         verify(goalMapper).insertGoal(goalCaptor.capture());
         assertEquals(10L, goalCaptor.getValue().getCoupleId());
         assertEquals(35_000_000L, goalCaptor.getValue().getTotalBudget());
+        assertEquals(true, goalCaptor.getValue().getIsMain());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<GoalItemVO>> itemsCaptor = ArgumentCaptor.forClass(List.class);
         verify(goalMapper).insertGoalItems(eq(100L), itemsCaptor.capture());
         assertEquals(2, itemsCaptor.getValue().size());
         assertEquals("예식장", itemsCaptor.getValue().get(0).getCategory());
+    }
+
+    @Test
+    void createGoalStoresAdditionalGoalAsNonMainForConnectedCouple() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+
+        when(coupleService.getConnectedCoupleByUserId(2L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectCoupleIdForUpdate(10L)).thenReturn(10L);
+        when(goalMapper.existsGoalByCoupleId(10L)).thenReturn(true);
+        when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
+            GoalVO goal = invocation.getArgument(0);
+            goal.setId(101L);
+            return 1;
+        });
+        when(goalMapper.insertGoalItems(eq(101L), anyList())).thenReturn(2);
+
+        service.createGoal(2L, validRequest());
+
+        ArgumentCaptor<GoalVO> goalCaptor = ArgumentCaptor.forClass(GoalVO.class);
+        verify(goalMapper).selectCoupleIdForUpdate(10L);
+        verify(goalMapper).insertGoal(goalCaptor.capture());
+        assertEquals(false, goalCaptor.getValue().getIsMain());
     }
 
     @Test
@@ -395,6 +426,67 @@ class GoalServiceImplTest {
         verify(goalMapper, never()).confirmGoal(any());
     }
 
+    @Test
+    void updateGoalReplacesGoalAndItemsWhileKeepingServerManagedValues() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        GoalVO existingGoal = goal(1L, "기존 예산", "CONFIRMED", true);
+        when(coupleService.getConnectedCoupleByUserId(2L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L)).thenReturn(List.of(existingGoal));
+        when(goalMapper.updateGoal(any(GoalVO.class))).thenReturn(1);
+        when(goalMapper.insertGoalItems(eq(1L), anyList())).thenReturn(2);
+
+        GoalUpdateResponseDTO response = service.updateGoal(2L, 1L, validUpdateRequest());
+
+        assertEquals("수정된 균형형 결혼 예산", response.getName());
+        assertEquals(35_000_000L, response.getTotalBudget());
+        assertEquals("CONFIRMED", response.getStatus());
+        assertEquals(true, response.getIsMain());
+        assertEquals(existingGoal.getCreatedAt(), response.getCreatedAt());
+        assertEquals(false, response.getItems().get(0).getCompleted());
+        verify(goalMapper).deleteGoalItems(1L);
+        verify(goalMapper).insertGoalItems(eq(1L), anyList());
+    }
+
+    @Test
+    void deleteGoalDeletesNonMainGoalForConnectedCouple() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L))
+                .thenReturn(List.of(goal(2L, "일반 예산", "NORMAL", false)));
+        when(goalMapper.deleteGoal(2L, 10L)).thenReturn(1);
+
+        GoalDeleteResponseDTO response = service.deleteGoal(1L, 2L);
+
+        assertEquals(2L, response.getGoalId());
+        verify(goalMapper).deleteGoal(2L, 10L);
+    }
+
+    @Test
+    void deleteGoalRejectsMainGoal() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService);
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectGoalsByCoupleIdForUpdate(10L))
+                .thenReturn(List.of(goal(1L, "메인 예산", "CONFIRMED", true)));
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                () -> service.deleteGoal(1L, 1L)
+        );
+
+        assertEquals(ErrorCode.INVALID_INPUT_VALUE, exception.getErrorCode());
+        assertEquals("메인 시안은 삭제할 수 없습니다.", exception.getMessage());
+        verify(goalMapper, never()).deleteGoal(any(), any());
+    }
+
     private GoalCreateRequestDTO validRequest() {
         return GoalCreateRequestDTO.builder()
                 .name("균형형 결혼 예산")
@@ -402,6 +494,17 @@ class GoalServiceImplTest {
                 .region("서울(강남)")
                 .groomRatio(50L)
                 .brideRatio(50L)
+                .items(validItems())
+                .build();
+    }
+
+    private GoalUpdateRequestDTO validUpdateRequest() {
+        return GoalUpdateRequestDTO.builder()
+                .name("수정된 균형형 결혼 예산")
+                .weddingDate(LocalDate.of(2099, 10, 9))
+                .region("서울(강남)")
+                .groomRatio(60L)
+                .brideRatio(40L)
                 .items(validItems())
                 .build();
     }

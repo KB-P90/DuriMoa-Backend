@@ -8,8 +8,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,6 +22,8 @@ import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
+import com.project.domain.goal.dto.GoalDeleteResponseDTO;
+import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.service.GoalService;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -183,6 +187,62 @@ class GoalControllerTest {
         assertTrue(response.get("success").asBoolean());
         assertTrue(response.get("data").isArray());
         assertEquals(0, response.get("data").size());
+    }
+
+    @Test
+    void updateGoalReturnsUpdatedGoalInCommonResponse() throws Exception {
+        authenticate(1L);
+        when(goalService.updateGoal(eq(1L), eq(1L), any())).thenReturn(
+                GoalUpdateResponseDTO.builder()
+                        .goalId(1L)
+                        .name("수정된 균형형 결혼 예산")
+                        .weddingDate(LocalDate.of(2099, 10, 9))
+                        .region("서울(강남)")
+                        .totalBudget(35_000_000L)
+                        .groomRatio(60L)
+                        .brideRatio(40L)
+                        .status("NORMAL")
+                        .isMain(true)
+                        .createdAt(LocalDateTime.of(2026, 7, 30, 10, 30))
+                        .items(List.of(GoalCreateItemResponseDTO.builder()
+                                .category("예식장")
+                                .targetAmount(35_000_000L)
+                                .included(true)
+                                .completed(false)
+                                .type("균형형")
+                                .build()))
+                        .build()
+        );
+
+        MvcResult result = mockMvc.perform(put("/api/goal/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validJson()))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals("결혼 목표가 수정되었습니다.", response.get("message").asText());
+        assertEquals(1L, response.at("/data/goalId").asLong());
+        assertTrue(response.at("/data/isMain").asBoolean());
+        assertEquals("2026-07-30 10:30:00", response.at("/data/createdAt").asText());
+        verify(goalService).updateGoal(eq(1L), eq(1L), any());
+    }
+
+    @Test
+    void deleteGoalReturnsDeletedGoalIdInCommonResponse() throws Exception {
+        authenticate(1L);
+        when(goalService.deleteGoal(1L, 2L)).thenReturn(
+                GoalDeleteResponseDTO.builder().goalId(2L).build()
+        );
+
+        MvcResult result = mockMvc.perform(delete("/api/goal/2"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals("결혼 목표가 삭제되었습니다.", response.get("message").asText());
+        assertEquals(2L, response.at("/data/goalId").asLong());
+        verify(goalService).deleteGoal(1L, 2L);
     }
 
     @Test

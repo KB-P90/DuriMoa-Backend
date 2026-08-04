@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel(description = "결혼 목표 등록 항목 응답")
+@ApiModel(description = "결혼 시안 등록 항목 응답")
 public class GoalCreateItemResponseDTO {
 
     @ApiModelProperty(value = "목표 항목 카테고리", example = "예식장")

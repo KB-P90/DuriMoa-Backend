@@ -31,6 +31,21 @@
         <result property="type" column="type"/>
     </resultMap>
 
+    <select id="selectCoupleIdForUpdate" resultType="java.lang.Long">
+        SELECT id
+        FROM couple
+        WHERE id = #{coupleId}
+        FOR UPDATE
+    </select>
+
+    <select id="existsGoalByCoupleId" resultType="java.lang.Boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM goal
+            WHERE couple_id = #{coupleId}
+        )
+    </select>
+
     <insert id="insertGoal"
             parameterType="com.project.domain.goal.domain.GoalVO"
             useGeneratedKeys="true"
@@ -43,6 +58,7 @@
             total_budget,
             groom_ratio,
             bride_ratio,
+            is_main,
             created_at
         ) VALUES (
             #{coupleId},
@@ -52,6 +68,7 @@
             #{totalBudget},
             #{groomRatio},
             #{brideRatio},
+            #{isMain},
             #{createdAt}
         )
     </insert>
@@ -138,6 +155,31 @@
             goal_id ASC,
             id ASC
     </select>
+
+    <update id="updateGoal"
+            parameterType="com.project.domain.goal.domain.GoalVO">
+        UPDATE goal
+        SET name = #{name},
+            wedding_date = #{weddingDate},
+            region = #{region},
+            total_budget = #{totalBudget},
+            groom_ratio = #{groomRatio},
+            bride_ratio = #{brideRatio}
+        WHERE id = #{id}
+          AND couple_id = #{coupleId}
+    </update>
+
+    <delete id="deleteGoalItems">
+        DELETE FROM goal_item
+        WHERE goal_id = #{goalId}
+    </delete>
+
+    <delete id="deleteGoal">
+        DELETE FROM goal
+        WHERE id = #{goalId}
+          AND couple_id = #{coupleId}
+          AND is_main = FALSE
+    </delete>
 
     <update id="updateGoalRequest">
         UPDATE goal

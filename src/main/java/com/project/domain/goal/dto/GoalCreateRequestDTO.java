@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel(description = "결혼 목표 등록 요청")
+@ApiModel(description = "결혼 시안 등록 요청")
 public class GoalCreateRequestDTO {
 
     @NotBlank(message = "시안 제목은 필수입니다.")
@@ -55,6 +55,6 @@ public class GoalCreateRequestDTO {
 
     @Valid
     @NotEmpty(message = "목표 항목은 최소 1개 이상이어야 합니다.")
-    @ApiModelProperty(value = "결혼 목표 항목 목록", required = true)
+    @ApiModelProperty(value = "결혼 시안 항목 목록", required = true)
     private List<GoalItemCreateRequestDTO> items;
 }

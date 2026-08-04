@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel(description = "결혼 목표 항목 등록 요청")
+@ApiModel(description = "결혼 시안 항목 등록 요청")
 public class GoalItemCreateRequestDTO {
 
     @NotBlank(message = "목표 항목 카테고리는 필수입니다.")
