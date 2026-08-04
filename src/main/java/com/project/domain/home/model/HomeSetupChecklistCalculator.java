@@ -68,10 +68,10 @@ public class HomeSetupChecklistCalculator {
                 return evidence.getAccountLinked();
             case WEDDING_GOAL_CREATED:
                 return evidence.getWeddingGoalCreated();
-            case REGION_SELECTED:
-                return evidence.getRegionSelected();
-            case FIRST_SAVING_RECORDED:
-                return evidence.getFirstSavingRecorded();
+            case MAIN_PLAN_SELECTED:
+                return evidence.getMainPlanSelected();
+            case FIRST_STEP_STARTED:
+                return evidence.getFirstStepStarted();
             default:
                 return false;
         }

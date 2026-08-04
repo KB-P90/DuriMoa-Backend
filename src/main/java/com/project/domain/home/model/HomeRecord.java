@@ -62,17 +62,11 @@ public final class HomeRecord {
     @Setter
     public static class HomeChecklistEvidenceRecord {
 
-        // 인증 사용자에게 연결 계좌 또는 카드가 있는지 나타내는 DB 조회 결과입니다.
-        private Boolean accountLinked;
-
-        // 활성 커플의 대표 결혼 목표가 있는지 나타내는 DB 조회 결과입니다.
+        // 활성 커플에 결혼 목표 시안이 하나 이상 있는지 나타내는 DB 조회 결과입니다.
         private Boolean weddingGoalCreated;
 
-        // 대표 결혼 목표에 지역 값이 있는지 나타내는 DB 조회 결과입니다.
-        private Boolean regionSelected;
-
-        // 활성 커플 구성원의 양수 저축 기록이 있는지 나타내는 DB 조회 결과입니다.
-        private Boolean firstSavingRecorded;
+        // 활성 커플에 확정된 메인 시안이 있는지 나타내는 DB 조회 결과입니다.
+        private Boolean mainPlanSelected;
 
         // 대표 결혼 목표 식별자입니다.
         private Long mainGoalId;
@@ -85,6 +79,46 @@ public final class HomeRecord {
 
         // 대표 결혼 목표의 지역 값입니다.
         private String region;
+    }
+
+    @Getter
+    @Setter
+    public static class HomeAssetSummaryRecord {
+
+        // 대표 결혼 목표의 총 예산입니다.
+        private Long totalBudgetAmount;
+
+        // 활성 커플 구성원의 누적 저축 금액입니다.
+        private Long totalSavedAmount;
+
+        // 인증 사용자의 누적 저축 금액입니다.
+        private Long personalSavedAmount;
+
+        // 인증 사용자의 목표 분담 금액입니다.
+        private Long personalTargetAmount;
+
+        // 활성 커플 구성원의 결혼 준비 지출 금액입니다.
+        private Long weddingExpenseAmount;
+
+        // 총 예산에서 누적 저축 금액을 뺀 잔여 금액입니다.
+        private Long remainingWeddingFundAmount;
+
+        // 요약 금액의 기준일입니다.
+        private String baseDate;
+    }
+
+    @Getter
+    @Setter
+    public static class HomeBudgetPreviewRecord {
+
+        // DB에 저장된 원본 지역명입니다.
+        private String region;
+
+        // 홈 차트에서 짧게 표시할 지역명입니다.
+        private String displayRegion;
+
+        // 지역별 결혼 통계 균형형 예상 금액입니다.
+        private Long balancedAmount;
     }
 
     @Getter

@@ -8,6 +8,10 @@ import lombok.Getter;
 @Builder
 public class HomeResponseDTO {
 
+    // 체크리스트 5단계가 모두 완료되어 메인 홈을 보여줄 수 있는지 나타냅니다.
+    @JsonProperty("setup_completed")
+    private final Boolean setupCompleted;
+
     // 홈 상단의 커플 연결과 결혼 목표 연결 정보를 담는 영역입니다.
     @JsonProperty("couple")
     private final CoupleResponseDTO couple;
@@ -31,4 +35,8 @@ public class HomeResponseDTO {
     // 준비 전 홈 화면의 5단계 진행 상태입니다.
     @JsonProperty("setup_checklist")
     private final SetupChecklistResponseDTO setupChecklist;
+
+    // 체크리스트 미완료 홈에서 보여줄 지역별 예상 예산 미리보기입니다.
+    @JsonProperty("expected_budget_preview")
+    private final ExpectedBudgetPreviewResponseDTO expectedBudgetPreview;
 }
