@@ -4,9 +4,14 @@ import com.project.domain.codef.dto.CodefAccountListRequestDTO;
 import com.project.domain.codef.dto.CodefApiResponseDTO;
 import com.project.domain.codef.dto.CodefCardListRequestDTO;
 import com.project.domain.codef.dto.CodefConnectedIdRequestDTO;
-import com.project.domain.codef.dto.CodefProductRequestDTO;
 import com.project.domain.codef.dto.CodefTokenRequestDTO;
 import com.project.domain.codef.dto.CodefTokenResponseDTO;
+
+import com.project.domain.codef.dto.CodefBankTransactionListRequestDTO;
+import com.project.domain.codef.dto.CodefBankTransactionResponseDTO;
+import com.project.domain.codef.dto.CodefCardApprovalListRequestDTO;
+import com.project.domain.codef.dto.CodefCardApprovalResponseDTO;
+import com.project.domain.codef.dto.CodefConnectedIdResponseDTO;
 
 public interface CodefService {
 
@@ -16,9 +21,14 @@ public interface CodefService {
     CodefTokenResponseDTO getAccessToken(CodefTokenRequestDTO requestDTO);
 
     /**
+     * CODEF RSA 비밀번호 암호화
+     */
+    String encryptPassword(String plainPassword);
+
+    /**
      * CODEF Connected ID 생성
      */
-    CodefApiResponseDTO<Object> createConnectedId(CodefConnectedIdRequestDTO requestDTO);
+    CodefApiResponseDTO<CodefConnectedIdResponseDTO> createConnectedId(CodefConnectedIdRequestDTO requestDTO);
 
     /**
      * CODEF 보유 계좌 목록 조회
@@ -31,9 +41,14 @@ public interface CodefService {
     CodefApiResponseDTO<Object> getCardList(CodefCardListRequestDTO requestDTO);
 
     /**
-     * CODEF 범용 API 상품 요청
+     * CODEF 은행 거래내역 조회
      */
-    CodefApiResponseDTO<Object> requestProduct(CodefProductRequestDTO requestDTO);
+    CodefApiResponseDTO<CodefBankTransactionResponseDTO> getBankTransactionList(CodefBankTransactionListRequestDTO requestDTO);
+
+    /**
+     * CODEF 카드 승인내역 조회
+     */
+    CodefApiResponseDTO<CodefCardApprovalResponseDTO> getCardApprovalList(CodefCardApprovalListRequestDTO requestDTO);
 
     /**
      * CODEF Connected ID 계정 추가

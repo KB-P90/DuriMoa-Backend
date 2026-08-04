@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.domain.onboarding.mapper.OnboardingMapper">
+
+    <select id="findConnectedIdByUserId" resultType="string">
+        SELECT connected_id
+        FROM `user`
+        WHERE id = #{userId} AND connected_id IS NOT NULL AND connected_id != ''
+        LIMIT 1
+    </select>
+
+    <update id="updateUserConnectedId">
+        UPDATE `user`
+        SET connected_id = #{connectedId}
+        WHERE id = #{userId}
+    </update>
+
+    <insert id="insertAccount" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO account (user_id, company, number, card_name, account_id, account_password, created_at)
+        VALUES (#{userId}, #{company}, #{number}, #{cardName}, #{accountId}, #{accountPassword}, NOW())
+    </insert>
+
+    <insert id="insertCard" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO card (user_id, card_product_id, company, number, card_name, card_id, card_password, created_at)
+        VALUES (#{userId}, #{cardProductId}, #{company}, #{number}, #{cardName}, #{cardId}, #{cardPassword}, NOW())
+    </insert>
+
+    <select id="findAccountIdByUserAndNumber" resultType="long">
+        SELECT id FROM account
+        WHERE user_id = #{userId}
+          AND (
+            number = #{number}
+            OR account_id = #{number}
+            OR company = #{company}
+          )
+        ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="findCardIdByUserAndNumber" resultType="long">
+        SELECT id FROM card
+        WHERE user_id = #{userId}
+          AND (
+            number = #{number}
+            OR card_id = #{number}
+            OR company = #{company}
+          )
+        ORDER BY id DESC LIMIT 1
+    </select>
+
+    <insert id="insertAccountRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO account_record (account_id, type, category, title, amount, record_date, memo, created_at)
+        VALUES (#{accountId}, #{type}, #{category}, #{title}, #{amount}, STR_TO_DATE(#{recordDate}, '%Y-%m-%d'), #{memo}, NOW())
+    </insert>
+
+    <insert id="insertCardRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO card_record (card_id, type, category, title, amount, record_date, memo, created_at)
+        VALUES (#{cardId}, #{type}, #{category}, #{title}, #{amount}, STR_TO_DATE(#{recordDate}, '%Y-%m-%d'), #{memo}, NOW())
+    </insert>
+
+</mapper>

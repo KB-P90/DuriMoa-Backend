@@ -20,10 +20,14 @@ import javax.sql.DataSource;
 @Configuration
 @PropertySource({"classpath:/database.properties"})
 @MapperScan(basePackages = {
-    "com.project.domain.calendar.mapper"
+    "com.project.domain.calendar.mapper",
+    "com.project.domain.onboarding.mapper"
 })
 @ComponentScan(basePackages = {
-    "com.project.domain.calendar.service"
+    "com.project.common.config",
+    "com.project.domain.codef.service",
+    "com.project.domain.calendar.service",
+    "com.project.domain.onboarding.service"
 })
 @EnableTransactionManagement
 public class RootConfig {
