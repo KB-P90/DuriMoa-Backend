@@ -12,10 +12,81 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProgressResponseDTO {
 
-    private Long totalSavingAmount;
-    private Long targetAmount;
-    private Integer progressRate;
-    private Long groomSavingAmount;
-    private Long brideSavingAmount;
-    private List<MonthlySavingDTO> monthlySavings;
+    private OverallProgressDTO overall;
+    private PersonalProgressDTO personal;
+    private MonthlyProgressDTO monthlyProgress;
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OverallProgressDTO {
+
+        private Long targetAmount;
+        private Long currentAmount;
+        private Integer progressRate;
+        private Integer completedItemCount;
+        private Integer totalItemCount;
+        private List<GoalItemProgressDTO> items;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GoalItemProgressDTO {
+
+        private Long goalItemId;
+        private String category;
+        private Long targetAmount;
+        private Long currentAmount;
+        private Integer progressRate;
+        private Boolean completed;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PersonalProgressDTO {
+
+        private List<MemberProgressDTO> members;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MemberProgressDTO {
+
+        private Long userId;
+        private String name;
+        private Boolean assetShared;
+        private Long assetAmount;
+        private Long targetAmount;
+        private Long currentAmount;
+        private Double progressRate;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MonthlyProgressDTO {
+
+        private Integer overallProgressRate;
+        private List<MonthlyProgressItemDTO> months;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MonthlyProgressItemDTO {
+
+        private String yearMonth;
+        private Long expenseAmount;
+        private Long cumulativeExpenseAmount;
+        private Integer progressRate;
+    }
 }

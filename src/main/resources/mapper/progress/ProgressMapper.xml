@@ -4,46 +4,126 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.project.domain.progress.mapper.ProgressMapper">
 
-    <select id="existsSavingRecord" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1
-            FROM account a
-                     INNER JOIN account_record ar ON ar.account_id = a.id
-            WHERE a.user_id IN (#{groomId}, #{brideId})
-              AND ar.type = 'SAVING'
-        )
+    <select id="findActiveGoal"
+            resultType="com.project.domain.progress.dto.ActiveGoalDTO">
+        SELECT
+            g.id AS goalId,
+            g.total_budget AS targetAmount,
+            g.groom_ratio AS groomRatio,
+            g.bride_ratio AS brideRatio,
+            g.created_at AS createdAt
+        FROM goal g
+        WHERE g.couple_id = #{coupleId}
+          AND g.is_main = TRUE
+          AND g.status = 'CONFIRMED'
+        ORDER BY g.created_at DESC
+        LIMIT 1
     </select>
 
-    <select id="findTotalSavingAmount" resultType="long">
-        SELECT COALESCE(SUM(ar.amount), 0)
-        FROM account a
-                 INNER JOIN account_record ar ON ar.account_id = a.id
-        WHERE a.user_id IN (#{groomId}, #{brideId})
-          AND ar.type = 'SAVING'
+    <select id="findIncludedGoalItems"
+            resultType="com.project.domain.progress.dto.GoalItemSourceDTO">
+        SELECT
+            gi.id AS goalItemId,
+            gi.category AS category,
+            gi.target_amount AS targetAmount,
+            gi.is_completed AS completed
+        FROM goal_item gi
+        WHERE gi.goal_id = #{goalId}
+          AND gi.is_included = TRUE
+        ORDER BY gi.id ASC
     </select>
 
-    <select id="findCoupleSavingSummary"
-            resultType="com.project.domain.progress.dto.CoupleSavingSummaryDTO">
-        SELECT COALESCE(SUM(CASE WHEN a.user_id = #{groomId} THEN ar.amount ELSE 0 END), 0)
-                       AS groomSavingAmount,
-               COALESCE(SUM(CASE WHEN a.user_id = #{brideId} THEN ar.amount ELSE 0 END), 0)
-                       AS brideSavingAmount
-        FROM account a
-                 INNER JOIN account_record ar ON ar.account_id = a.id
-        WHERE a.user_id IN (#{groomId}, #{brideId})
-          AND ar.type = 'SAVING'
+    <select id="findMembers"
+            resultType="com.project.domain.progress.dto.MemberSourceDTO">
+        SELECT
+            u.id AS userId,
+            u.name AS name,
+            u.role AS role,
+            u.asset AS asset,
+            u.is_shared AS assetShared
+        FROM user u
+        WHERE u.id IN (#{groomId}, #{brideId})
+        ORDER BY
+            CASE
+                WHEN u.id = #{groomId} THEN 0
+                ELSE 1
+            END
     </select>
 
-    <select id="findMonthlySavingAmounts"
-            resultType="com.project.domain.progress.dto.MonthlySavingDTO">
-        SELECT DATE_FORMAT(ar.record_date, '%Y-%m') AS yearMonth,
-               COALESCE(SUM(ar.amount), 0) AS savingAmount
-        FROM account a
-                 INNER JOIN account_record ar ON ar.account_id = a.id
-        WHERE a.user_id IN (#{groomId}, #{brideId})
-          AND ar.type = 'SAVING'
-        GROUP BY DATE_FORMAT(ar.record_date, '%Y-%m')
-        ORDER BY MIN(ar.record_date) ASC
+    <select id="findTotalWeddingExpense" resultType="long">
+        SELECT COALESCE(SUM(sr.amount), 0)
+        FROM service_record sr
+        WHERE sr.user_id IN
+        <foreach collection="userIds"
+                 item="userId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{userId}
+        </foreach>
+          AND sr.type = 'EXPENSE'
+          AND COALESCE(sr.changed_category, sr.category) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+    </select>
+
+    <select id="findCategoryWeddingExpenses"
+            resultType="com.project.domain.progress.dto.CategoryExpenseDTO">
+        SELECT
+            COALESCE(sr.changed_category, sr.category) AS categoryCode,
+            COALESCE(SUM(sr.amount), 0) AS expenseAmount
+        FROM service_record sr
+        WHERE sr.user_id IN
+        <foreach collection="userIds"
+                 item="userId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{userId}
+        </foreach>
+          AND sr.type = 'EXPENSE'
+          AND COALESCE(sr.changed_category, sr.category) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+        GROUP BY COALESCE(sr.changed_category, sr.category)
+    </select>
+
+    <select id="findMonthlyWeddingExpenses"
+            resultType="com.project.domain.progress.dto.MonthlyExpenseDTO">
+        SELECT
+            DATE_FORMAT(sr.record_date, '%Y-%m') AS yearMonth,
+            COALESCE(SUM(sr.amount), 0) AS expenseAmount
+        FROM service_record sr
+        WHERE sr.user_id IN
+        <foreach collection="userIds"
+                 item="userId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{userId}
+        </foreach>
+          AND sr.type = 'EXPENSE'
+          AND COALESCE(sr.changed_category, sr.category) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+          AND sr.record_date BETWEEN #{startAt} AND #{endAt}
+        GROUP BY DATE_FORMAT(sr.record_date, '%Y-%m')
+        ORDER BY DATE_FORMAT(sr.record_date, '%Y-%m') ASC
     </select>
 
 </mapper>
