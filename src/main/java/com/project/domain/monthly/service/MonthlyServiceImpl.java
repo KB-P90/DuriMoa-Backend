@@ -9,7 +9,6 @@ import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.RecommendedMissionDTO;
-import com.project.domain.monthly.dto.SavingMissionChallengeRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionDTO;
 import com.project.domain.monthly.dto.SavingMissionEntityDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
@@ -46,9 +45,14 @@ public class MonthlyServiceImpl implements MonthlyService {
             categories = Collections.emptyList();
         }
 
+        long totalAmount = categories.stream()
+                .mapToLong(c -> c.getAmount() != null ? c.getAmount() : 0L)
+                .sum();
+
         return MonthlyExpenseResponseDTO.builder()
                 .year(year)
                 .month(month)
+                .totalAmount(totalAmount)
                 .expenseCategories(categories)
                 .build();
     }
@@ -77,7 +81,7 @@ public class MonthlyServiceImpl implements MonthlyService {
 
     @Override
     @Transactional
-    public void startSavingMission(Long userId, Long missionId, SavingMissionChallengeRequestDTO requestDTO) {
+    public void startSavingMission(Long userId, Long missionId) {
         int updatedRows = monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
         if (updatedRows == 0) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "해당 절약 미션을 찾을 수 없거나 이미 도전 중인 미션입니다.");
