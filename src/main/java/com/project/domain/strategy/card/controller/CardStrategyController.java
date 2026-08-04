@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 @Api(tags = "Card Strategy", description = "카드 추천 및 상세 조회 API")
 @RestController
@@ -32,7 +33,7 @@ public class CardStrategyController {
     @GetMapping
     public ResponseEntity<ApiResponse<CardRecommendationResponseDTO>> recommendCards(
             @RequestParam(value = "amount", required = false) String amount,
-            @AuthenticationPrincipal Long authenticatedUserId
+            @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
     ) {
         Long paymentAmount = CardPaymentAmountValidator.validate(amount);
         CardRecommendationResponseDTO response = cardStrategyService.recommendCards(authenticatedUserId, paymentAmount);
@@ -44,7 +45,7 @@ public class CardStrategyController {
     @GetMapping("/{userCardKey}")
     public ResponseEntity<ApiResponse<CardDetailResponseDTO>> getCardDetail(
             @PathVariable("userCardKey") String userCardKeyText,
-            @AuthenticationPrincipal Long authenticatedUserId
+            @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
     ) {
         Long userCardKey = parseUserCardKey(userCardKeyText);
         CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, userCardKey);
