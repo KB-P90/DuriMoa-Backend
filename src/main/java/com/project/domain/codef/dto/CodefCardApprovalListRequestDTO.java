@@ -50,7 +50,7 @@ public class CodefCardApprovalListRequestDTO {
     @ApiModelProperty(value = "중복카드 일련번호 (inquiryType='0'인 경우)", example = "0")
     private String duplicateCardIdx;
 
-    @ApiModelProperty(value = "카드번호 (현대카드 아이디로그인 필수 / KB 카드소지확인용)", example = "1234567890123456")
+    @ApiModelProperty(value = "카드번호 (현대카드 아이디로그인 필수 / KB 카드소지확인용)", example = "\"1234567890123456\"", dataType = "String")
     private String cardNo;
 
     @ApiModelProperty(value = "카드 비밀번호 (RSA 암호화된 비밀번호 - 현대카드 4자리 / KB 앞2자리)", example = "rsa_encrypted_password")

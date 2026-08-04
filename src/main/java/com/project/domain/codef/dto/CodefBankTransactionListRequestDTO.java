@@ -1,5 +1,6 @@
 package com.project.domain.codef.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -9,8 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.validation.constraints.NotBlank;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
 
 @Getter
 @Setter
@@ -29,7 +28,7 @@ public class CodefBankTransactionListRequestDTO {
     private String organization;
 
     @NotBlank(message = "account는 필수 항목입니다.")
-    @ApiModelProperty(value = "계좌번호", required = true, example = "12345678901234")
+    @ApiModelProperty(value = "계좌번호", required = true, example = "\"12345678901234\"")
     private String account;
 
     @ApiModelProperty(value = "조회 시작일자 (YYYYMMDD)", example = "20260701")
