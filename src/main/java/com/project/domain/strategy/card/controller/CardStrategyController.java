@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 @Api(tags = "Card Strategy", description = "카드 추천 및 상세 조회 API")
 @RestController
@@ -32,7 +33,7 @@ public class CardStrategyController {
     @GetMapping
     public ResponseEntity<ApiResponse<CardRecommendationResponseDTO>> recommendCards(
             @RequestParam(value = "amount", required = false) String amount,
-            @AuthenticationPrincipal Long authenticatedUserId
+            @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
     ) {
         Long paymentAmount = CardPaymentAmountValidator.validate(amount);
         CardRecommendationResponseDTO response = cardStrategyService.recommendCards(authenticatedUserId, paymentAmount);
@@ -41,20 +42,20 @@ public class CardStrategyController {
 
     // 사용자 카드 식별자로 권한 검증 후 카드 상세 정보를 조회합니다.
     @ApiOperation(value = "카드 상세 조회", notes = "사용자 보유 카드 식별자 기준으로 카드 상품 상세 정보를 조회합니다.")
-    @GetMapping("/{userCardKey}")
+    @GetMapping("/{cardId}")
     public ResponseEntity<ApiResponse<CardDetailResponseDTO>> getCardDetail(
-            @PathVariable("userCardKey") String userCardKeyText,
-            @AuthenticationPrincipal Long authenticatedUserId
+            @PathVariable("cardId") String cardIdText,
+            @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
     ) {
-        Long userCardKey = parseUserCardKey(userCardKeyText);
-        CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, userCardKey);
+        Long cardId = parseCardId(cardIdText);
+        CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, cardId);
         return ResponseEntity.ok(ApiResponse.success("카드 상세 조회에 성공했습니다.", response));
     }
 
     // 상세 조회의 사용자 카드 식별자를 양수 Long으로 변환합니다.
-    private Long parseUserCardKey(String userCardKeyText) {
+    private Long parseCardId(String cardIdText) {
         return parsePositiveLong(
-                userCardKeyText,
+                cardIdText,
                 new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "카드 정보를 찾을 수 없습니다.")
         );
     }

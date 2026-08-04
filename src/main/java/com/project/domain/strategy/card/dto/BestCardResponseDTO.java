@@ -10,8 +10,8 @@ import lombok.Getter;
 public class BestCardResponseDTO {
 
     // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
-    @JsonProperty("user_card_key")
-    private final Long userCardKey;
+    @JsonProperty("card_id")
+    private final Long cardId;
 
     // 카드 소유자 구분입니다. SELF 또는 PARTNER입니다.
     @JsonProperty("owner_type")
