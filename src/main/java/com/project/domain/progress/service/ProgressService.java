@@ -4,5 +4,5 @@ import com.project.domain.progress.dto.ProgressResponseDTO;
 
 public interface ProgressService {
 
-    ProgressResponseDTO getProgress();
+    ProgressResponseDTO getProgress(Long userId);
 }

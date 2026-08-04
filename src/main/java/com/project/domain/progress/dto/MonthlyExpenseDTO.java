@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MonthlySavingDTO {
+public class MonthlyExpenseDTO {
 
     private String yearMonth;
-    private Long savingAmount;
+    private Long expenseAmount;
 }
