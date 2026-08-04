@@ -387,10 +387,10 @@ public class OnboardingServiceImpl implements OnboardingService {
                 CodefCardApprovalListRequestDTO cardReq = CodefCardApprovalListRequestDTO.builder()
                         .connectedId(connectedId)
                         .organization(organization)
-                        .cardNumber(numberStr)
+                        .cardNo(numberStr)
                         .startDate(startDate)
                         .endDate(endDate)
-                        .inquireType("1")
+                        .inquiryType("1")
                         .build();
 
                 log.info("[CODEF-REQ] 카드 승인내역 요청 - serviceType: {}, range: {} ~ {}",
