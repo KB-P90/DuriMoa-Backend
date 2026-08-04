@@ -32,7 +32,7 @@ public final class CardStrategyRecord {
     public static class UserCardRecord {
 
         // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
-        private Long userCardKey;
+        private Long cardId;
 
         // 카드 소유 사용자 ID입니다.
         private Long userId;
@@ -73,7 +73,7 @@ public final class CardStrategyRecord {
     public static class CardPerformanceRecord {
 
         // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
-        private Long userCardKey;
+        private Long cardId;
 
         // 매출에서 취소·환불을 차감한 인정 실적입니다.
         private Long recognizedPerformanceAmount;
@@ -84,7 +84,7 @@ public final class CardStrategyRecord {
     public static class CardProductRecord {
 
         // 사용자 보유 카드 식별자로 사용하는 card.id입니다.
-        private Long userCardKey;
+        private Long cardId;
 
         // 연결된 카드 상품 ID입니다.
         private Long cardProductId;

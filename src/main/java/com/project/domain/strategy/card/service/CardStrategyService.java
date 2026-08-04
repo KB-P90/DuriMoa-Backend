@@ -9,5 +9,5 @@ public interface CardStrategyService {
     CardRecommendationResponseDTO recommendCards(Long authenticatedUserId, Long paymentAmount);
 
     // 사용자 카드 식별자로 권한 검증 후 카드 상세 정보를 조회합니다.
-    CardDetailResponseDTO getCardDetail(Long authenticatedUserId, Long userCardKey);
+    CardDetailResponseDTO getCardDetail(Long authenticatedUserId, Long cardId);
 }

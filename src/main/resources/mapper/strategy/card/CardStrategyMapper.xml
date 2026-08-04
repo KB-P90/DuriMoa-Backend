@@ -23,7 +23,7 @@
 
     <select id="selectUserCardsByUserIds" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$UserCardRecord">
         SELECT
-            c.id AS user_card_key,
+            c.id AS card_id,
             c.user_id AS user_id,
             u.name AS owner_name,
             u.role AS owner_role,
@@ -54,7 +54,7 @@
 
     <select id="selectCurrentMonthPerformances" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardPerformanceRecord">
         SELECT
-            c.id AS user_card_key,
+            c.id AS card_id,
             GREATEST(
                 COALESCE(SUM(
                     CASE
@@ -72,15 +72,15 @@
            AND cr.record_date &lt;= #{endDate}
            AND cr.type IN ('EXPENSE', 'INCOME')
         WHERE c.id IN
-        <foreach collection="userCardKeys" item="userCardKey" open="(" separator="," close=")">
-            #{userCardKey}
+        <foreach collection="cardIds" item="cardId" open="(" separator="," close=")">
+            #{cardId}
         </foreach>
         GROUP BY c.id
     </select>
 
-    <select id="selectCardDetailByUserCardKey" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
+    <select id="selectCardDetailByCardId" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
         SELECT
-            c.id AS user_card_key,
+            c.id AS card_id,
             cp.id AS card_product_id,
             cp.company AS company,
             COALESCE(c.card_name, cp.name) AS card_name,
@@ -92,7 +92,7 @@
         FROM card c
         INNER JOIN card_product cp
             ON cp.id = c.card_product_id
-        WHERE c.id = #{userCardKey}
+        WHERE c.id = #{cardId}
           AND c.card_product_id IS NOT NULL
     </select>
 
@@ -102,7 +102,7 @@
         INNER JOIN couple co
             ON co.status = 'CONNECTED'
            AND (cd.user_id = co.groom_id OR cd.user_id = co.bride_id)
-        WHERE cd.id = #{userCardKey}
+        WHERE cd.id = #{cardId}
           AND cd.card_product_id IS NOT NULL
           AND (co.groom_id = #{userId} OR co.bride_id = #{userId})
     </select>
