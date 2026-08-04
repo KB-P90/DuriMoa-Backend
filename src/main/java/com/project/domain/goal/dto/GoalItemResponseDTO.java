@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel(description = "결혼 목표 항목 조회 응답")
+@ApiModel(description = "결혼 시안 항목 조회 응답")
 public class GoalItemResponseDTO {
 
     @ApiModelProperty(value = "목표 항목 ID", example = "1")

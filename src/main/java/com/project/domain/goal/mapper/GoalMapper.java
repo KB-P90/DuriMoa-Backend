@@ -25,6 +25,15 @@ public interface GoalMapper {
 
     List<GoalItemVO> selectGoalItemsByGoalIds(@Param("goalIds") List<Long> goalIds);
 
+    Integer updateGoal(GoalVO goal);
+
+    Integer deleteGoalItems(@Param("goalId") Long goalId);
+
+    Integer deleteGoal(
+            @Param("goalId") Long goalId,
+            @Param("coupleId") Long coupleId
+    );
+
     Integer updateGoalRequest(
             @Param("goalId") Long goalId,
             @Param("requestedBy") Long requestedBy,

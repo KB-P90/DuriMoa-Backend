@@ -13,10 +13,13 @@ import com.project.domain.goal.dto.GoalCreateRequestDTO;
 import com.project.domain.goal.dto.GoalCreateResponseDTO;
 import com.project.domain.goal.dto.GoalCreateItemResponseDTO;
 import com.project.domain.goal.dto.GoalDecisionRequestDTO;
+import com.project.domain.goal.dto.GoalDeleteResponseDTO;
 import com.project.domain.goal.dto.GoalItemCreateRequestDTO;
 import com.project.domain.goal.dto.GoalItemResponseDTO;
 import com.project.domain.goal.dto.GoalResponseDTO;
 import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
+import com.project.domain.goal.dto.GoalUpdateRequestDTO;
+import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -130,6 +133,86 @@ public class GoalServiceImpl implements GoalService {
                         authenticatedUserId
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public GoalUpdateResponseDTO updateGoal(
+            Long authenticatedUserId,
+            Long goalId,
+            GoalUpdateRequestDTO request
+    ) {
+        validateAuthenticatedUser(authenticatedUserId);
+        validateGoalId(goalId);
+        Long totalBudget = validateUpdateRequest(request);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        GoalVO existingGoal = findGoal(lockCoupleGoals(couple.getId()), goalId);
+
+        GoalVO updatedGoal = GoalVO.builder()
+                .id(goalId)
+                .coupleId(couple.getId())
+                .name(request.getName().trim())
+                .weddingDate(request.getWeddingDate())
+                .region(request.getRegion().trim())
+                .totalBudget(totalBudget)
+                .groomRatio(request.getGroomRatio())
+                .brideRatio(request.getBrideRatio())
+                .build();
+        ensureSingleRowUpdated(
+                goalMapper.updateGoal(updatedGoal),
+                "결혼 목표 수정에 실패했습니다."
+        );
+
+        goalMapper.deleteGoalItems(goalId);
+        List<GoalItemVO> items = request.getItems().stream()
+                .map(this::toGoalItem)
+                .collect(Collectors.toList());
+        Integer insertedItemCount = goalMapper.insertGoalItems(goalId, items);
+        if (insertedItemCount == null || insertedItemCount != items.size()) {
+            throw new CustomException(
+                    ErrorCode.INTERNAL_SERVER_ERROR,
+                    "결혼 목표 항목 수정에 실패했습니다."
+            );
+        }
+
+        return GoalUpdateResponseDTO.builder()
+                .goalId(goalId)
+                .name(updatedGoal.getName())
+                .weddingDate(updatedGoal.getWeddingDate())
+                .region(updatedGoal.getRegion())
+                .totalBudget(updatedGoal.getTotalBudget())
+                .groomRatio(updatedGoal.getGroomRatio())
+                .brideRatio(updatedGoal.getBrideRatio())
+                .status(existingGoal.getStatus())
+                .isMain(existingGoal.getIsMain())
+                .createdAt(existingGoal.getCreatedAt())
+                .items(request.getItems().stream()
+                        .map(GoalCreateItemResponseDTO::from)
+                        .collect(Collectors.toList()))
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public GoalDeleteResponseDTO deleteGoal(Long authenticatedUserId, Long goalId) {
+        validateAuthenticatedUser(authenticatedUserId);
+        validateGoalId(goalId);
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(authenticatedUserId);
+        GoalVO goal = findGoal(lockCoupleGoals(couple.getId()), goalId);
+        if (Boolean.TRUE.equals(goal.getIsMain())) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "메인 시안은 삭제할 수 없습니다."
+            );
+        }
+
+        ensureSingleRowUpdated(
+                goalMapper.deleteGoal(goalId, couple.getId()),
+                "결혼 목표 삭제에 실패했습니다."
+        );
+        return GoalDeleteResponseDTO.builder()
+                .goalId(goalId)
+                .build();
     }
 
     @Override
@@ -316,6 +399,17 @@ public class GoalServiceImpl implements GoalService {
     }
 
     private Long validateRequest(GoalCreateRequestDTO request) {
+        if (request == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "요청 정보가 필요합니다.");
+        }
+        validateText(request.getName(), 50, "시안 제목");
+        validateText(request.getRegion(), 50, "결혼식 지역");
+        validateWeddingDate(request.getWeddingDate());
+        validateRatios(request.getGroomRatio(), request.getBrideRatio());
+        return calculateTotalBudget(request.getItems());
+    }
+
+    private Long validateUpdateRequest(GoalUpdateRequestDTO request) {
         if (request == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "요청 정보가 필요합니다.");
         }
