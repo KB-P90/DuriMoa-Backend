@@ -21,4 +21,8 @@ public class CodefApiResponseDTO<T> {
 
     @ApiModelProperty(value = "CODEF 처리 데이터 객체")
     private T data;
+
+    public boolean isSuccess() {
+        return result != null && "CF-00000".equals(result.getCode());
+    }
 }

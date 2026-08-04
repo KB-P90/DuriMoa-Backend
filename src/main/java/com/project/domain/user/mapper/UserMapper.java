@@ -11,4 +11,5 @@ public interface UserMapper {
 
     public boolean update(UserProfileVO profile);
 
+    public boolean updateIsShared(long no);
 }
