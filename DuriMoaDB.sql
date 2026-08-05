@@ -25,6 +25,7 @@ DROP TABLE IF EXISTS `couple`;
 DROP TABLE IF EXISTS `card_product`;
 DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
+DROP TABLE IF EXISTS `codef_access_token`;
 -- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -368,6 +369,15 @@ CREATE TABLE `wedding_statistics` (
                                       UNIQUE KEY `uk_wedding_statistics_region_category` (`region`, `category`),
                                       CONSTRAINT `chk_wedding_statistics_amounts`
                                           CHECK (`high_10` >= 0 AND `high_25` >= 0 AND `mid_50` >= 0 AND `low_25` >= 0 AND `low_10` >= 0)
+);
+
+-- CODEF 토큰
+CREATE TABLE `codef_access_token` (
+                                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                                    access_token TEXT NOT NULL,
+                                    token_type VARCHAR(20),
+                                    expires_at DATETIME NOT NULL,
+                                    created_at DATETIME NOT NULL
 );
 
 /*

@@ -21,7 +21,8 @@ import javax.sql.DataSource;
 @PropertySource({"classpath:/database.properties"})
 @MapperScan(basePackages = {
     "com.project.domain.calendar.mapper",
-    "com.project.domain.onboarding.mapper"
+    "com.project.domain.onboarding.mapper",
+    "com.project.domain.codef.mapper"
 })
 @ComponentScan(basePackages = {
     "com.project.common.config",

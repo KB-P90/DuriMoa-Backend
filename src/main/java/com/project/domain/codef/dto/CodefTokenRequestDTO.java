@@ -16,9 +16,9 @@ import lombok.Setter;
 @ApiModel(description = "CODEF OAuth 토큰 요청 DTO")
 public class CodefTokenRequestDTO {
 
-    @ApiModelProperty(value = "CODEF Client ID (미입력시 서버 기본값 사용)", example = "your-client-id")
+    @ApiModelProperty(value = "CODEF Client ID", example = "your-client-id")
     private String clientId;
 
-    @ApiModelProperty(value = "CODEF Client Secret (미입력시 서버 기본값 사용)", example = "your-client-secret")
+    @ApiModelProperty(value = "CODEF Client Secret", example = "your-client-secret")
     private String clientSecret;
 }

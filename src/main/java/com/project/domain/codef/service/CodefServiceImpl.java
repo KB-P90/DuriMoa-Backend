@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.config.CodefConfig;
 import com.project.domain.codef.dto.*;
+import com.project.domain.codef.mapper.CodefTokenMapper;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -24,13 +25,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
+import java.time.Duration;
+import java.util.*;
 
 import java.net.URLDecoder;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Log4j2
 @Service
@@ -40,28 +39,42 @@ public class CodefServiceImpl implements CodefService {
     private final CodefConfig codefConfig;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    private String cachedAccessToken;
-    private LocalDateTime tokenExpireTime;
+    private final CodefTokenMapper codefTokenMapper;
 
     @Override
-    public CodefTokenResponseDTO getAccessToken(CodefTokenRequestDTO requestDTO) {
-        String clientId = (requestDTO != null && StringUtils.hasText(requestDTO.getClientId()))
-                ? requestDTO.getClientId() : codefConfig.getClientId();
-        String clientSecret = (requestDTO != null && StringUtils.hasText(requestDTO.getClientSecret()))
-                ? requestDTO.getClientSecret() : codefConfig.getClientSecret();
+    public CodefTokenResponseDTO getAccessToken() {
+        CodefTokenDTO savedToken = codefTokenMapper.selectLatestToken();
 
-        if (cachedAccessToken != null && tokenExpireTime != null && LocalDateTime.now().isBefore(tokenExpireTime)) {
-            log.debug("캐시된 CODEF Access Token을 사용합니다.");
+        if (savedToken != null
+                && savedToken.getExpiresAt() != null
+                && savedToken.getExpiresAt().isAfter(LocalDateTime.now())) {
+
+            log.debug("DB에 저장된 유효한 CODEF Access Token을 사용합니다.");
             return CodefTokenResponseDTO.builder()
-                    .accessToken(cachedAccessToken)
-                    .tokenType("Bearer")
-                    .expiresIn(604800L)
+                    .accessToken(savedToken.getAccessToken())
+                    .tokenType(savedToken.getTokenType())
+                    .expiresIn(Duration.between(
+                            LocalDateTime.now(),
+                            savedToken.getExpiresAt()
+                    ).getSeconds())
                     .scope("read")
                     .build();
         }
 
+        String clientId = Optional.ofNullable(codefConfig.getClientId())
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.INVALID_INPUT_VALUE,
+                        "CODEF 토큰 발급 필수 요청값 clientId가 null입니다."
+                ));
+        String clientSecret = Optional.ofNullable(codefConfig.getClientSecret())
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.INVALID_INPUT_VALUE,
+                        "CODEF 토큰 발급 필수 요청값 clientSecret가 null입니다."
+                ));
+
         try {
+            // ----- RestTemplate Post 요청 -----
+            // 클라이언트아이디, 시크릿코드 Base64 인코딩
             String authHeader = "Basic " + Base64.getEncoder().encodeToString(
                     (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
 
@@ -69,6 +82,7 @@ public class CodefServiceImpl implements CodefService {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             headers.set("Authorization", authHeader);
 
+            // Oauth2.0 사용자 자격증명 방식(client_credentials) 토큰 요청 설정
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("grant_type", "client_credentials");
             body.add("scope", "read");
@@ -77,17 +91,23 @@ public class CodefServiceImpl implements CodefService {
             ResponseEntity<CodefTokenResponseDTO> response = restTemplate.postForEntity(
                     codefConfig.getOauthUrl(), entity, CodefTokenResponseDTO.class);
 
-            if (response.getBody() == null || response.getBody().getAccessToken() == null) {
+            if (response.getBody() == null || !StringUtils.hasText(response.getBody().getAccessToken())) {
                 throw new CustomException(ErrorCode.UNAUTHORIZED, "CODEF 토큰 발급 응답이 올바르지 않습니다.");
             }
 
             CodefTokenResponseDTO tokenDto = response.getBody();
-            this.cachedAccessToken = tokenDto.getAccessToken();
-            // 기본 7일 유효기간 중 안전을 위해 6.5일 후 만료 처리
-            this.tokenExpireTime = LocalDateTime.now().plusSeconds(
-                    tokenDto.getExpiresIn() != null ? tokenDto.getExpiresIn() - 43200L : 600000L);
+            // 기본 7일 유효기간 중 안전을 위해 12시간 전 만료 처리 (expires_in이 604799로 반환됨)
+            LocalDateTime tokenExpireTime = LocalDateTime.now()
+                    .plusSeconds(tokenDto.getExpiresIn())
+                    .minusHours(12);
 
-            log.info("CODEF OAuth2.0 Access Token 발급 완료");
+            codefTokenMapper.upsertToken(
+                    tokenDto.getAccessToken(),
+                    tokenDto.getTokenType(),
+                    tokenExpireTime
+            );
+
+            log.info("CODEF OAuth2.0 Access Token 발급 및 DB 저장 완료");
             return tokenDto;
         } catch (Exception e) {
             log.error("CODEF 토큰 발급 중 오류 발생: {}", e.getMessage());
@@ -212,7 +232,7 @@ public class CodefServiceImpl implements CodefService {
 
     @SuppressWarnings("unchecked")
     private <T> CodefApiResponseDTO<T> executeProductRequest(String productUrl, String serviceType, Object requestPayload, Class<T> dataType) {
-        CodefTokenResponseDTO tokenDTO = getAccessToken(null);
+        CodefTokenResponseDTO tokenDTO = getAccessToken();
         String accessToken = tokenDTO.getAccessToken();
 
         String baseUrl;

@@ -46,10 +46,9 @@ public class CodefController {
 
     @ApiOperation(value = "Access Token 발급", notes = "CODEF API 호출용 Access Token을 발급받습니다.")
     @PostMapping("/token")
-    public ResponseEntity<ApiResponse<CodefTokenResponseDTO>> getAccessToken(
-            @RequestBody(required = false) CodefTokenRequestDTO requestDTO) {
+    public ResponseEntity<ApiResponse<CodefTokenResponseDTO>> getAccessToken() {
         log.info("CODEF 토큰 발급 요청 수신");
-        CodefTokenResponseDTO tokenResponse = codefService.getAccessToken(requestDTO);
+        CodefTokenResponseDTO tokenResponse = codefService.getAccessToken();
         return ResponseEntity.ok(ApiResponse.success("CODEF 토큰 발급 성공", tokenResponse));
     }
 
