@@ -4,6 +4,7 @@ import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
+import com.project.domain.home.model.HomeRecord.HomeSavingAlertRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
 import java.util.List;
@@ -38,6 +39,9 @@ public interface HomeMapper {
 
     // 체크리스트 미완료 홈의 지역별 예상 예산 미리보기 목록을 조회합니다.
     List<HomeBudgetPreviewRecord> selectExpectedBudgetPreviewRegions();
+
+    // 홈 알림 배너에 표시할 인증 사용자의 최신 알림 1건을 조회합니다.
+    HomeSavingAlertRecord selectLatestSavingAlert(@Param("userId") Long userId);
 
     // 현재 월 홈 도전중 절약미션 요약과 대표 미션을 조회합니다.
     HomeSavingMissionSummaryRecord selectSavingMissionSummary(

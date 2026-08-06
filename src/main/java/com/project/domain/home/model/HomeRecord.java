@@ -123,6 +123,23 @@ public final class HomeRecord {
 
     @Getter
     @Setter
+    public static class HomeSavingAlertRecord {
+
+        // 홈 알림의 종류입니다.
+        private String alertType;
+
+        // 홈 알림 제목입니다.
+        private String title;
+
+        // 홈 알림 내용입니다.
+        private String message;
+
+        // 홈 알림 생성 일시입니다.
+        private String createdAt;
+    }
+
+    @Getter
+    @Setter
     public static class HomeSavingMissionSummaryRecord {
 
         // 현재 월 절약 미션들의 예상 절약 금액 합계입니다.

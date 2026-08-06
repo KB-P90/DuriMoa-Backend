@@ -209,6 +209,20 @@
         LIMIT 7
     </select>
 
+    <select id="selectLatestSavingAlert" resultType="com.project.domain.home.model.HomeRecord$HomeSavingAlertRecord">
+        SELECT
+            n.type AS alert_type,
+            n.title AS title,
+            n.content AS message,
+            DATE_FORMAT(n.created_at, '%Y-%m-%d %H:%i:%s') AS created_at
+        FROM notification n
+        WHERE n.user_id = #{userId}
+        ORDER BY
+            n.created_at DESC,
+            n.id DESC
+        LIMIT 1
+    </select>
+
     <select id="selectSavingMissionSummary" resultType="com.project.domain.home.model.HomeRecord$HomeSavingMissionSummaryRecord">
         SELECT
             COALESCE((
