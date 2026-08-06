@@ -90,7 +90,10 @@ public class NotificationServiceImpl implements NotificationService {
         validateNotificationId(notificationId);
         validateNotificationExists(authenticatedUserId, notificationId);
 
-        notificationMapper.updateNotificationRead(authenticatedUserId, notificationId);
+        Integer deletedCount = notificationMapper.deleteNotification(authenticatedUserId, notificationId);
+        if (deletedCount == null || deletedCount != 1) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "삭제할 알림을 찾을 수 없습니다.");
+        }
         Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
         return NotificationReadResponseDTO.builder()
                 .noticeId(notificationId)
@@ -103,7 +106,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public NotificationReadAllResponseDTO markAllAsRead(Long authenticatedUserId) {
         validateUserId(authenticatedUserId);
-        Integer updatedCount = notificationMapper.updateAllNotificationsRead(authenticatedUserId);
+        Integer updatedCount = notificationMapper.deleteAllNotifications(authenticatedUserId);
         Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
         return NotificationReadAllResponseDTO.builder()
                 .updatedCount(updatedCount == null ? 0 : updatedCount)

@@ -48,21 +48,22 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void markAsReadUpdatesOnlyAuthenticatedUsersNotification() {
+    void markAsReadDeletesOnlyAuthenticatedUsersNotification() {
         NotificationMapper notificationMapper = mock(NotificationMapper.class);
         NotificationService service = new NotificationServiceImpl(notificationMapper);
-        when(notificationMapper.updateNotificationRead(1L, 10L)).thenReturn(1);
+        when(notificationMapper.existsNotification(1L, 10L)).thenReturn(1);
+        when(notificationMapper.deleteNotification(1L, 10L)).thenReturn(1);
 
         service.markAsRead(1L, 10L);
 
-        verify(notificationMapper).updateNotificationRead(1L, 10L);
+        verify(notificationMapper).deleteNotification(1L, 10L);
     }
 
     @Test
     void markAsReadRejectsMissingNotification() {
         NotificationMapper notificationMapper = mock(NotificationMapper.class);
         NotificationService service = new NotificationServiceImpl(notificationMapper);
-        when(notificationMapper.updateNotificationRead(1L, 10L)).thenReturn(0);
+        when(notificationMapper.existsNotification(1L, 10L)).thenReturn(0);
 
         CustomException exception = assertThrows(
                 CustomException.class,

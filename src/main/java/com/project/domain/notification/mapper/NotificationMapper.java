@@ -29,12 +29,12 @@ public interface NotificationMapper {
             @Param("notificationId") Long notificationId
     );
 
-    Integer updateNotificationRead(
+    Integer deleteNotification(
             @Param("userId") Long userId,
             @Param("notificationId") Long notificationId
     );
 
-    Integer updateAllNotificationsRead(@Param("userId") Long userId);
+    Integer deleteAllNotifications(@Param("userId") Long userId);
 
     List<NotificationSettingResponseDTO> selectNotificationSettingsByUserId(
             @Param("userId") Long userId

@@ -14,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,7 +58,7 @@ public class NotificationController {
     }
 
     @ApiOperation(value = "알림 읽음 처리", notes = "인증 사용자의 특정 알림을 읽음 상태로 변경합니다.")
-    @PatchMapping("/{noticeId}/read")
+    @DeleteMapping("/{noticeId}")
     public ResponseEntity<ApiResponse<NotificationReadResponseDTO>> markAsRead(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication,
@@ -67,11 +67,11 @@ public class NotificationController {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         NotificationReadResponseDTO response =
                 notificationService.markAsRead(authenticatedUserId, noticeId);
-        return ResponseEntity.ok(ApiResponse.success("알림을 읽음 처리했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("알림을 삭제했습니다.", response));
     }
 
     @ApiOperation(value = "전체 알림 읽음 처리", notes = "인증 사용자의 모든 읽지 않은 알림을 읽음 상태로 변경합니다.")
-    @PatchMapping("/read-all")
+    @DeleteMapping
     public ResponseEntity<ApiResponse<NotificationReadAllResponseDTO>> markAllAsRead(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication
@@ -79,7 +79,7 @@ public class NotificationController {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         NotificationReadAllResponseDTO response =
                 notificationService.markAllAsRead(authenticatedUserId);
-        return ResponseEntity.ok(ApiResponse.success("모든 알림을 읽음 처리했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("모든 알림을 삭제했습니다.", response));
     }
 
     private Long resolveAuthenticatedUserId(Long userId, Authentication authentication) {
