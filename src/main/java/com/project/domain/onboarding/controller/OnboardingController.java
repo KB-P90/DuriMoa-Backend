@@ -96,8 +96,8 @@ public class OnboardingController {
         if (userId == null || userId <= 0) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
         }
-        log.info("온보딩 선택 계좌 거래 내역 동기화 요청 수신 - userId: {}, company: {}, selectedNumbers: {}",
-                userId, requestDTO.getCompany(), requestDTO.getSelectedNumbers());
+        log.info("온보딩 선택 계좌 거래 내역 동기화 요청 수신 - userId: {}, company: {}, selectedItems: {}",
+                userId, requestDTO.getCompany(), requestDTO.getSelectedItems());
         OnboardingSelectResponseDTO response = onboardingService.selectAccountsOrCards(userId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("선택 계좌 거래 내역 저장 완료", response));
     }

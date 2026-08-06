@@ -24,9 +24,9 @@ public class OnboardingSelectRequestDTO {
     @ApiModelProperty(value = "금융기관 이름 또는 코드 (예: 국민은행, KB카드)", required = true, example = "국민은행")
     private String company;
 
-    @NotEmpty(message = "선택한 계좌/카드 번호 목록은 필수입니다.")
-    @ApiModelProperty(value = "사용자가 선택한 계좌번호 또는 카드번호 목록", required = true, example = "[\"110123456789\"]")
-    private List<String> selectedNumbers;
+    @NotEmpty(message = "선택한 계좌/카드 목록(selectedItems)은 필수입니다.")
+    @ApiModelProperty(value = "사용자가 선택한 계좌/카드 정보 목록 (번호 및 상품명)", required = true)
+    private List<OnboardingSelectItemDTO> selectedItems;
 
     @ApiModelProperty(value = "조회 시작일 (YYYYMMDD, 미입력 시 최근 3개월 전)", example = "20260501")
     private String startDate;

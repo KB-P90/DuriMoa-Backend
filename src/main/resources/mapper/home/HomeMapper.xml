@@ -51,19 +51,17 @@
                     SELECT 1
                     FROM account a
                     WHERE a.user_id = #{userId}
-                      AND (
-                          NULLIF(TRIM(a.connected_id), '') IS NOT NULL
-                          OR NULLIF(TRIM(a.account_id), '') IS NOT NULL
-                      )
                 )
                 OR EXISTS (
                     SELECT 1
                     FROM card cd
                     WHERE cd.user_id = #{userId}
-                      AND (
-                          NULLIF(TRIM(cd.connected_id), '') IS NOT NULL
-                          OR NULLIF(TRIM(cd.card_id), '') IS NOT NULL
-                      )
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM `user` u
+                    WHERE u.id = #{userId}
+                      AND NULLIF(TRIM(u.connected_id), '') IS NOT NULL
                 ) THEN TRUE
                 ELSE FALSE
             END

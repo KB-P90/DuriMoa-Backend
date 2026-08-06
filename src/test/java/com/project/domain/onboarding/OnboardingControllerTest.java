@@ -9,6 +9,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
 import com.project.domain.onboarding.service.OnboardingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -121,9 +122,14 @@ class OnboardingControllerTest {
     @Test
     @DisplayName("3. 계좌/카드 선택 및 거래 내역 저장 API 컨트롤러 테스트")
     void selectAccountsOrCards_ControllerTest() throws Exception {
+        OnboardingSelectItemDTO selectItem = OnboardingSelectItemDTO.builder()
+                .number("12345678901234")
+                .name("KB국민ONE통장-저축예금")
+                .build();
+
         OnboardingSelectRequestDTO request = OnboardingSelectRequestDTO.builder()
                 .company("국민은행")
-                .selectedNumbers(Collections.singletonList("12345678901234"))
+                .selectedItems(Collections.singletonList(selectItem))
                 .startDate("20260701")
                 .endDate("20260731")
                 .build();
