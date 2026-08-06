@@ -1,5 +1,6 @@
 package com.project.domain.home.model;
 
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -135,7 +136,7 @@ public final class HomeRecord {
         private String message;
 
         // 홈 알림 생성 일시입니다.
-        private String createdAt;
+        private LocalDateTime createdAt;
     }
 
     @Getter

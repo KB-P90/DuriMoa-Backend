@@ -214,7 +214,7 @@
             n.type AS alert_type,
             n.title AS title,
             n.content AS message,
-            DATE_FORMAT(n.created_at, '%Y-%m-%d %H:%i:%s') AS created_at
+            n.created_at AS created_at
         FROM notification n
         WHERE n.user_id = #{userId}
         ORDER BY

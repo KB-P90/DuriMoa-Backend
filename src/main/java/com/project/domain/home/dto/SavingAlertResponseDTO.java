@@ -1,6 +1,8 @@
 package com.project.domain.home.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,6 +23,7 @@ public class SavingAlertResponseDTO {
     private final String message;
 
     // 알림 생성 시점은 알림 도메인 계약 확정 후 연결합니다.
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonProperty("created_at")
-    private final String createdAt;
+    private final LocalDateTime createdAt;
 }
