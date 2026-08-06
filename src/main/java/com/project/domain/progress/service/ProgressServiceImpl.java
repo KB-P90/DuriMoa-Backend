@@ -194,7 +194,11 @@ public class ProgressServiceImpl implements ProgressService {
             List<String> weddingCategoryCodes,
             Integer overallProgressRate
     ) {
-        YearMonth startMonth = resolveStartMonth(activeGoal.getCreatedAt());
+        LocalDate firstExpenseDate = progressMapper.findFirstWeddingExpenseDate(
+                memberIds,
+                weddingCategoryCodes
+        );
+        YearMonth startMonth = resolveStartMonth(firstExpenseDate, activeGoal.getCreatedAt());
         YearMonth currentMonth = YearMonth.now();
         LocalDateTime startAt = startMonth.atDay(1).atStartOfDay();
         LocalDateTime endAt = currentMonth.atEndOfMonth().atTime(23, 59, 59);
@@ -291,7 +295,10 @@ public class ProgressServiceImpl implements ProgressService {
                 .doubleValue();
     }
 
-    private YearMonth resolveStartMonth(LocalDateTime createdAt) {
+    private YearMonth resolveStartMonth(LocalDate firstExpenseDate, LocalDateTime createdAt) {
+        if (firstExpenseDate != null) {
+            return YearMonth.from(firstExpenseDate);
+        }
         if (createdAt == null) {
             return YearMonth.from(LocalDate.now());
         }
