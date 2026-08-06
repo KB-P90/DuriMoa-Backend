@@ -27,7 +27,7 @@ public class UserController {
             @ApiIgnore @AuthenticationPrincipal Long userId) {
 
         UserProfileDto profile = userService.getProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success(profile));
+        return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회에 성공했습니다.", profile));
     }
 
 
@@ -35,7 +35,7 @@ public class UserController {
     @ApiOperation(value = "사용자 정보 수정")
     public ResponseEntity<ApiResponse<UserProfileDto>> update(@RequestBody UserProfileDto profile) {
         UserProfileDto updated = userService.updateProfile(profile);
-        return ResponseEntity.ok(ApiResponse.success(updated));
+        return ResponseEntity.ok(ApiResponse.success("정보 수정에 성공했습니다.", updated));
     }
 
     @PatchMapping("/share")
@@ -44,8 +44,15 @@ public class UserController {
             @ApiIgnore @AuthenticationPrincipal Long userId) {
 
         boolean result = userService.updateIsShared(userId);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(ApiResponse.success("공유 여부가 변경되었습니다.", result));
     }
 
+    @GetMapping("/invite")
+    @ApiOperation(value = "초대 코드 조회")
+    public ResponseEntity<ApiResponse<String>> getUserInvite(
+            @ApiIgnore @AuthenticationPrincipal Long userId) {
 
+        String inviteCode = userService.getUserInvite(userId);
+        return ResponseEntity.ok(ApiResponse.success("조회에 성공했습니다", inviteCode));
+    }
 }
