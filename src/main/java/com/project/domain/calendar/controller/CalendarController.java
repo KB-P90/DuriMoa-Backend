@@ -36,15 +36,12 @@ public class CalendarController {
     )
     @GetMapping("/monthly")
     public ResponseEntity<ApiResponse<?>> getMonthlyRecord(
-//            @AuthenticationPrincipal Long userId,
-            Authentication authentication,
+            @AuthenticationPrincipal Long userId,
             @ApiParam(value = "조회 월 (yyyy-MM 형식)", example = "2026-07")
             @RequestParam String month,
             @ApiParam(value = "조회 타입 (personal 또는 wedding)", example = "personal")
             @RequestParam String type
     ) {
-        Long userId = (Long) authentication.getPrincipal();
-
         YearMonth yearMonth;
         CalendarType calendarType;
 
@@ -64,15 +61,12 @@ public class CalendarController {
     )
     @GetMapping("/daily")
     public ResponseEntity<ApiResponse<?>> getDailyRecord(
-//            @AuthenticationPrincipal Long userId,
-            Authentication authentication,
+            @AuthenticationPrincipal Long userId,
             @ApiParam(value = "조회 날짜 (yyyy-MM-dd 형식)", example = "2026-07-30")
             @RequestParam String date,
             @ApiParam(value = "조회 타입 (personal 또는 wedding)", example = "personal")
             @RequestParam String type
     ) {
-        Long userId = (Long) authentication.getPrincipal();
-
         LocalDate localDate;
         CalendarType calendarType;
 
@@ -92,12 +86,9 @@ public class CalendarController {
     )
     @PostMapping()
     public ResponseEntity<ApiResponse<RecordResponseDTO>> create(
-//            @AuthenticationPrincipal Long userId,
-            Authentication authentication,
+            @AuthenticationPrincipal Long userId,
             @RequestBody RecordRequestDTO record
     ) {
-        Long userId = (Long) authentication.getPrincipal();
-
         return ResponseEntity.ok(ApiResponse.success("내역이 등록되었습니다.", service.create(userId, record)));
     }
 
@@ -107,14 +98,11 @@ public class CalendarController {
     )
     @PatchMapping("/{recordId}")
     public ResponseEntity<ApiResponse<RecordResponseDTO>> update(
-//            @AuthenticationPrincipal Long userId,
-            Authentication authentication,
+            @AuthenticationPrincipal Long userId,
             @ApiParam(value = "거래 내역 ID", example = "1")
             @PathVariable Long recordId,
             @RequestBody RecordRequestDTO record
     ) {
-        Long userId = (Long) authentication.getPrincipal();
-
         return ResponseEntity.ok(ApiResponse.success("내역이 수정되었습니다.", service.update(userId, recordId, record)));
     }
 
@@ -124,13 +112,10 @@ public class CalendarController {
     )
     @DeleteMapping("/{recordId}")
     public ResponseEntity<ApiResponse<RecordResponseDTO>> delete(
-//            @AuthenticationPrincipal Long userId,
-            Authentication authentication,
+            @AuthenticationPrincipal Long userId,
             @ApiParam(value = "거래 내역 ID", example = "1")
             @PathVariable Long recordId
     ) {
-        Long userId = (Long) authentication.getPrincipal();
-
         return ResponseEntity.ok(ApiResponse.success("내역이 삭제되었습니다.", service.delete(userId, recordId)));
     }
 }
