@@ -34,9 +34,4 @@ public class OnboardingCardCreateRequestDTO {
     @ApiModelProperty(value = "카드 별칭/명칭")
     private String cardName;
 
-    @ApiModelProperty(value = "카드 ID (문자열)")
-    private String cardId;
-
-    @ApiModelProperty(value = "카드 비밀번호")
-    private String cardPassword;
 }

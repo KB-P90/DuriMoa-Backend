@@ -9,6 +9,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
 import com.project.domain.onboarding.service.OnboardingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,9 +71,9 @@ class OnboardingControllerTest {
 
     @Test
     @DisplayName("1. 계좌/카드 등록 및 추가 API 컨트롤러 테스트")
-    void registerOrAddAccount_ControllerTest() throws Exception {
+    void registerOrAddInstitution_ControllerTest() throws Exception {
         OnboardingRegisterRequestDTO request = OnboardingRegisterRequestDTO.builder()
-                .company("KB국민은행")
+                .company("국민은행")
                 .id("test_user")
                 .password("password123!")
                 .build();
@@ -82,10 +83,10 @@ class OnboardingControllerTest {
                 .actionType("CREATED")
                 .businessType("BK")
                 .organization("0004")
-                .company("KB국민은행")
+                .company("국민은행")
                 .build();
 
-        when(onboardingService.registerOrAddAccount(any(), any())).thenReturn(response);
+        when(onboardingService.registerOrAddInstitution(any(), any())).thenReturn(response);
 
         MvcResult result = mockMvc.perform(post("/api/onboarding/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,7 +97,7 @@ class OnboardingControllerTest {
         String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertNotNull(body);
         assertTrue(body.contains("demo_connected_id"));
-        assertTrue(body.contains("KB국민은행"));
+        assertTrue(body.contains("국민은행"));
     }
 
     @Test
@@ -109,7 +110,7 @@ class OnboardingControllerTest {
         when(onboardingService.getAccountsOrCards(any(), any())).thenReturn(response);
 
         MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/onboarding/accounts")
-                        .param("company", "KB국민은행"))
+                        .param("company", "국민은행"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -121,9 +122,14 @@ class OnboardingControllerTest {
     @Test
     @DisplayName("3. 계좌/카드 선택 및 거래 내역 저장 API 컨트롤러 테스트")
     void selectAccountsOrCards_ControllerTest() throws Exception {
+        OnboardingSelectItemDTO selectItem = OnboardingSelectItemDTO.builder()
+                .number("12345678901234")
+                .name("KB국민ONE통장-저축예금")
+                .build();
+
         OnboardingSelectRequestDTO request = OnboardingSelectRequestDTO.builder()
-                .company("KB국민은행")
-                .selectedNumbers(Collections.singletonList("12345678901234"))
+                .company("국민은행")
+                .selectedItems(Collections.singletonList(selectItem))
                 .startDate("20260701")
                 .endDate("20260731")
                 .build();

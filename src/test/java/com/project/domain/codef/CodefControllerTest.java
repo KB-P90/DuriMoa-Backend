@@ -54,7 +54,7 @@ class CodefControllerTest {
                 .scope("read")
                 .build();
 
-        when(codefService.getAccessToken(any())).thenReturn(mockResponse);
+        when(codefService.getAccessToken()).thenReturn(mockResponse);
 
         // when & then
         MvcResult mvcResult = mockMvc.perform(post("/api/codef/token")

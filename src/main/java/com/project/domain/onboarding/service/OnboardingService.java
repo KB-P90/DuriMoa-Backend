@@ -10,7 +10,7 @@ import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
 public interface OnboardingService {
 
     // 1. 계좌/카드 등록 및 추가 API
-    OnboardingRegisterResponseDTO registerOrAddAccount(Long userId, OnboardingRegisterRequestDTO requestDTO);
+    OnboardingRegisterResponseDTO registerOrAddInstitution(Long userId, OnboardingRegisterRequestDTO requestDTO);
 
     // 2. 계좌/카드 목록 조회 API
     OnboardingQueryResponseDTO getAccountsOrCards(Long userId, OnboardingQueryRequestDTO requestDTO);

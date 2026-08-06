@@ -29,11 +29,6 @@ public class OnboardingAccountCreateRequestDTO {
     private String number;
 
     @ApiModelProperty(value = "계좌 별칭/명칭")
-    private String cardName;
+    private String accountName;
 
-    @ApiModelProperty(value = "계좌 ID (문자열)")
-    private String accountId;
-
-    @ApiModelProperty(value = "계좌 비밀번호")
-    private String accountPassword;
 }

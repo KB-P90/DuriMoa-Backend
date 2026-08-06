@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.codef.mapper.CodefTokenMapper">
+
+    <resultMap id="codefTokenResultMap" type="com.project.domain.codef.dto.CodefTokenDTO">
+        <id property="id" column="id"/>
+        <result property="accessToken" column="access_token"/>
+        <result property="tokenType" column="token_type"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="selectLatestToken" resultMap="codefTokenResultMap">
+        SELECT id, access_token, token_type, expires_at, created_at
+        FROM codef_access_token
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="upsertToken">
+        INSERT INTO codef_access_token (id, access_token, token_type, expires_at, created_at)
+        VALUES (1, #{accessToken}, #{tokenType}, #{expiresAt}, NOW())
+        ON DUPLICATE KEY UPDATE
+            access_token = #{accessToken},
+            token_type = #{tokenType},
+            expires_at = #{expiresAt},
+            created_at = NOW()
+    </insert>
+
+</mapper>

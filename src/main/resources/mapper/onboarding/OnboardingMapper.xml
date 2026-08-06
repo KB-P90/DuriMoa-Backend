@@ -18,13 +18,13 @@
     </update>
 
     <insert id="insertAccount" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO account (user_id, company, number, card_name, account_id, account_password, created_at)
-        VALUES (#{userId}, #{company}, #{number}, #{cardName}, #{accountId}, #{accountPassword}, NOW())
+        INSERT INTO account (user_id, company, number, account_name, created_at)
+        VALUES (#{userId}, #{company}, #{number}, #{accountName}, NOW())
     </insert>
 
     <insert id="insertCard" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO card (user_id, card_product_id, company, number, card_name, card_id, card_password, created_at)
-        VALUES (#{userId}, #{cardProductId}, #{company}, #{number}, #{cardName}, #{cardId}, #{cardPassword}, NOW())
+        INSERT INTO card (user_id, card_product_id, company, number, card_name, created_at)
+        VALUES (#{userId}, #{cardProductId}, #{company}, #{number}, #{cardName}, NOW())
     </insert>
 
     <select id="findAccountIdByUserAndNumber" resultType="long">
@@ -32,7 +32,6 @@
         WHERE user_id = #{userId}
           AND (
             number = #{number}
-            OR account_id = #{number}
             OR company = #{company}
           )
         ORDER BY id DESC LIMIT 1
@@ -43,10 +42,21 @@
         WHERE user_id = #{userId}
           AND (
             number = #{number}
-            OR card_id = #{number}
             OR company = #{company}
           )
         ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="findRegisteredAccountNumbers" resultType="string">
+        SELECT number FROM account
+        WHERE user_id = #{userId}
+          AND company = #{company}
+    </select>
+
+    <select id="findRegisteredCardNumbers" resultType="string">
+        SELECT number FROM card
+        WHERE user_id = #{userId}
+          AND company = #{company}
     </select>
 
     <insert id="insertAccountRecord" useGeneratedKeys="true" keyProperty="id">

@@ -25,6 +25,7 @@ DROP TABLE IF EXISTS `couple`;
 DROP TABLE IF EXISTS `card_product`;
 DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
+DROP TABLE IF EXISTS `codef_access_token`;
 -- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -221,9 +222,7 @@ CREATE TABLE `account` (
                            `user_id`          BIGINT       NOT NULL COMMENT '사용자 ID',
                            `company`          VARCHAR(50)  NOT NULL COMMENT '회사/금융기관',
                            `number`           VARCHAR(50)  NOT NULL COMMENT '계좌 번호',
-                           `card_name`        VARCHAR(100) NULL COMMENT '계좌 이름',
-                           `account_id`       VARCHAR(50)  NULL COMMENT '외부 계좌 식별자',
-                           `account_password` VARCHAR(512) NULL COMMENT '외부 계좌 RSA 암호화 비밀번호',
+                           `account_name`        VARCHAR(100) NULL COMMENT '계좌 이름',
                            `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                            PRIMARY KEY (`id`),
@@ -241,8 +240,6 @@ CREATE TABLE `card` (
                            `company`          VARCHAR(50)  NOT NULL COMMENT '회사/금융기관',
                            `number`           VARCHAR(50)  NOT NULL COMMENT '카드 번호',
                            `card_name`        VARCHAR(100) NULL COMMENT '카드 이름',
-                           `card_id`       VARCHAR(50)  NULL COMMENT '외부 카드 식별자',
-                           `card_password` VARCHAR(512) NULL COMMENT '외부 카드 RSA 암호화 비밀번호',
                            `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                            PRIMARY KEY (`id`),
@@ -370,6 +367,15 @@ CREATE TABLE `wedding_statistics` (
                                       UNIQUE KEY `uk_wedding_statistics_region_category` (`region`, `category`),
                                       CONSTRAINT `chk_wedding_statistics_amounts`
                                           CHECK (`high_10` >= 0 AND `high_25` >= 0 AND `mid_50` >= 0 AND `low_25` >= 0 AND `low_10` >= 0)
+);
+
+-- CODEF 토큰
+CREATE TABLE `codef_access_token` (
+                                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                                    access_token TEXT NOT NULL,
+                                    token_type VARCHAR(20),
+                                    expires_at DATETIME NOT NULL,
+                                    created_at DATETIME NOT NULL
 );
 
 /*

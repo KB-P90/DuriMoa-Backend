@@ -7,6 +7,8 @@ import com.project.domain.onboarding.dto.OnboardingCardRecordCreateRequestDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface OnboardingMapper {
 
@@ -32,6 +34,16 @@ public interface OnboardingMapper {
     Long findCardIdByUserAndNumber(
             @Param("userId") Long userId,
             @Param("number") String number,
+            @Param("company") String company);
+
+    // 사용자의 특정 금융기관 등록된 계좌 번호 목록 조회
+    List<String> findRegisteredAccountNumbers(
+            @Param("userId") Long userId,
+            @Param("company") String company);
+
+    // 사용자의 특정 금융기관 등록된 카드 번호 목록 조회
+    List<String> findRegisteredCardNumbers(
+            @Param("userId") Long userId,
             @Param("company") String company);
 
     // account_record 테이블 거래내역 저장

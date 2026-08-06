@@ -27,6 +27,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
 import com.project.domain.onboarding.mapper.OnboardingMapper;
 import com.project.common.enums.CodefInstitution;
 import lombok.RequiredArgsConstructor;
@@ -37,10 +38,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Log4j2
 @Service
@@ -53,7 +51,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Override
     @Transactional
-    public OnboardingRegisterResponseDTO registerOrAddAccount(Long userId, OnboardingRegisterRequestDTO requestDTO) {
+    public OnboardingRegisterResponseDTO registerOrAddInstitution(Long userId, OnboardingRegisterRequestDTO requestDTO) {
         String inputCompany = requestDTO.getCompany();
         String loginId = requestDTO.getId();
         String loginPassword = requestDTO.getPassword();
@@ -85,7 +83,6 @@ public class OnboardingServiceImpl implements OnboardingService {
         String finalConnectedId;
         String actionType;
 
-        String realNumberStr = null;
         if (!StringUtils.hasText(existingConnectedId)) {
             CodefConnectedIdRequestDTO createReq = CodefConnectedIdRequestDTO.builder()
                     .accountList(Collections.singletonList(accountItem))
@@ -100,12 +97,6 @@ public class OnboardingServiceImpl implements OnboardingService {
             }
             finalConnectedId = codefRes.getData().getConnectedId();
             actionType = "CREATED";
-
-            if ("BK".equalsIgnoreCase(businessType)) {
-                realNumberStr = codefRes.getData().getFirstAccountNumber();
-            } else {
-                realNumberStr = codefRes.getData().getFirstCardNumber();
-            }
 
             // user 테이블에 생성된 connected_id 업데이트 저장
             onboardingMapper.updateUserConnectedId(userId, finalConnectedId);
@@ -128,9 +119,6 @@ public class OnboardingServiceImpl implements OnboardingService {
             actionType = "ADDED";
         }
 
-        // 2. 계정 등록/추가 성공 시 입력받은 계정 정보 1개만 account 또는 card DB 테이블에 저장
-        saveRegisteredAccountOrCard(userId, businessType, companyName, loginId, loginPassword, realNumberStr);
-
         return OnboardingRegisterResponseDTO.builder()
                 .connectedId(finalConnectedId)
                 .actionType(actionType)
@@ -138,45 +126,6 @@ public class OnboardingServiceImpl implements OnboardingService {
                 .organization(organization)
                 .company(companyName)
                 .build();
-    }
-
-    private void saveRegisteredAccountOrCard(Long userId, String businessType, String companyName, String loginId, String loginPassword, String realNumberStr) {
-        if (!StringUtils.hasText(loginId)) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "계정 연동을 위한 아이디 정보가 비어있습니다.");
-        }
-
-        String encryptedPassword = StringUtils.hasText(loginPassword) ? codefService.encryptPassword(loginPassword) : null;
-        String accountNumber = StringUtils.hasText(realNumberStr) ? realNumberStr : loginId;
-
-        if ("BK".equalsIgnoreCase(businessType)) {
-            Long existingId = onboardingMapper.findAccountIdByUserAndNumber(userId, accountNumber, companyName);
-            if (existingId == null) {
-                OnboardingAccountCreateRequestDTO accountReq = OnboardingAccountCreateRequestDTO.builder()
-                        .userId(userId)
-                        .company(companyName)
-                        .number(accountNumber)
-                        .cardName(companyName + " 계좌")
-                        .accountId(loginId)
-                        .accountPassword(encryptedPassword)
-                        .build();
-                onboardingMapper.insertAccount(accountReq);
-                log.info("사용자 [{}] 입력 계정 기반 account DB 저장 완료 - company: {}, number: {}, accountId: {}", userId, companyName, accountNumber, loginId);
-            }
-        } else {
-            Long existingId = onboardingMapper.findCardIdByUserAndNumber(userId, accountNumber, companyName);
-            if (existingId == null) {
-                OnboardingCardCreateRequestDTO cardReq = OnboardingCardCreateRequestDTO.builder()
-                        .userId(userId)
-                        .company(companyName)
-                        .number(accountNumber)
-                        .cardName(companyName + " 카드")
-                        .cardId(loginId)
-                        .cardPassword(encryptedPassword)
-                        .build();
-                onboardingMapper.insertCard(cardReq);
-                log.info("사용자 [{}] 입력 계정 기반 card DB 저장 완료 - company: {}, number: {}, cardId: {}", userId, companyName, accountNumber, loginId);
-            }
-        }
     }
 
     @Override
@@ -222,6 +171,20 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         List<Map<String, Object>> flatItemList = extractFlatItemList(resultData);
+
+        List<String> registeredNumbers;
+        if ("BK".equalsIgnoreCase(businessType)) {
+            registeredNumbers = onboardingMapper.findRegisteredAccountNumbers(userId, companyName);
+        } else {
+            registeredNumbers = onboardingMapper.findRegisteredCardNumbers(userId, companyName);
+        }
+        Set<String> registeredSet = new HashSet<>(registeredNumbers != null ? registeredNumbers : Collections.emptyList());
+
+        for (Map<String, Object> item : flatItemList) {
+            String number = (String) item.get("resAccount");
+            boolean isRegistered = StringUtils.hasText(number) && registeredSet.contains(number);
+            item.put("isRegistered", isRegistered);
+        }
 
         return OnboardingQueryResponseDTO.builder()
                 .itemList(flatItemList)
@@ -338,16 +301,32 @@ public class OnboardingServiceImpl implements OnboardingService {
         int totalSaved = 0;
         List<String> processedNumbers = new ArrayList<>();
 
-        for (String numberStr : requestDTO.getSelectedNumbers()) {
+        if (requestDTO.getSelectedItems() == null || requestDTO.getSelectedItems().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "선택한 계좌/카드 목록(selectedItems)이 비어있습니다.");
+        }
+
+        for (OnboardingSelectItemDTO item : requestDTO.getSelectedItems()) {
+            String numberStr = item.getNumber();
+            String nameStr = item.getName();
             if (!StringUtils.hasText(numberStr)) {
                 throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "선택한 계좌/카드 번호가 비어있습니다.");
             }
 
             if ("BK".equalsIgnoreCase(businessType)) {
-                // 기존 계좌 DB 레코드 조회 (number, account_id, 또는 company 매칭)
+                // 계좌 DB 레코드 조회 및 신규 생성
                 Long accountId = onboardingMapper.findAccountIdByUserAndNumber(userId, numberStr, companyName);
                 if (accountId == null) {
-                    throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "선택한 계좌(" + numberStr + ") 정보가 DB에 존재하지 않습니다. 먼저 계좌를 등록해 주세요.");
+                    String targetAccountName = StringUtils.hasText(nameStr) ? nameStr : (companyName + " 계좌");
+                    OnboardingAccountCreateRequestDTO accountReq = OnboardingAccountCreateRequestDTO.builder()
+                            .userId(userId)
+                            .company(companyName)
+                            .number(numberStr)
+                            .accountName(targetAccountName)
+                            .build();
+                    onboardingMapper.insertAccount(accountReq);
+                    accountId = accountReq.getId();
+                    log.info("사용자 [{}] 선택 계좌 account DB 신규 생성 완료 - company: {}, number: {}, name: {}, generatedId: {}",
+                            userId, companyName, numberStr, targetAccountName, accountId);
                 }
 
                 // CODEF 은행 계좌 거래내역 조회
@@ -377,10 +356,20 @@ public class OnboardingServiceImpl implements OnboardingService {
                 totalSaved += savedCount;
                 processedNumbers.add(numberStr);
             } else {
-                // 기존 카드 DB 레코드 조회 (number, card_id, 또는 company 매칭)
+                // 카드 DB 레코드 조회 및 신규 생성
                 Long cardId = onboardingMapper.findCardIdByUserAndNumber(userId, numberStr, companyName);
                 if (cardId == null) {
-                    throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "선택한 카드(" + numberStr + ") 정보가 DB에 존재하지 않습니다. 먼저 카드를 등록해 주세요.");
+                    String targetCardName = StringUtils.hasText(nameStr) ? nameStr : (companyName + " 카드");
+                    OnboardingCardCreateRequestDTO cardReq = OnboardingCardCreateRequestDTO.builder()
+                            .userId(userId)
+                            .company(companyName)
+                            .number(numberStr)
+                            .cardName(targetCardName)
+                            .build();
+                    onboardingMapper.insertCard(cardReq);
+                    cardId = cardReq.getId();
+                    log.info("사용자 [{}] 선택 카드 card DB 신규 생성 완료 - company: {}, number: {}, name: {}, generatedId: {}",
+                            userId, companyName, numberStr, targetCardName, cardId);
                 }
 
                 // CODEF 카드 승인 내역 조회

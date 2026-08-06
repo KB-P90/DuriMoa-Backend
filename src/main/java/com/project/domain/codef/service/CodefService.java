@@ -18,7 +18,7 @@ public interface CodefService {
     /**
      * CODEF OAuth2.0 Access Token 발급 및 조회
      */
-    CodefTokenResponseDTO getAccessToken(CodefTokenRequestDTO requestDTO);
+    CodefTokenResponseDTO getAccessToken();
 
     /**
      * CODEF RSA 비밀번호 암호화
