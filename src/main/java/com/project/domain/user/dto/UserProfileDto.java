@@ -22,7 +22,8 @@ public class UserProfileDto {
     private boolean shared;
     private String password;
 
-    // 계좌정보 dto 생성 된 후 추가할 예정
+    private int cardCount;
+    private int accountCount;
 
     private String partnerName;
     private String partnerRole;
