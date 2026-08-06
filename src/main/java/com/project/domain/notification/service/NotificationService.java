@@ -1,6 +1,9 @@
 package com.project.domain.notification.service;
 
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.dto.NotificationListResponseDTO;
+import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
+import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
@@ -15,6 +18,13 @@ public interface NotificationService {
      * @param authenticatedUserId JWT 인증으로 확인된 사용자 ID
      * @return 사용자의 알림 목록
      */
+    NotificationListResponseDTO getNotifications(
+            Long authenticatedUserId,
+            Integer page,
+            Integer size,
+            Boolean isRead
+    );
+
     List<NotificationResponseDTO> getNotifications(Long authenticatedUserId);
 
     /**
@@ -31,14 +41,14 @@ public interface NotificationService {
      * @param authenticatedUserId JWT 인증으로 확인된 사용자 ID
      * @param notificationId 읽음 처리할 알림 ID
      */
-    void markAsRead(Long authenticatedUserId, Long notificationId);
+    NotificationReadResponseDTO markAsRead(Long authenticatedUserId, Long notificationId);
 
     /**
      * 인증 사용자의 모든 읽지 않은 알림을 읽음 상태로 변경합니다.
      *
      * @param authenticatedUserId JWT 인증으로 확인된 사용자 ID
      */
-    void markAllAsRead(Long authenticatedUserId);
+    NotificationReadAllResponseDTO markAllAsRead(Long authenticatedUserId);
 
     /**
      * 인증 사용자의 알림 종류별 수신 설정 목록을 조회합니다.

@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 public class NotificationSettingUpdateRequestDTO {
 
     @NotBlank(message = "알림 종류는 필수입니다.")
-    @Size(max = 10, message = "알림 종류는 10자 이하여야 합니다.")
-    @ApiModelProperty(value = "알림 종류", required = true, example = "GOAL")
+    @Size(max = 50, message = "알림 종류는 50자 이하여야 합니다.")
+    @ApiModelProperty(value = "알림 종류", required = true, example = "GOAL_CHANGED")
     private String type;
 
     @NotNull(message = "푸시 알림 활성화 여부는 필수입니다.")

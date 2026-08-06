@@ -10,7 +10,24 @@ public interface NotificationMapper {
 
     List<NotificationResponseDTO> selectNotificationsByUserId(@Param("userId") Long userId);
 
+    List<NotificationResponseDTO> selectNotifications(
+            @Param("userId") Long userId,
+            @Param("isRead") Boolean isRead,
+            @Param("limit") Integer limit,
+            @Param("offset") Integer offset
+    );
+
+    Integer countNotifications(
+            @Param("userId") Long userId,
+            @Param("isRead") Boolean isRead
+    );
+
     Integer countUnreadNotifications(@Param("userId") Long userId);
+
+    Integer existsNotification(
+            @Param("userId") Long userId,
+            @Param("notificationId") Long notificationId
+    );
 
     Integer updateNotificationRead(
             @Param("userId") Long userId,

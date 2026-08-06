@@ -69,7 +69,7 @@ CREATE TABLE `terms_agreement` (
 CREATE TABLE `notification_setting` (
                                         `id`              BIGINT      NOT NULL AUTO_INCREMENT COMMENT '알림 설정 ID',
                                         `user_id`         BIGINT      NOT NULL COMMENT '사용자 ID',
-                                        `type`            VARCHAR(10) NOT NULL COMMENT '알림 종류',
+                                        `type`            VARCHAR(50) NOT NULL COMMENT '알림 종류',
                                         `is_push_enabled` BOOLEAN     NOT NULL DEFAULT TRUE COMMENT '푸시 알림 여부',
                                         `created_at`      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
@@ -85,10 +85,12 @@ CREATE TABLE `notification_setting` (
 CREATE TABLE `notification` (
                                 `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '알림 ID',
                                 `user_id`    BIGINT       NOT NULL COMMENT '사용자 ID',
-                                `type`       VARCHAR(10)  NOT NULL COMMENT '알림 종류',
+                                `type`       VARCHAR(50)  NOT NULL COMMENT '알림 종류',
                                 `title`      VARCHAR(100) NOT NULL COMMENT '제목',
                                 `content`    TEXT         NOT NULL COMMENT '내용',
                                 `is_read`    BOOLEAN      NOT NULL DEFAULT FALSE COMMENT '읽음 여부',
+                                `target_type` VARCHAR(20) NULL COMMENT '이동 대상 종류',
+                                `target_id`  BIGINT       NULL COMMENT '이동 대상 ID',
                                 `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                 PRIMARY KEY (`id`),

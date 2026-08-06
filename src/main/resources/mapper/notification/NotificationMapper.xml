@@ -12,6 +12,8 @@
         <result property="content" column="content"/>
         <result property="isRead" column="is_read"/>
         <result property="createdAt" column="created_at"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
     </resultMap>
 
     <resultMap id="NotificationSettingResponseMap"
@@ -31,12 +33,47 @@
             title,
             content,
             is_read,
-            created_at
+            created_at,
+            target_type,
+            target_id
         FROM notification
         WHERE user_id = #{userId}
         ORDER BY
             created_at DESC,
             id DESC
+    </select>
+
+    <select id="selectNotifications" resultMap="NotificationResponseMap">
+        SELECT
+            id,
+            user_id,
+            type,
+            title,
+            content,
+            is_read,
+            created_at,
+            target_type,
+            target_id
+        FROM notification
+        WHERE user_id = #{userId}
+        <if test="isRead != null">
+          AND is_read = #{isRead}
+        </if>
+        ORDER BY
+            created_at DESC,
+            id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countNotifications" resultType="java.lang.Integer">
+        SELECT
+            COUNT(id)
+        FROM notification
+        WHERE user_id = #{userId}
+        <if test="isRead != null">
+          AND is_read = #{isRead}
+        </if>
     </select>
 
     <select id="countUnreadNotifications" resultType="java.lang.Integer">
@@ -47,12 +84,19 @@
           AND is_read = FALSE
     </select>
 
+    <select id="existsNotification" resultType="java.lang.Integer">
+        SELECT
+            COUNT(id)
+        FROM notification
+        WHERE id = #{notificationId}
+          AND user_id = #{userId}
+    </select>
+
     <update id="updateNotificationRead">
         UPDATE notification
         SET is_read = TRUE
         WHERE id = #{notificationId}
           AND user_id = #{userId}
-          AND is_read = FALSE
     </update>
 
     <update id="updateAllNotificationsRead">
@@ -107,12 +151,16 @@
             user_id,
             type,
             title,
-            content
+            content,
+            target_type,
+            target_id
         ) VALUES (
             #{userId},
             #{type},
             #{title},
-            #{content}
+            #{content},
+            #{targetType},
+            #{targetId}
         )
     </insert>
 </mapper>
