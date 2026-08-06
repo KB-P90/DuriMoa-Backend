@@ -16,6 +16,9 @@
         <result column="is_shared" property="shared"/>
         <result column="phone" property="phone"/>
 
+        <result column="card_count" property="cardCount"/>
+        <result column="account_count" property="accountCount"/>
+
         <result column="partner_name" property="partnerName"/>
         <result column="partner_role" property="partnerRole"/>
 
@@ -59,6 +62,9 @@
                u.profile_image AS profile_image,
                u.is_shared     AS is_shared,
                u.phone         AS phone,
+
+               (SELECT COUNT(*) FROM card ca WHERE ca.user_id = u.id)    AS card_count,
+               (SELECT COUNT(*) FROM account ac WHERE ac.user_id = u.id) AS account_count,
 
                p.name          AS partner_name,
                p.role          AS partner_role,
