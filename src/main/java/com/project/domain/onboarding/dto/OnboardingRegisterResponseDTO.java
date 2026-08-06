@@ -28,6 +28,6 @@ public class OnboardingRegisterResponseDTO {
     @ApiModelProperty(value = "기관 코드", example = "0004")
     private String organization;
 
-    @ApiModelProperty(value = "금융기관명", example = "KB국민은행")
+    @ApiModelProperty(value = "금융기관명", example = "국민은행")
     private String company;
 }

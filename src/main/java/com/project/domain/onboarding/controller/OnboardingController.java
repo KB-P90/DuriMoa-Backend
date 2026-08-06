@@ -43,8 +43,8 @@ public class OnboardingController {
                     "- 커넥티드 ID 미존재 시: CODEF 계정 등록 API(/v1/account/create) 호출\n" +
                     "- 커넥티드 ID 존재 시: CODEF 계정 추가 API(/v1/account/add) 호출\n\n" +
                     "📌 [주요 지원 금융기관 명칭 (company)]\n" +
-                    "• 은행: KB국민은행, 신한은행, 우리은행, 하나은행, NH농협은행, IBK기업은행, 카카오뱅크, 케이뱅크, 토스뱅크\n" +
-                    "• 카드: KB국민카드, 신한카드, 삼성카드, 현대카드, 롯데카드, 우리카드, 하나카드, NH농협카드"
+                    "• 은행: 산업은행, 기업은행, 국민은행, 수협은행, 농협은행, 우리은행, SC은행, 씨티은행, 대구은행, 부산은행, 광주은행, 제주은행, 전북은행, 경남은행, 새마을금고, 신협은행, 우체국, KEB하나은행, 신한은행, K뱅크\n" +
+                    "• 카드: KB카드, 현대카드, 삼성카드, NH카드, BC카드, 신한카드, 씨티카드, 우리카드, 롯데카드, 하나카드, 전북카드, 광주카드, 수협카드, 제주카드"
     )
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<OnboardingRegisterResponseDTO>> registerOrAddAccount(
@@ -62,13 +62,13 @@ public class OnboardingController {
             value = "계좌/카드 목록 조회 API",
             notes = "입력받은 금융기관 이름을 파라미터로 전달받아 백엔드에서 사용자 커넥티드 ID 및 기관 코드를 자동 매핑하여 보유 계좌/카드 목록을 조회합니다.\n\n" +
                     "📌 [주요 지원 금융기관 명칭 (company)]\n" +
-                    "• 은행: KB국민은행, 신한은행, 우리은행, 하나은행, NH농협은행, IBK기업은행, 카카오뱅크, 케이뱅크, 토스뱅크\n" +
-                    "• 카드: KB국민카드, 신한카드, 삼성카드, 현대카드, 롯데카드, 우리카드, 하나카드, NH농협카드"
+                    "• 은행: 산업은행, 기업은행, 국민은행, 수협은행, 농협은행, 우리은행, SC은행, 씨티은행, 대구은행, 부산은행, 광주은행, 제주은행, 전북은행, 경남은행, 새마을금고, 신협은행, 우체국, KEB하나은행, 신한은행, K뱅크\n" +
+                    "• 카드: KB카드, 현대카드, 삼성카드, NH카드, BC카드, 신한카드, 씨티카드, 우리카드, 롯데카드, 하나카드, 전북카드, 광주카드, 수협카드, 제주카드"
     )
     @GetMapping("/accounts")
     public ResponseEntity<ApiResponse<OnboardingQueryResponseDTO>> getAccountsOrCards(
             @ApiIgnore @AuthenticationPrincipal Long userId,
-            @ApiParam(value = "금융기관 이름 (예: KB국민은행, KB국민카드)", required = true, example = "KB국민은행")
+            @ApiParam(value = "금융기관 이름 (예: 국민은행, KB카드)", required = true, example = "국민은행")
             @RequestParam("company") String company) {
         if (userId == null || userId <= 0) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
@@ -86,8 +86,8 @@ public class OnboardingController {
             value = "계좌/카드 선택 API",
             notes = "사용자가 선택한 금융기관 이름과 계좌/카드 번호 목록을 전달받아, 사용자 커넥티드 ID로 거래 내역을 수집하고 DB에 저장합니다.\n\n" +
                     "📌 [주요 지원 금융기관 명칭 (company)]\n" +
-                    "• 은행: KB국민은행, 신한은행, 우리은행, 하나은행, NH농협은행, IBK기업은행, 카카오뱅크, 케이뱅크, 토스뱅크\n" +
-                    "• 카드: KB국민카드, 신한카드, 삼성카드, 현대카드, 롯데카드, 우리카드, 하나카드, NH농협카드"
+                    "• 은행: 산업은행, 기업은행, 국민은행, 수협은행, 농협은행, 우리은행, SC은행, 씨티은행, 대구은행, 부산은행, 광주은행, 제주은행, 전북은행, 경남은행, 새마을금고, 신협은행, 우체국, KEB하나은행, 신한은행, K뱅크\n" +
+                    "• 카드: KB카드, 현대카드, 삼성카드, NH카드, BC카드, 신한카드, 씨티카드, 우리카드, 롯데카드, 하나카드, 전북카드, 광주카드, 수협카드, 제주카드"
     )
     @PostMapping("/select")
     public ResponseEntity<ApiResponse<OnboardingSelectResponseDTO>> selectAccountsOrCards(

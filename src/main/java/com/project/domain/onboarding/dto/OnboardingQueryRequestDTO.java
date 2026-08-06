@@ -19,6 +19,6 @@ import javax.validation.constraints.NotBlank;
 public class OnboardingQueryRequestDTO {
 
     @NotBlank(message = "금융기관 이름(company)은 필수입니다.")
-    @ApiModelProperty(value = "금융기관 이름 또는 코드 (예: KB국민은행, KB국민카드)", required = true, example = "KB국민은행")
+    @ApiModelProperty(value = "금융기관 이름 또는 코드 (예: 국민은행, KB카드)", required = true, example = "국민은행")
     private String company;
 }
