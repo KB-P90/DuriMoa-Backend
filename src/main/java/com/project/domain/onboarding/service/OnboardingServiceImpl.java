@@ -53,7 +53,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Override
     @Transactional
-    public OnboardingRegisterResponseDTO registerOrAddAccount(Long userId, OnboardingRegisterRequestDTO requestDTO) {
+    public OnboardingRegisterResponseDTO registerOrAddInstitution(Long userId, OnboardingRegisterRequestDTO requestDTO) {
         String inputCompany = requestDTO.getCompany();
         String loginId = requestDTO.getId();
         String loginPassword = requestDTO.getPassword();
@@ -128,8 +128,8 @@ public class OnboardingServiceImpl implements OnboardingService {
             actionType = "ADDED";
         }
 
-        // 2. 계정 등록/추가 성공 시 입력받은 계정 정보 1개만 account 또는 card DB 테이블에 저장
-        saveRegisteredAccountOrCard(userId, businessType, companyName, loginId, loginPassword, realNumberStr);
+        // 2. 금융기관 연동 성공 시 연동 정보 저장
+        saveRegisteredInstitution(userId, businessType, companyName, loginId, loginPassword, realNumberStr);
 
         return OnboardingRegisterResponseDTO.builder()
                 .connectedId(finalConnectedId)
@@ -140,7 +140,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                 .build();
     }
 
-    private void saveRegisteredAccountOrCard(Long userId, String businessType, String companyName, String loginId, String loginPassword, String realNumberStr) {
+    private void saveRegisteredInstitution(Long userId, String businessType, String companyName, String loginId, String loginPassword, String realNumberStr) {
         if (!StringUtils.hasText(loginId)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "계정 연동을 위한 아이디 정보가 비어있습니다.");
         }

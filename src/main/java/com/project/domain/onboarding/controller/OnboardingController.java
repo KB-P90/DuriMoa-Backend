@@ -47,14 +47,14 @@ public class OnboardingController {
                     "• 카드: KB카드, 현대카드, 삼성카드, NH카드, BC카드, 신한카드, 씨티카드, 우리카드, 롯데카드, 하나카드, 전북카드, 광주카드, 수협카드, 제주카드"
     )
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<OnboardingRegisterResponseDTO>> registerOrAddAccount(
+    public ResponseEntity<ApiResponse<OnboardingRegisterResponseDTO>> registerOrAddInstitution(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody OnboardingRegisterRequestDTO requestDTO) {
         if (userId == null || userId <= 0) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
         }
         log.info("온보딩 계좌/카드 등록 요청 수신 - userId: {}, company: {}", userId, requestDTO.getCompany());
-        OnboardingRegisterResponseDTO response = onboardingService.registerOrAddAccount(userId, requestDTO);
+        OnboardingRegisterResponseDTO response = onboardingService.registerOrAddInstitution(userId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("계정 등록/추가 성공", response));
     }
 

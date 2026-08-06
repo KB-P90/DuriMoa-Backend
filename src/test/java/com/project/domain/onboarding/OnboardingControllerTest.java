@@ -70,7 +70,7 @@ class OnboardingControllerTest {
 
     @Test
     @DisplayName("1. 계좌/카드 등록 및 추가 API 컨트롤러 테스트")
-    void registerOrAddAccount_ControllerTest() throws Exception {
+    void registerOrAddInstitution_ControllerTest() throws Exception {
         OnboardingRegisterRequestDTO request = OnboardingRegisterRequestDTO.builder()
                 .company("국민은행")
                 .id("test_user")
@@ -85,7 +85,7 @@ class OnboardingControllerTest {
                 .company("국민은행")
                 .build();
 
-        when(onboardingService.registerOrAddAccount(any(), any())).thenReturn(response);
+        when(onboardingService.registerOrAddInstitution(any(), any())).thenReturn(response);
 
         MvcResult result = mockMvc.perform(post("/api/onboarding/register")
                         .contentType(MediaType.APPLICATION_JSON)
