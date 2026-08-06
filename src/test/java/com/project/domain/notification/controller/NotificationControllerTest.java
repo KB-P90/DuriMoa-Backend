@@ -1,7 +1,7 @@
 package com.project.domain.notification.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -88,12 +88,12 @@ class NotificationControllerTest {
     void markAsReadDelegatesToService() throws Exception {
         setAuthentication(1L);
 
-        MvcResult result = mockMvc.perform(patch("/api/notifications/10/read"))
+        MvcResult result = mockMvc.perform(delete("/api/notifications/10"))
                 .andExpect(status().isOk())
                 .andReturn();
 
         JsonNode response = readResponse(result);
-        Assertions.assertEquals("알림을 읽음 처리했습니다.", response.get("message").asText());
+        Assertions.assertEquals("알림을 삭제했습니다.", response.get("message").asText());
         Mockito.verify(notificationService).markAsRead(1L, 10L);
     }
 

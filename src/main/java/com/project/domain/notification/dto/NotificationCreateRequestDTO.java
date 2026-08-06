@@ -22,16 +22,23 @@ public class NotificationCreateRequestDTO {
     private Long userId;
 
     @NotBlank(message = "알림 종류는 필수입니다.")
-    @Size(max = 10, message = "알림 종류는 10자 이하여야 합니다.")
-    @ApiModelProperty(value = "알림 종류", required = true, example = "GOAL")
+    @Size(max = 50, message = "알림 종류는 50자 이하여야 합니다.")
+    @ApiModelProperty(value = "알림 종류", required = true, example = "GOAL_CHANGED")
     private String type;
 
     @NotBlank(message = "알림 제목은 필수입니다.")
     @Size(max = 100, message = "알림 제목은 100자 이하여야 합니다.")
-    @ApiModelProperty(value = "알림 제목", required = true, example = "목표가 변경되었습니다.")
+    @ApiModelProperty(value = "알림 제목", required = true, example = "시안이 수정되었습니다.")
     private String title;
 
     @NotBlank(message = "알림 내용은 필수입니다.")
-    @ApiModelProperty(value = "알림 내용", required = true, example = "결혼 목표 예산이 변경되었습니다.")
+    @ApiModelProperty(value = "알림 내용", required = true, example = "상대방이 결혼 시안을 수정했습니다.")
     private String content;
+
+    @Size(max = 20, message = "이동 대상 종류는 20자 이하여야 합니다.")
+    @ApiModelProperty(value = "이동 대상 종류", example = "GOAL")
+    private String targetType;
+
+    @ApiModelProperty(value = "이동 대상 ID", example = "1")
+    private Long targetId;
 }

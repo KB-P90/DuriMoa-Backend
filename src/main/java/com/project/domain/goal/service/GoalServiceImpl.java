@@ -21,6 +21,8 @@ import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
 import com.project.domain.goal.dto.GoalUpdateRequestDTO;
 import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
+import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.service.NotificationService;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,19 +34,40 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class GoalServiceImpl implements GoalService {
 
     private static final Long RATIO_TOTAL = 100L;
+    private static final String TARGET_TYPE_GOAL = "GOAL";
+    private static final String GOAL_CREATED = "GOAL_CREATED";
+    private static final String GOAL_CHANGED = "GOAL_CHANGED";
+    private static final String GOAL_APPROVAL_REQUESTED = "GOAL_APPROVAL_REQUESTED";
+    private static final String GOAL_APPROVED = "GOAL_APPROVED";
+    private static final String GOAL_REJECTED = "GOAL_REJECTED";
 
     private final GoalMapper goalMapper;
     private final CoupleService coupleService;
+    private final NotificationService notificationService;
     private final Clock clock = Clock.systemDefaultZone();
+
+    public GoalServiceImpl(GoalMapper goalMapper, CoupleService coupleService) {
+        this(goalMapper, coupleService, null);
+    }
+
+    @Autowired
+    public GoalServiceImpl(
+            GoalMapper goalMapper,
+            CoupleService coupleService,
+            NotificationService notificationService
+    ) {
+        this.goalMapper = goalMapper;
+        this.coupleService = coupleService;
+        this.notificationService = notificationService;
+    }
 
     @Override
     @Transactional
@@ -86,6 +109,14 @@ public class GoalServiceImpl implements GoalService {
                     "결혼 목표 항목 저장에 실패했습니다."
             );
         }
+
+        createGoalNotification(
+                findPartnerId(authenticatedUserId, couple),
+                GOAL_CREATED,
+                "새 시안이 생성되었습니다.",
+                goal.getName() + " 시안이 생성되었습니다.",
+                goal.getId()
+        );
 
         return GoalCreateResponseDTO.builder()
                 .goalId(goal.getId())
@@ -175,6 +206,14 @@ public class GoalServiceImpl implements GoalService {
             );
         }
 
+        createGoalNotification(
+                findPartnerId(authenticatedUserId, couple),
+                GOAL_CHANGED,
+                "시안이 수정되었습니다.",
+                updatedGoal.getName() + " 시안이 수정되었습니다.",
+                goalId
+        );
+
         return GoalUpdateResponseDTO.builder()
                 .goalId(goalId)
                 .name(updatedGoal.getName())
@@ -248,6 +287,14 @@ public class GoalServiceImpl implements GoalService {
                 goalMapper.updateGoalRequest(goalId, authenticatedUserId, requestedAt),
                 "메인 시안 승인 요청에 실패했습니다."
         );
+        createGoalNotification(
+                findPartnerId(authenticatedUserId, couple),
+                GOAL_APPROVAL_REQUESTED,
+                "메인 시안 승인 요청이 도착했습니다.",
+                goal.getName() + " 시안의 메인 설정 승인을 요청했습니다.",
+                goalId
+        );
+
         return buildStatusResponse(
                 goalId,
                 GoalStatus.PENDING,
@@ -320,6 +367,13 @@ public class GoalServiceImpl implements GoalService {
                     goalMapper.rejectGoalRequest(goalId),
                     "메인 시안 승인 요청 거절에 실패했습니다."
             );
+            createGoalNotification(
+                    goal.getRequestedBy(),
+                    GOAL_REJECTED,
+                    "메인 시안 요청이 거절되었습니다.",
+                    goal.getName() + " 시안의 메인 설정 요청이 거절되었습니다.",
+                    goalId
+            );
             return buildStatusResponse(goalId, GoalStatus.NORMAL, false, false, null);
         }
 
@@ -327,6 +381,13 @@ public class GoalServiceImpl implements GoalService {
         ensureSingleRowUpdated(
                 goalMapper.confirmGoal(goalId),
                 "메인 시안 승인에 실패했습니다."
+        );
+        createGoalNotification(
+                goal.getRequestedBy(),
+                GOAL_APPROVED,
+                "메인 시안 요청이 승인되었습니다.",
+                goal.getName() + " 시안이 메인 시안으로 승인되었습니다.",
+                goalId
         );
         return buildStatusResponse(goalId, GoalStatus.CONFIRMED, true, false, null);
     }
@@ -546,6 +607,39 @@ public class GoalServiceImpl implements GoalService {
                 .included(item.getIncluded())
                 .type(item.getType().trim())
                 .build();
+    }
+
+    private Long findPartnerId(Long userId, CoupleDTO couple) {
+        if (couple == null || userId == null) {
+            return null;
+        }
+        if (userId.equals(couple.getGroomId())) {
+            return couple.getBrideId();
+        }
+        if (userId.equals(couple.getBrideId())) {
+            return couple.getGroomId();
+        }
+        return null;
+    }
+
+    private void createGoalNotification(
+            Long receiverId,
+            String type,
+            String title,
+            String content,
+            Long goalId
+    ) {
+        if (notificationService == null || receiverId == null) {
+            return;
+        }
+        notificationService.createNotification(NotificationCreateRequestDTO.builder()
+                .userId(receiverId)
+                .type(type)
+                .title(title)
+                .content(content)
+                .targetType(TARGET_TYPE_GOAL)
+                .targetId(goalId)
+                .build());
     }
 
     private String trim(String value) {
