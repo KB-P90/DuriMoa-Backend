@@ -47,5 +47,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
+    @GetMapping("/invite")
+    @ApiOperation(value = "초대 코드 조회")
+    public ResponseEntity<ApiResponse<String>> getUserInvite(
+            @ApiIgnore @AuthenticationPrincipal Long userId) {
 
+        String inviteCode = userService.getUserInvite(userId);
+        return ResponseEntity.ok(ApiResponse.success(inviteCode));
+    }
 }

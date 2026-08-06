@@ -12,4 +12,6 @@ public interface UserMapper {
     public boolean update(UserProfileVO profile);
 
     public boolean updateIsShared(long no);
+
+    public String getUserInvite(Long no);
 }
