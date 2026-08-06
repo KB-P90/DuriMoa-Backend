@@ -47,6 +47,18 @@
         ORDER BY id DESC LIMIT 1
     </select>
 
+    <select id="findRegisteredAccountNumbers" resultType="string">
+        SELECT number FROM account
+        WHERE user_id = #{userId}
+          AND company = #{company}
+    </select>
+
+    <select id="findRegisteredCardNumbers" resultType="string">
+        SELECT number FROM card
+        WHERE user_id = #{userId}
+          AND company = #{company}
+    </select>
+
     <insert id="insertAccountRecord" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO account_record (account_id, type, category, title, amount, record_date, memo, created_at)
         VALUES (#{accountId}, #{type}, #{category}, #{title}, #{amount}, STR_TO_DATE(#{recordDate}, '%Y-%m-%d'), #{memo}, NOW())

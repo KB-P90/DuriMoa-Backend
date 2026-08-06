@@ -38,10 +38,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Log4j2
 @Service
@@ -86,7 +83,6 @@ public class OnboardingServiceImpl implements OnboardingService {
         String finalConnectedId;
         String actionType;
 
-        String realNumberStr = null;
         if (!StringUtils.hasText(existingConnectedId)) {
             CodefConnectedIdRequestDTO createReq = CodefConnectedIdRequestDTO.builder()
                     .accountList(Collections.singletonList(accountItem))
@@ -101,12 +97,6 @@ public class OnboardingServiceImpl implements OnboardingService {
             }
             finalConnectedId = codefRes.getData().getConnectedId();
             actionType = "CREATED";
-
-            if ("BK".equalsIgnoreCase(businessType)) {
-                realNumberStr = codefRes.getData().getFirstAccountNumber();
-            } else {
-                realNumberStr = codefRes.getData().getFirstCardNumber();
-            }
 
             // user 테이블에 생성된 connected_id 업데이트 저장
             onboardingMapper.updateUserConnectedId(userId, finalConnectedId);
@@ -181,6 +171,20 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         List<Map<String, Object>> flatItemList = extractFlatItemList(resultData);
+
+        List<String> registeredNumbers;
+        if ("BK".equalsIgnoreCase(businessType)) {
+            registeredNumbers = onboardingMapper.findRegisteredAccountNumbers(userId, companyName);
+        } else {
+            registeredNumbers = onboardingMapper.findRegisteredCardNumbers(userId, companyName);
+        }
+        Set<String> registeredSet = new HashSet<>(registeredNumbers != null ? registeredNumbers : Collections.emptyList());
+
+        for (Map<String, Object> item : flatItemList) {
+            String number = (String) item.get("resAccount");
+            boolean isRegistered = StringUtils.hasText(number) && registeredSet.contains(number);
+            item.put("isRegistered", isRegistered);
+        }
 
         return OnboardingQueryResponseDTO.builder()
                 .itemList(flatItemList)
