@@ -1,5 +1,6 @@
 package com.project.domain.home.model;
 
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -119,6 +120,23 @@ public final class HomeRecord {
 
         // 지역별 결혼 통계 균형형 예상 금액입니다.
         private Long balancedAmount;
+    }
+
+    @Getter
+    @Setter
+    public static class HomeSavingAlertRecord {
+
+        // 홈 알림의 종류입니다.
+        private String alertType;
+
+        // 홈 알림 제목입니다.
+        private String title;
+
+        // 홈 알림 내용입니다.
+        private String message;
+
+        // 홈 알림 생성 일시입니다.
+        private LocalDateTime createdAt;
     }
 
     @Getter

@@ -19,6 +19,7 @@ import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
+import com.project.domain.home.model.HomeRecord.HomeSavingAlertRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
 import com.project.domain.home.model.HomeSetupChecklistCalculator;
@@ -73,6 +74,9 @@ public class HomeServiceImpl implements HomeService {
         HomeAssetSummaryRecord assetSummary = setupCompleted
                 ? selectAssetSummary(authenticatedUserId, couple, evidenceRecord)
                 : null;
+        HomeSavingAlertRecord savingAlert = setupCompleted
+                ? homeMapper.selectLatestSavingAlert(authenticatedUserId)
+                : null;
         HomeSavingMissionSummaryRecord savingMissionSummary = setupCompleted
                 ? selectSavingMissionSummary(authenticatedUserId)
                 : null;
@@ -84,7 +88,7 @@ public class HomeServiceImpl implements HomeService {
                 .setupCompleted(setupCompleted)
                 .couple(buildCoupleResponse(user, couple, evidenceRecord))
                 .assetSummary(setupCompleted ? buildAssetSummary(assetSummary) : null)
-                .savingAlert(setupCompleted ? buildSavingAlertPlaceholder() : null)
+                .savingAlert(setupCompleted ? buildSavingAlert(savingAlert) : null)
                 .savingMissionSummary(setupCompleted ? buildSavingMissionSummary(savingMissionSummary) : null)
                 .goalSummary(setupCompleted ? buildGoalSummary(evidenceRecord, assetSummary) : null)
                 .setupChecklist(buildSetupChecklistResponse(checklistResult))
@@ -210,9 +214,18 @@ public class HomeServiceImpl implements HomeService {
                 .build();
     }
 
-    // TODO: 알림 제공자의 목표 변경 알림 조회 계약이 생기면 연결합니다.
-    private SavingAlertResponseDTO buildSavingAlertPlaceholder() {
-        return SavingAlertResponseDTO.builder().build();
+    // 최신 알림 조회 결과를 홈 알림 배너 응답으로 변환합니다.
+    private SavingAlertResponseDTO buildSavingAlert(HomeSavingAlertRecord savingAlert) {
+        if (savingAlert == null) {
+            return null;
+        }
+
+        return SavingAlertResponseDTO.builder()
+                .alertType(savingAlert.getAlertType())
+                .title(savingAlert.getTitle())
+                .message(savingAlert.getMessage())
+                .createdAt(savingAlert.getCreatedAt())
+                .build();
     }
 
     // 홈에서 보여줄 현재 월 도전중 절약미션 요약을 조회합니다.
