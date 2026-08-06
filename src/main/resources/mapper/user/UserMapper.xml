@@ -95,6 +95,7 @@
         SELECT invite_code
         FROM invitation
         WHERE inviter_id = #{no}
+          AND invitee_id IS NULL
 
     </select>
 
