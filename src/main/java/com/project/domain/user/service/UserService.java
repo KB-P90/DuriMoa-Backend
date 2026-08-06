@@ -8,4 +8,6 @@ public interface UserService {
     public UserProfileDto updateProfile(UserProfileDto profile);
 
     public boolean updateIsShared(Long no);
+
+    public String getUserInvite(Long no);
 }

@@ -81,5 +81,15 @@
         WHERE u.id = #{userId}
 
     </select>
+    
+    <select id="getUserInvite"
+            parameterType="long"
+            resultType="java.lang.String">
+
+        SELECT invite_code
+        FROM invitation
+        WHERE inviter_id = #{no}
+
+    </select>
 
 </mapper>

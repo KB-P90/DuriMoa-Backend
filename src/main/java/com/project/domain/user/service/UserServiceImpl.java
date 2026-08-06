@@ -62,8 +62,25 @@ public class UserServiceImpl implements UserService {
         if (!result) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "수정을 실패했습니다.");
         }
-        
+
         return result;
+    }
+
+    @Override
+    public String getUserInvite(Long no) {
+        UserProfileDto profile = userMapper.get(no);
+
+        if (profile == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "존재하지 않는 회원입니다." + no);
+        }
+
+        String inviteCode = userMapper.getUserInvite(no);
+
+        if (inviteCode == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "초대 코드를 찾을 수 없습니다." + no);
+        }
+
+        return inviteCode;
     }
 
 
