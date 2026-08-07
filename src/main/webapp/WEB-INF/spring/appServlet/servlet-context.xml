@@ -28,4 +28,7 @@
     <context:component-scan base-package="com.project.domain.**.controller"/>
     <context:component-scan base-package="com.project.common"/>
 
+    <!-- Enables multipart/form-data request parsing (required for MultipartFile binding) -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.support.StandardServletMultipartResolver"/>
+
 </beans>
