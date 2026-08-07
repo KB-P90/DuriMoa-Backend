@@ -27,14 +27,14 @@
             c.user_id AS user_id,
             u.name AS owner_name,
             u.role AS owner_role,
-            COALESCE(matched_cp.id, linked_cp.id) AS card_product_id,
-            COALESCE(matched_cp.company, linked_cp.company, c.company) AS company,
-            COALESCE(c.card_name, matched_cp.name, linked_cp.name) AS card_name,
-            COALESCE(matched_cp.annual_fee, linked_cp.annual_fee, 0) AS annual_fee,
-            COALESCE(matched_cp.image, linked_cp.image) AS image,
-            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(matched_cp.benefit, linked_cp.benefit), '$')) AS benefit,
-            COALESCE(matched_cp.`condition`, linked_cp.`condition`) AS condition_text,
-            DATE_FORMAT(COALESCE(matched_cp.updated_at, linked_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
+            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
+            COALESCE(linked_cp.image, matched_cp.image) AS image,
+            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
+            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
+            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         INNER JOIN `user` u
             ON u.id = c.user_id
@@ -56,6 +56,7 @@
                 ORDER BY cp2.updated_at DESC, cp2.id DESC
                 LIMIT 1
             )
+           AND c.card_product_id IS NULL
         LEFT JOIN card_product linked_cp
             ON linked_cp.id = c.card_product_id
         WHERE c.user_id IN
@@ -64,8 +65,8 @@
         </foreach>
         ORDER BY
             c.user_id ASC,
-            COALESCE(matched_cp.company, linked_cp.company, c.company) ASC,
-            COALESCE(c.card_name, matched_cp.name, linked_cp.name) ASC,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) ASC,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) ASC,
             c.id ASC
     </select>
 
@@ -98,14 +99,14 @@
     <select id="selectCardDetailByCardId" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
         SELECT
             c.id AS card_id,
-            COALESCE(matched_cp.id, linked_cp.id) AS card_product_id,
-            COALESCE(matched_cp.company, linked_cp.company, c.company) AS company,
-            COALESCE(c.card_name, matched_cp.name, linked_cp.name) AS card_name,
-            COALESCE(matched_cp.image, linked_cp.image) AS image,
-            COALESCE(matched_cp.annual_fee, linked_cp.annual_fee, 0) AS annual_fee,
-            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(matched_cp.benefit, linked_cp.benefit), '$')) AS benefit,
-            COALESCE(matched_cp.`condition`, linked_cp.`condition`) AS condition_text,
-            DATE_FORMAT(COALESCE(matched_cp.updated_at, linked_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
+            COALESCE(linked_cp.image, matched_cp.image) AS image,
+            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
+            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
+            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         LEFT JOIN card_product matched_cp
             ON matched_cp.id = (
@@ -125,6 +126,7 @@
                 ORDER BY cp2.updated_at DESC, cp2.id DESC
                 LIMIT 1
             )
+           AND c.card_product_id IS NULL
         LEFT JOIN card_product linked_cp
             ON linked_cp.id = c.card_product_id
         WHERE c.id = #{cardId}
@@ -173,7 +175,8 @@
         SET annual_fee = #{source.annualFee},
             image = #{source.image},
             benefit = #{source.benefit},
-            `condition` = #{source.conditionText}
+            `condition` = #{source.conditionText},
+            updated_at = CURRENT_TIMESTAMP
         WHERE company = #{source.company}
           AND name = #{source.name}
     </update>

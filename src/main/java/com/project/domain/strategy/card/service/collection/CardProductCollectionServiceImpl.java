@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.domain.strategy.card.dto.CardProductCollectRequestDTO;
 import com.project.domain.strategy.card.dto.CardProductCollectionResultDTO;
-import com.project.domain.strategy.card.mapper.CardStrategyMapper;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductSource;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,12 +21,12 @@ public class CardProductCollectionServiceImpl implements CardProductCollectionSe
     // 카드 상품 혜택 원문을 JSON 문자열로 정규화하는 파서입니다.
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    // 카드 상품 저장과 갱신을 담당하는 Mapper입니다.
-    private final CardStrategyMapper cardStrategyMapper;
+    // 카드 상품 저장과 사용자 카드 연결을 한 트랜잭션으로 처리하는 writer입니다.
+    private final CardProductCatalogWriter cardProductCatalogWriter;
 
     // 운영 환경에서 사용하는 수집 서비스 생성자입니다.
-    public CardProductCollectionServiceImpl(CardStrategyMapper cardStrategyMapper) {
-        this.cardStrategyMapper = cardStrategyMapper;
+    public CardProductCollectionServiceImpl(CardProductCatalogWriter cardProductCatalogWriter) {
+        this.cardProductCatalogWriter = cardProductCatalogWriter;
     }
 
     // 카드 상품 수집 결과를 정규화해 신규 등록 또는 중복 갱신합니다.
@@ -40,7 +39,7 @@ public class CardProductCollectionServiceImpl implements CardProductCollectionSe
         for (CardProductCollectRequestDTO product : safeProducts) {
             try {
                 CardProductSource source = normalize(product);
-                upsertProduct(source);
+                cardProductCatalogWriter.upsertProduct(source);
                 successCount++;
             } catch (Exception exception) {
                 String productName = safeProductName(product);
@@ -77,20 +76,6 @@ public class CardProductCollectionServiceImpl implements CardProductCollectionSe
                 .benefit(normalizeBenefit(product.getBenefit()))
                 .conditionText(blankToNull(product.getConditionText()))
                 .build();
-    }
-
-    // 기존 상품이 있으면 갱신하고 없으면 새로 등록합니다.
-    private void upsertProduct(CardProductSource source) {
-        Long existingProductId = cardStrategyMapper.selectCardProductIdByCompanyAndName(
-                source.getCompany(),
-                source.getName()
-        );
-        if (existingProductId == null) {
-            cardStrategyMapper.insertCardProduct(source);
-        } else {
-            cardStrategyMapper.updateCardProductByCompanyAndName(source);
-        }
-        cardStrategyMapper.updateUserCardsProductIdByCompanyAndName(source);
     }
 
     // 혜택 원문을 JSON 컬럼에 저장 가능한 문자열로 정규화합니다.

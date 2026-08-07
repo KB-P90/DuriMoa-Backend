@@ -101,7 +101,7 @@ public class CardGorillaCardProductCrawler {
             waitBeforeDetailRequest();
             try {
                 Long cardIdx = extractCardIdx(cardSummary);
-                JsonNode cardDetail = fetchCardDetailOrFallback(cardSummary, cardIdx);
+                JsonNode cardDetail = fetchCardDetail(cardIdx);
                 products.add(parser.parseProduct(cardDetail, buildDetailPageUrl(cardIdx, category)));
             } catch (Exception exception) {
                 log.warn("Card Gorilla product crawl failed. category={}, idx={}",
@@ -150,17 +150,12 @@ public class CardGorillaCardProductCrawler {
         return params;
     }
 
-    // 상세 API 실패 시 목록 데이터로 수집을 계속합니다.
-    private JsonNode fetchCardDetailOrFallback(JsonNode cardSummary, Long cardIdx) {
+    // 상세 API 응답을 가져옵니다. 실패하면 요약 데이터로 대체하지 않고 해당 상품 수집을 건너뜁니다.
+    private JsonNode fetchCardDetail(Long cardIdx) {
         if (cardIdx == null) {
-            return cardSummary;
+            throw new IllegalArgumentException("카드고릴라 카드 idx가 비어 있습니다.");
         }
-        try {
-            return fetchJson(CARD_DETAIL_API_URL_PREFIX + cardIdx, Collections.emptyMap());
-        } catch (CustomException exception) {
-            log.warn("Card Gorilla detail API failed. idx={}", cardIdx, exception);
-            return cardSummary;
-        }
+        return fetchJson(CARD_DETAIL_API_URL_PREFIX + cardIdx, Collections.emptyMap());
     }
 
     // 외부 JSON 문서를 가져옵니다.
