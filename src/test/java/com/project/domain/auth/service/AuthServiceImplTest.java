@@ -3,11 +3,13 @@ package com.project.domain.auth.service;
 import com.project.common.security.JwtTokenProvider;
 import com.project.common.exception.CustomException;
 import com.project.domain.auth.dto.LoginRequestDTO;
-import com.project.domain.auth.dto.LoginResponseDTO;
+import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
+import com.project.domain.auth.dto.TokenRefreshResultDTO;
 import com.project.domain.auth.mapper.AuthMapper;
+import com.project.domain.auth.repository.RefreshTokenRepository;
 import com.project.domain.couple.service.CoupleInvitationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,12 +19,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,13 +43,21 @@ class AuthServiceImplTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
     private CoupleInvitationService coupleInvitationService;
 
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authMapper, passwordEncoder, jwtTokenProvider, coupleInvitationService);
+        authService = new AuthServiceImpl(
+                authMapper,
+                passwordEncoder,
+                jwtTokenProvider,
+                refreshTokenRepository,
+                coupleInvitationService);
     }
 
     @Test
@@ -121,13 +133,17 @@ class AuthServiceImplTest {
         when(authMapper.findLoginUserByPhone("01012345678")).thenReturn(loginUser);
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
         when(jwtTokenProvider.createAccessToken(1L, "G")).thenReturn("accessToken");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("refreshToken");
+        when(jwtTokenProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(14));
 
-        LoginResponseDTO response = authService.login(request);
+        LoginResultDTO result = authService.login(request);
 
-        assertEquals("Bearer accessToken", response.getAccessToken());
-        assertEquals(1L, response.getUser().getUserId());
-        assertEquals("01012345678", response.getUser().getPhone());
-        assertEquals("LOCAL", response.getUser().getProvider());
+        assertEquals("Bearer accessToken", result.getResponse().getAccessToken());
+        assertEquals(1L, result.getResponse().getUser().getUserId());
+        assertEquals("01012345678", result.getResponse().getUser().getPhone());
+        assertEquals("LOCAL", result.getResponse().getUser().getProvider());
+        assertEquals("refreshToken", result.getRefreshToken());
+        verify(refreshTokenRepository).save(1L, "refreshToken", Duration.ofDays(14));
     }
 
     @Test
@@ -155,6 +171,84 @@ class AuthServiceImplTest {
 
         assertThrows(CustomException.class, () -> authService.login(request));
         verify(jwtTokenProvider, never()).createAccessToken(1L, "G");
+    }
+
+    @Test
+    void refreshRotatesTokenAndReturnsNewAccessToken() {
+        LoginUserDTO loginUser = new LoginUserDTO(
+                1L, null, null, null, "G", null, null);
+        when(jwtTokenProvider.validateRefreshToken("refreshToken")).thenReturn(true);
+        when(jwtTokenProvider.getUserId("refreshToken")).thenReturn(1L);
+        when(authMapper.findLoginUserById(1L)).thenReturn(loginUser);
+        when(jwtTokenProvider.createAccessToken(1L, "G")).thenReturn("newAccessToken");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("newRefreshToken");
+        when(jwtTokenProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(14));
+        when(refreshTokenRepository.rotate(
+                1L,
+                "refreshToken",
+                "newRefreshToken",
+                Duration.ofDays(14)))
+                .thenReturn(true);
+
+        TokenRefreshResultDTO result = authService.refresh("refreshToken");
+
+        assertEquals("Bearer newAccessToken", result.getResponse().getAccessToken());
+        assertEquals("newRefreshToken", result.getRefreshToken());
+    }
+
+    @Test
+    void refreshRejectsInvalidTokenBeforeDatabaseLookup() {
+        when(jwtTokenProvider.validateRefreshToken("invalidToken")).thenReturn(false);
+
+        assertThrows(CustomException.class, () -> authService.refresh("invalidToken"));
+
+        verify(authMapper, never()).findLoginUserById(1L);
+    }
+
+    @Test
+    void refreshRejectsReusedToken() {
+        LoginUserDTO loginUser = new LoginUserDTO(
+                1L, null, null, null, "G", null, null);
+        when(jwtTokenProvider.validateRefreshToken("reusedToken")).thenReturn(true);
+        when(jwtTokenProvider.getUserId("reusedToken")).thenReturn(1L);
+        when(authMapper.findLoginUserById(1L)).thenReturn(loginUser);
+        when(jwtTokenProvider.createAccessToken(1L, "G")).thenReturn("newAccessToken");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("newRefreshToken");
+        when(jwtTokenProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(14));
+        when(refreshTokenRepository.rotate(
+                1L,
+                "reusedToken",
+                "newRefreshToken",
+                Duration.ofDays(14)))
+                .thenReturn(false);
+
+        assertThrows(CustomException.class, () -> authService.refresh("reusedToken"));
+    }
+
+    @Test
+    void logoutDeletesMatchingRefreshToken() {
+        when(jwtTokenProvider.validateRefreshToken("refreshToken")).thenReturn(true);
+        when(jwtTokenProvider.getUserId("refreshToken")).thenReturn(1L);
+
+        authService.logout("refreshToken");
+
+        verify(refreshTokenRepository).deleteIfMatches(1L, "refreshToken");
+    }
+
+    @Test
+    void logoutIsIdempotentWhenRefreshTokenIsMissing() {
+        authService.logout(null);
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void logoutDoesNotDeleteSessionForInvalidRefreshToken() {
+        when(jwtTokenProvider.validateRefreshToken("invalidToken")).thenReturn(false);
+
+        authService.logout("invalidToken");
+
+        verifyNoInteractions(refreshTokenRepository);
     }
 
     private SignupRequestDTO createRequest(

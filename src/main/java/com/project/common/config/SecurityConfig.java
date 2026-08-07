@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .antMatchers(
                         "/api/auth/signup",
                         "/api/auth/login",
+                        "/api/auth/refresh",
+                        "/api/auth/logout",
                         "/swagger-ui.html",
                         "/swagger-resources/**",
                         "/v2/api-docs",
