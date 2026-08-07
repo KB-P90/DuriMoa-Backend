@@ -98,6 +98,28 @@
         GROUP BY COALESCE(sr.changed_category, sr.category)
     </select>
 
+    <select id="findFirstWeddingExpenseDate" resultType="java.time.LocalDate">
+        SELECT MIN(sr.record_date)
+        FROM service_record sr
+        WHERE sr.user_id IN
+        <foreach collection="userIds"
+                 item="userId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{userId}
+        </foreach>
+          AND sr.type = 'EXPENSE'
+          AND COALESCE(sr.changed_category, sr.category) IN
+        <foreach collection="categories"
+                 item="category"
+                 open="("
+                 separator=","
+                 close=")">
+            #{category}
+        </foreach>
+    </select>
+
     <select id="findMonthlyWeddingExpenses"
             resultType="com.project.domain.progress.dto.MonthlyExpenseDTO">
         SELECT

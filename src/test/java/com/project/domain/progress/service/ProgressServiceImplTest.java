@@ -55,7 +55,7 @@ class ProgressServiceImplTest {
                 .targetAmount(50_000_000L)
                 .groomRatio(50L)
                 .brideRatio(50L)
-                .createdAt(startMonth.atDay(1).atStartOfDay())
+                .createdAt(YearMonth.now().atDay(1).atStartOfDay())
                 .build();
 
         when(coupleService.getConnectedCoupleByUserId(REQUEST_USER_ID)).thenReturn(couple);
@@ -76,6 +76,10 @@ class ProgressServiceImplTest {
                 new MemberSourceDTO(REQUEST_USER_ID, "김민준", "G", 14_670_000L, true),
                 new MemberSourceDTO(PARTNER_USER_ID, "이서연", "B", 16_520_000L, false)
         ));
+        when(progressMapper.findFirstWeddingExpenseDate(
+                eq(List.of(REQUEST_USER_ID, PARTNER_USER_ID)),
+                anyList()
+        )).thenReturn(startMonth.atDay(1));
         when(progressMapper.findMonthlyWeddingExpenses(
                 eq(List.of(REQUEST_USER_ID, PARTNER_USER_ID)),
                 anyList(),
