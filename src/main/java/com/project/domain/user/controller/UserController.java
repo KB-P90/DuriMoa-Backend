@@ -31,9 +31,9 @@ public class UserController {
     }
 
 
-    @PutMapping("/profile")
+    @PutMapping(value = "/profile", consumes = "multipart/form-data")
     @ApiOperation(value = "사용자 정보 수정")
-    public ResponseEntity<ApiResponse<UserProfileDto>> update(@RequestBody UserProfileDto profile) {
+    public ResponseEntity<ApiResponse<UserProfileDto>> update(@ModelAttribute UserProfileDto profile) {
         UserProfileDto updated = userService.updateProfile(profile);
         return ResponseEntity.ok(ApiResponse.success("정보 수정에 성공했습니다.", updated));
     }

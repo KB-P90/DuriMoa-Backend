@@ -1,8 +1,11 @@
 package com.project.domain.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.domain.user.domain.UserProfileVO;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -17,7 +20,10 @@ public class UserProfileDto {
     private String name;
     private String role;
     private String provider;
-    private byte[] profileImage;
+    @JsonIgnore
+    private MultipartFile profileImage;
+    @JsonProperty("profileImage")
+    private String profileImageUrl;
     private String phone;
     private boolean shared;
     private String password;
@@ -40,7 +46,7 @@ public class UserProfileDto {
                 .isShared(shared ? 1 : 0)
                 .password(password)
                 .phone(phone)
-                .profileImage(profileImage)
+                .profileImage(profileImageUrl)
                 .build();
     }
 

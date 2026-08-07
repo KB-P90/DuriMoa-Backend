@@ -13,6 +13,6 @@ public class LoginUserResponseDTO {
     private String phone;
     private String name;
     private String role;
-    private byte[] profileImage;
+    private String profileImage;
     private String provider;
 }

@@ -58,6 +58,16 @@ public class CodefBankTransactionItemDTO {
 
     @JsonProperty("resAccountDesc3")
     @JsonAlias({"resDesc3", "resAccountDesc3", "desc3"})
-    @ApiModelProperty(value = "거래 적요 3", example = "메모")
+    @ApiModelProperty(value = "거래 적요 3 (적요)", example = "메모")
     private String description3;
+
+    @JsonProperty("resAccountDesc4")
+    @JsonAlias({"resDesc4", "resAccountDesc4", "desc4"})
+    @ApiModelProperty(value = "거래 적요 4 (거래점)", example = "여의도지점")
+    private String description4;
+
+    @JsonProperty("resAfterTranBalance")
+    @JsonAlias({"resAfterTranBalance", "afterTranBalance"})
+    @ApiModelProperty(value = "거래후 잔액", example = "11517")
+    private Long afterTranBalance;
 }
