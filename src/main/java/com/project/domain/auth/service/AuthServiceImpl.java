@@ -5,11 +5,15 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.auth.dto.LoginRequestDTO;
 import com.project.domain.auth.dto.LoginResponseDTO;
+import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.LoginUserResponseDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
+import com.project.domain.auth.dto.TokenRefreshResponseDTO;
+import com.project.domain.auth.dto.TokenRefreshResultDTO;
 import com.project.domain.auth.mapper.AuthMapper;
+import com.project.domain.auth.repository.RefreshTokenRepository;
 import com.project.domain.couple.service.CoupleInvitationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -28,6 +32,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final CoupleInvitationService coupleInvitationService;
 
     @Override
@@ -72,8 +77,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public LoginResponseDTO login(LoginRequestDTO request) {
+    @Transactional
+    public LoginResultDTO login(LoginRequestDTO request) {
         String normalizedPhone = request.getPhone().replace("-", "");
         LoginUserDTO loginUser = authMapper.findLoginUserByPhone(normalizedPhone);
 
@@ -87,6 +92,11 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken =
                 jwtTokenProvider.createAccessToken(loginUser.getUserId(), loginUser.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(loginUser.getUserId());
+        refreshTokenRepository.save(
+                loginUser.getUserId(),
+                refreshToken,
+                jwtTokenProvider.getRefreshTokenExpiration());
         LoginUserResponseDTO user = new LoginUserResponseDTO(
                 loginUser.getUserId(),
                 loginUser.getPhone(),
@@ -94,12 +104,64 @@ public class AuthServiceImpl implements AuthService {
                 loginUser.getRole(),
                 loginUser.getProfileImage(),
                 loginUser.getProvider());
-        return new LoginResponseDTO("Bearer " + accessToken, user);
+        LoginResponseDTO response = new LoginResponseDTO("Bearer " + accessToken, user);
+        return new LoginResultDTO(response, refreshToken);
+    }
+
+    @Override
+    @Transactional
+    public TokenRefreshResultDTO refresh(String refreshToken) {
+        if (refreshToken == null
+                || refreshToken.isBlank()
+                || !jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            throw invalidRefreshTokenException();
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        LoginUserDTO loginUser = authMapper.findLoginUserById(userId);
+        if (loginUser == null) {
+            refreshTokenRepository.delete(userId);
+            throw invalidRefreshTokenException();
+        }
+
+        String newAccessToken =
+                jwtTokenProvider.createAccessToken(loginUser.getUserId(), loginUser.getRole());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(loginUser.getUserId());
+        Boolean rotated = refreshTokenRepository.rotate(
+                loginUser.getUserId(),
+                refreshToken,
+                newRefreshToken,
+                jwtTokenProvider.getRefreshTokenExpiration());
+        if (!Boolean.TRUE.equals(rotated)) {
+            throw invalidRefreshTokenException();
+        }
+
+        TokenRefreshResponseDTO response =
+                new TokenRefreshResponseDTO("Bearer " + newAccessToken);
+        return new TokenRefreshResultDTO(response, newRefreshToken);
+    }
+
+    @Override
+    public void logout(String refreshToken) {
+        if (refreshToken == null
+                || refreshToken.isBlank()
+                || !jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            return;
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        refreshTokenRepository.deleteIfMatches(userId, refreshToken);
     }
 
     private void saveTermsAgreements(Long userId, SignupRequestDTO request) {
         authMapper.insertTermsAgreement(userId, SERVICE_TERMS, request.getServiceTermsAgreed());
         authMapper.insertTermsAgreement(userId, PRIVACY_TERMS, request.getPrivacyTermsAgreed());
         authMapper.insertTermsAgreement(userId, MARKETING_TERMS, request.getMarketingTermsAgreed());
+    }
+
+    private CustomException invalidRefreshTokenException() {
+        return new CustomException(
+                ErrorCode.UNAUTHORIZED,
+                "유효하지 않거나 만료된 Refresh Token입니다.");
     }
 }

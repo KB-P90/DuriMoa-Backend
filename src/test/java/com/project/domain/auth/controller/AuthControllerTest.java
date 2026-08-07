@@ -5,8 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.common.security.RefreshTokenCookieProvider;
 import com.project.domain.auth.dto.LoginResponseDTO;
+import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserResponseDTO;
+import com.project.domain.auth.dto.TokenRefreshResponseDTO;
+import com.project.domain.auth.dto.TokenRefreshResultDTO;
 import com.project.domain.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -33,12 +38,15 @@ class AuthControllerTest {
     @Mock
     private AuthService authService;
 
+    @Mock
+    private RefreshTokenCookieProvider refreshTokenCookieProvider;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        AuthController authController = new AuthController(authService);
+        AuthController authController = new AuthController(authService, refreshTokenCookieProvider);
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -49,9 +57,14 @@ class AuthControllerTest {
     void loginReturnsConfirmedResponseFormat() throws Exception {
         LoginUserResponseDTO user =
                 new LoginUserResponseDTO(1L, "01012345678", "홍길동", "G", null, "LOCAL");
-        when(authService.login(any())).thenReturn(
-                new LoginResponseDTO("Bearer accessToken", user)
-        );
+        when(authService.login(any())).thenReturn(new LoginResultDTO(
+                new LoginResponseDTO("Bearer accessToken", user),
+                "refreshToken"));
+        when(refreshTokenCookieProvider.createCookie("refreshToken")).thenReturn(
+                ResponseCookie.from("refreshToken", "refreshToken")
+                        .httpOnly(true)
+                        .path("/api/auth")
+                        .build());
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,6 +79,7 @@ class AuthControllerTest {
         assertEquals(1L, response.at("/data/user/userId").asLong());
         assertEquals("01012345678", response.at("/data/user/phone").asText());
         assertEquals("LOCAL", response.at("/data/user/provider").asText());
+        assertTrue(result.getResponse().getHeader("Set-Cookie").contains("HttpOnly"));
     }
 
     @Test
@@ -100,6 +114,50 @@ class AuthControllerTest {
 
         assertEquals(false, response.get("success").asBoolean());
         assertTrue(response.get("data").isNull());
+    }
+
+    @Test
+    void refreshReturnsNewAccessTokenAndRefreshTokenCookie() throws Exception {
+        when(authService.refresh("refreshToken")).thenReturn(new TokenRefreshResultDTO(
+                new TokenRefreshResponseDTO("Bearer newAccessToken"),
+                "newRefreshToken"));
+        when(refreshTokenCookieProvider.createCookie("newRefreshToken")).thenReturn(
+                ResponseCookie.from("refreshToken", "newRefreshToken")
+                        .httpOnly(true)
+                        .path("/api/auth")
+                        .build());
+
+        MvcResult result = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new javax.servlet.http.Cookie("refreshToken", "refreshToken")))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals(
+                "Bearer newAccessToken",
+                response.at("/data/accessToken").asText());
+        assertTrue(result.getResponse().getHeader("Set-Cookie").contains("HttpOnly"));
+    }
+
+    @Test
+    void logoutExpiresRefreshTokenCookie() throws Exception {
+        when(refreshTokenCookieProvider.deleteCookie()).thenReturn(
+                ResponseCookie.from("refreshToken", "")
+                        .httpOnly(true)
+                        .path("/api/auth")
+                        .maxAge(0L)
+                        .build());
+
+        MvcResult result = mockMvc.perform(post("/api/auth/logout")
+                        .cookie(new javax.servlet.http.Cookie("refreshToken", "refreshToken")))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertTrue(response.get("success").asBoolean());
+        assertEquals("로그아웃이 완료되었습니다.", response.get("message").asText());
+        assertTrue(result.getResponse().getHeader("Set-Cookie").contains("Max-Age=0"));
+        org.mockito.Mockito.verify(authService).logout("refreshToken");
     }
 
     private JsonNode readResponse(MvcResult result) throws Exception {

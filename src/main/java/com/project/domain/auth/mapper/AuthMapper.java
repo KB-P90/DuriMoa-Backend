@@ -20,6 +20,8 @@ public interface AuthMapper {
 
     LoginUserDTO findLoginUserByPhone(@Param("phone") String phone);
 
+    LoginUserDTO findLoginUserById(@Param("userId") Long userId);
+
     Integer insertTermsAgreement(
             @Param("userId") Long userId,
             @Param("termsType") String termsType,
