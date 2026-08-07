@@ -337,7 +337,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                         .startDate(startDate)
                         .endDate(endDate)
                         .orderBy("0")
-                        .inquireType("1")
+                        .inquiryType("1")
                         .build();
 
                 log.info("[CODEF-REQ] 은행 거래내역 요청 - serviceType: {}, account: {}, range: {} ~ {}",
