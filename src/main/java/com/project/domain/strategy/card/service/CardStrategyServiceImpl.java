@@ -39,7 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CardStrategyServiceImpl implements CardStrategyService {
 
     // 예상 혜택 계산이 확정 청구 할인은 아니라는 공통 안내 문구입니다.
-    private static final String BENEFIT_NOTICE = "예상 혜택은 카드사 승인, 제외 업종, 취소·환불 반영 시 달라질 수 있습니다.";
+    private static final String BENEFIT_NOTICE =
+            "사용처가 입력되지 않아 전 가맹점 또는 기본 혜택만 확정 계산했습니다. "
+                    + "예상 혜택은 카드사 승인, 제외 업종, 취소·환불 반영 시 달라질 수 있습니다.";
 
     // 현재 스키마에 판매 상태 컬럼이 없어 상세 응답에 사용하는 기본 상태입니다.
     private static final String UNKNOWN_SALE_STATUS = "UNKNOWN";
@@ -142,13 +144,15 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 cardDetail.getBenefit(),
                 cardDetail.getConditionText()
         );
+        List<CardBenefitRule> amountOnlyBenefitRules = CardBenefitCatalog.filterAmountOnlyApplicableRules(benefitRules);
         // 상세 응답에서 보여줄 카드 상품 추천 가능 상태입니다.
         // 판매·추천 가능 상태 판단에 사용하는 상품 조건 확인 시점입니다.
         LocalDateTime conditionCheckedAt = parseConditionCheckedAt(cardDetail.getConditionCheckedAt());
-        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decide(
+        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decideForAmountOnly(
                 LocalDate.now(clock),
                 conditionCheckedAt,
-                CardBenefitCatalog.hasCalculableBenefit(benefitRules)
+                CardBenefitCatalog.hasCalculableBenefit(benefitRules),
+                CardBenefitCatalog.hasCalculableBenefit(amountOnlyBenefitRules)
         );
 
         return CardDetailResponseDTO.builder()
@@ -234,21 +238,24 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     ) {
         // 카드 상품 혜택 JSON과 조건 문구에서 추출한 계산 규칙입니다.
         List<CardBenefitRule> benefitRules = CardBenefitCatalog.parse(card.getBenefit(), card.getConditionText());
+        // 결제 사용처가 없는 추천에서는 전 가맹점 또는 기본 혜택만 확정 계산합니다.
+        List<CardBenefitRule> amountOnlyBenefitRules = CardBenefitCatalog.filterAmountOnlyApplicableRules(benefitRules);
         // 취소·환불 차감 후 카드별 현재 월 인정 실적입니다.
         Long currentPerformanceAmount = performanceAmountByCardKey.getOrDefault(card.getCardId(), 0L);
         // 결제 예정 금액 기준 예상 혜택과 다음 구간 계산 결과입니다.
         CardBenefitCalculation calculation = cardBenefitCalculator.calculate(
                 paymentAmount,
                 currentPerformanceAmount,
-                benefitRules
+                amountOnlyBenefitRules
         );
         // 상품 확인일과 혜택 데이터 기준 추천 가능 상태입니다.
         // 판매·추천 가능 상태 판단에 사용하는 상품 조건 확인 시점입니다.
         LocalDateTime conditionCheckedAt = parseConditionCheckedAt(card.getConditionCheckedAt());
-        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decide(
+        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decideForAmountOnly(
                 today,
                 conditionCheckedAt,
-                CardBenefitCatalog.hasCalculableBenefit(benefitRules)
+                CardBenefitCatalog.hasCalculableBenefit(benefitRules),
+                CardBenefitCatalog.hasCalculableBenefit(amountOnlyBenefitRules)
         );
         // 추천 대상에서 제외된 상품은 순위 계산 혜택을 0원으로 처리합니다.
         Long expectedBenefitAmount = Boolean.TRUE.equals(recommendStatus.isRecommendable())
@@ -362,6 +369,8 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                         .fixedBenefitAmount(rule.getFixedBenefitAmount())
                         .monthlyLimitAmount(rule.getMonthlyLimitAmount())
                         .minimumPerformanceAmount(rule.getMinimumPerformanceAmount())
+                        .categories(rule.safeCategories())
+                        .amountOnlyApplicable(CardBenefitCatalog.isAmountOnlyApplicable(rule))
                         .excludedKeywords(rule.safeExcludedKeywords())
                         .build())
                 .collect(Collectors.toList());

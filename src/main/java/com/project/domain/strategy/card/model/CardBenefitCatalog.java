@@ -8,9 +8,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public final class CardBenefitCatalog {
 
@@ -22,6 +24,29 @@ public final class CardBenefitCatalog {
 
     // 조건 문구에서 원 단위 또는 만 원 단위 금액을 찾는 패턴입니다.
     private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d[\\d,]*)(\\s*만)?\\s*원");
+
+    // 사용처를 몰라도 적용 가능한 혜택 범위를 판단할 때 사용하는 카테고리 코드입니다.
+    private static final Set<String> UNIVERSAL_CATEGORY_CODES = Set.of(
+            "ALL",
+            "ANY",
+            "BASIC",
+            "COMMON",
+            "DEFAULT",
+            "GENERAL",
+            "UNIVERSAL"
+    );
+
+    // 카테고리가 명시되지 않은 원문에서 전 가맹점·기본 혜택 여부를 판단하는 키워드입니다.
+    private static final Set<String> UNIVERSAL_EXACT_KEYWORDS = Set.of(
+            "기본",
+            "기본혜택",
+            "기본할인",
+            "기본적립",
+            "공통",
+            "공통혜택",
+            "공통할인",
+            "공통적립"
+    );
 
     private CardBenefitCatalog() {
     }
@@ -66,6 +91,28 @@ public final class CardBenefitCatalog {
                         && Boolean.TRUE.equals(rule.hasBenefitValue()));
     }
 
+    // 사용처 입력 없이도 확정 계산할 수 있는 전 가맹점·기본 혜택 규칙만 반환합니다.
+    public static List<CardBenefitRule> filterAmountOnlyApplicableRules(List<CardBenefitRule> rules) {
+        if (rules == null || rules.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return rules.stream()
+                .filter(CardBenefitCatalog::isAmountOnlyApplicable)
+                .collect(Collectors.toList());
+    }
+
+    // 사용처 입력 없이도 해당 혜택을 확정 계산할 수 있는지 확인합니다.
+    public static Boolean isAmountOnlyApplicable(CardBenefitRule rule) {
+        if (rule == null || Boolean.TRUE.equals(rule.getExcluded()) || !Boolean.TRUE.equals(rule.hasBenefitValue())) {
+            return false;
+        }
+        List<String> categories = rule.safeCategories();
+        if (!categories.isEmpty()) {
+            return categories.stream().anyMatch(CardBenefitCatalog::isUniversalScopeText);
+        }
+        return hasUniversalKeyword(rule.getTitle()) || hasUniversalKeyword(rule.getDescription());
+    }
+
     // 배열 형태의 혜택 항목을 규칙 목록으로 변환합니다.
     private static List<CardBenefitRule> parseArray(JsonNode arrayNode, JsonNode defaultNode, List<Long> conditionThresholds) {
         List<CardBenefitRule> rules = new ArrayList<>();
@@ -92,6 +139,7 @@ public final class CardBenefitCatalog {
         Long minimumPerformanceAmount = firstLong(node, defaultNode,
                 "minimumPerformanceAmount", "minimum_performance_amount", "minimumMonthlySpend", "minimum_monthly_spend",
                 "requiredMonthlySpend", "required_monthly_spend", "minSpend", "performanceThreshold");
+        List<String> categories = parseCategories(node);
         List<Long> benefitThresholds = mergeThresholds(conditionThresholds, parseThresholds(node, defaultNode));
         Boolean excluded = firstBoolean(node, "excluded", "exclude", "isExcluded", "is_excluded");
         List<String> excludedKeywords = parseTextArray(node, "excludedKeywords", "excluded_keywords", "excludedCategories",
@@ -104,6 +152,7 @@ public final class CardBenefitCatalog {
                 .fixedBenefitAmount(fixedBenefitAmount)
                 .monthlyLimitAmount(monthlyLimitAmount)
                 .minimumPerformanceAmount(minimumPerformanceAmount)
+                .categories(categories)
                 .benefitThresholds(benefitThresholds)
                 .excludedKeywords(excludedKeywords)
                 .excluded(excluded)
@@ -116,6 +165,7 @@ public final class CardBenefitCatalog {
                 .title(emptyToDefault(text, "기본 혜택"))
                 .description(text)
                 .benefitRate(parsePercentRate(text))
+                .categories(Collections.emptyList())
                 .benefitThresholds(conditionThresholds)
                 .build();
     }
@@ -242,6 +292,35 @@ public final class CardBenefitCatalog {
         return Collections.emptyList();
     }
 
+    // 객체에서 적용 카테고리 배열 또는 단일 카테고리 값을 추출합니다.
+    private static List<String> parseCategories(JsonNode node) {
+        List<String> categories = parseTextArray(node,
+                "categories", "categoryCodes", "category_codes", "benefitCategories", "benefit_categories",
+                "targetCategories", "target_categories");
+        if (!categories.isEmpty()) {
+            return normalizeCategories(categories);
+        }
+
+        String category = firstText(node,
+                "category", "categoryName", "category_name", "categoryCode", "category_code",
+                "targetCategory", "target_category");
+        if (category == null || category.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return normalizeCategories(Collections.singletonList(category));
+    }
+
+    // 카테고리 값의 공백을 제거하고 빈 값을 제외합니다.
+    private static List<String> normalizeCategories(List<String> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return categories.stream()
+                .filter(value -> value != null && !value.trim().isEmpty())
+                .map(String::trim)
+                .collect(Collectors.toList());
+    }
+
     // JSON의 혜택 구간 필드와 최소 실적 필드를 금액 목록으로 변환합니다.
     private static List<Long> parseThresholds(JsonNode node, JsonNode defaultNode) {
         List<Long> thresholds = new ArrayList<>();
@@ -365,5 +444,35 @@ public final class CardBenefitCatalog {
             return defaultValue;
         }
         return value.trim();
+    }
+
+    // 텍스트가 전 가맹점·기본 혜택 범위를 의미하는지 판단합니다.
+    private static Boolean isUniversalScopeText(String text) {
+        String normalizedText = normalizeScopeText(text);
+        return UNIVERSAL_CATEGORY_CODES.contains(normalizedText)
+                || UNIVERSAL_EXACT_KEYWORDS.contains(normalizedText)
+                || normalizedText.contains("전가맹점")
+                || normalizedText.contains("전체가맹점")
+                || normalizedText.contains("모든가맹점")
+                || normalizedText.contains("국내외가맹점")
+                || normalizedText.contains("국내전가맹점")
+                || normalizedText.contains("가맹점전체");
+    }
+
+    // 카테고리가 없는 원문에서 전 가맹점·기본 혜택 키워드를 찾습니다.
+    private static Boolean hasUniversalKeyword(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+        return isUniversalScopeText(text);
+    }
+
+    // 한글과 코드 값을 동일 기준으로 비교하기 위해 범위 문구를 정규화합니다.
+    private static String normalizeScopeText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("[\\s_\\-·/]", "")
+                .toUpperCase(Locale.ROOT);
     }
 }

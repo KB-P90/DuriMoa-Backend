@@ -28,6 +28,9 @@ public class CardBenefitRule {
     // 혜택 적용에 필요한 인정 실적 기준 금액입니다.
     private final Long minimumPerformanceAmount;
 
+    // 혜택이 적용되는 소비 카테고리입니다. ALL은 사용처 미입력 상태에서도 계산 가능한 혜택입니다.
+    private final List<String> categories;
+
     // 다음 혜택 구간 계산에 사용하는 실적 기준 금액 목록입니다.
     private final List<Long> benefitThresholds;
 
@@ -48,6 +51,14 @@ public class CardBenefitRule {
             return Collections.emptyList();
         }
         return benefitThresholds;
+    }
+
+    // 비어 있을 수 있는 적용 카테고리 목록을 안전하게 반환합니다.
+    public List<String> safeCategories() {
+        if (categories == null) {
+            return Collections.emptyList();
+        }
+        return categories;
     }
 
     // 비어 있을 수 있는 제외 조건 목록을 안전하게 반환합니다.

@@ -87,9 +87,10 @@ public class CardProductCollectionServiceImpl implements CardProductCollectionSe
         );
         if (existingProductId == null) {
             cardStrategyMapper.insertCardProduct(source);
-            return;
+        } else {
+            cardStrategyMapper.updateCardProductByCompanyAndName(source);
         }
-        cardStrategyMapper.updateCardProductByCompanyAndName(source);
+        cardStrategyMapper.updateUserCardsProductIdByCompanyAndName(source);
     }
 
     // 혜택 원문을 JSON 컬럼에 저장 가능한 문자열로 정규화합니다.

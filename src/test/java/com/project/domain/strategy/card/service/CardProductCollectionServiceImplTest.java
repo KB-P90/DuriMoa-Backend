@@ -27,6 +27,7 @@ class CardProductCollectionServiceImplTest {
 
         Assertions.assertEquals(1, result.getSuccessCount());
         Mockito.verify(mapper).updateCardProductByCompanyAndName(Mockito.any(CardProductSource.class));
+        Mockito.verify(mapper).updateUserCardsProductIdByCompanyAndName(Mockito.any(CardProductSource.class));
         Mockito.verify(mapper, Mockito.never()).insertCardProduct(Mockito.any(CardProductSource.class));
     }
 
@@ -42,6 +43,7 @@ class CardProductCollectionServiceImplTest {
         ArgumentCaptor<CardProductSource> captor = ArgumentCaptor.forClass(CardProductSource.class);
         Mockito.verify(mapper).insertCardProduct(captor.capture());
         Assertions.assertEquals("[\"생활 1% 할인\"]", captor.getValue().getBenefit());
+        Mockito.verify(mapper).updateUserCardsProductIdByCompanyAndName(Mockito.any(CardProductSource.class));
     }
 
     // 검증 실패 상품은 기존 정상 상품 저장을 방해하지 않고 실패 목록에 남깁니다.
