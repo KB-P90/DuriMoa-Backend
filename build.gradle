@@ -91,6 +91,9 @@ dependencies {
     // XML parsing support
     implementation 'xerces:xercesImpl:2.12.2'
 
+    // HTML crawling/parsing
+    implementation 'org.jsoup:jsoup:1.22.2'
+
     // Lombok
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"

@@ -27,28 +27,46 @@
             c.user_id AS user_id,
             u.name AS owner_name,
             u.role AS owner_role,
-            cp.id AS card_product_id,
-            cp.company AS company,
-            COALESCE(c.card_name, cp.name) AS card_name,
-            cp.annual_fee AS annual_fee,
-            cp.image AS image,
-            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
-            cp.`condition` AS condition_text,
-            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
+            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
+            COALESCE(linked_cp.image, matched_cp.image) AS image,
+            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
+            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
+            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         INNER JOIN `user` u
             ON u.id = c.user_id
-        INNER JOIN card_product cp
-            ON cp.id = c.card_product_id
-        WHERE c.card_product_id IS NOT NULL
-          AND c.user_id IN
+        LEFT JOIN card_product matched_cp
+            ON matched_cp.id = (
+                SELECT
+                    cp2.id
+                FROM card_product cp2
+                WHERE (
+                    REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
+                        = REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                    OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', ''), '%')
+                    OR REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
+                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
+                )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(cp2.name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+                      = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+                ORDER BY cp2.updated_at DESC, cp2.id DESC
+                LIMIT 1
+            )
+           AND c.card_product_id IS NULL
+        LEFT JOIN card_product linked_cp
+            ON linked_cp.id = c.card_product_id
+        WHERE c.user_id IN
         <foreach collection="userIds" item="userId" open="(" separator="," close=")">
             #{userId}
         </foreach>
         ORDER BY
             c.user_id ASC,
-            cp.company ASC,
-            COALESCE(c.card_name, cp.name) ASC,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) ASC,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) ASC,
             c.id ASC
     </select>
 
@@ -81,19 +99,37 @@
     <select id="selectCardDetailByCardId" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
         SELECT
             c.id AS card_id,
-            cp.id AS card_product_id,
-            cp.company AS company,
-            COALESCE(c.card_name, cp.name) AS card_name,
-            cp.image AS image,
-            cp.annual_fee AS annual_fee,
-            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
-            cp.`condition` AS condition_text,
-            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
+            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
+            COALESCE(linked_cp.image, matched_cp.image) AS image,
+            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
+            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
+            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
-        INNER JOIN card_product cp
-            ON cp.id = c.card_product_id
+        LEFT JOIN card_product matched_cp
+            ON matched_cp.id = (
+                SELECT
+                    cp2.id
+                FROM card_product cp2
+                WHERE (
+                    REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
+                        = REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                    OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', ''), '%')
+                    OR REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
+                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
+                )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(cp2.name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+                      = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+                ORDER BY cp2.updated_at DESC, cp2.id DESC
+                LIMIT 1
+            )
+           AND c.card_product_id IS NULL
+        LEFT JOIN card_product linked_cp
+            ON linked_cp.id = c.card_product_id
         WHERE c.id = #{cardId}
-          AND c.card_product_id IS NOT NULL
     </select>
 
     <select id="existsCardAccessInActiveCouple" resultType="java.lang.Integer">
@@ -103,7 +139,6 @@
             ON co.status = 'CONNECTED'
            AND (cd.user_id = co.groom_id OR cd.user_id = co.bride_id)
         WHERE cd.id = #{cardId}
-          AND cd.card_product_id IS NOT NULL
           AND (co.groom_id = #{userId} OR co.bride_id = #{userId})
     </select>
 
@@ -140,8 +175,28 @@
         SET annual_fee = #{source.annualFee},
             image = #{source.image},
             benefit = #{source.benefit},
-            `condition` = #{source.conditionText}
+            `condition` = #{source.conditionText},
+            updated_at = CURRENT_TIMESTAMP
         WHERE company = #{source.company}
           AND name = #{source.name}
+    </update>
+
+    <update id="updateUserCardsProductIdByCompanyAndName">
+        UPDATE card c
+        INNER JOIN card_product cp
+            ON cp.company = #{source.company}
+           AND cp.name = #{source.name}
+        SET c.card_product_id = cp.id
+        WHERE c.card_product_id IS NULL
+          AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+              = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(#{source.name}, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
+          AND (
+              REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                  = REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', '')
+              OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
+                  LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', ''), '%')
+              OR REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', '')
+                  LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
+          )
     </update>
 </mapper>

@@ -46,4 +46,7 @@ public interface CardStrategyMapper {
 
     // 기존 카드 상품 정보를 카드사와 상품명 기준으로 갱신합니다.
     Integer updateCardProductByCompanyAndName(@Param("source") CardProductSource source);
+
+    // 수집된 카드 상품과 동일한 사용자 보유 카드에 card_product_id를 연결합니다.
+    Integer updateUserCardsProductIdByCompanyAndName(@Param("source") CardProductSource source);
 }

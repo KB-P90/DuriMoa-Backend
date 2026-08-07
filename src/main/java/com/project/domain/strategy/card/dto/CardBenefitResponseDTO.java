@@ -34,6 +34,14 @@ public class CardBenefitResponseDTO {
     @JsonProperty("minimum_performance_amount")
     private final Long minimumPerformanceAmount;
 
+    // 혜택이 적용되는 소비 카테고리입니다.
+    @JsonProperty("categories")
+    private final List<String> categories;
+
+    // 사용처 입력 없이도 확정 계산에 사용할 수 있는 혜택인지 여부입니다.
+    @JsonProperty("amount_only_applicable")
+    private final Boolean amountOnlyApplicable;
+
     // 제외 업종이나 제외 조건 안내 키워드입니다.
     @JsonProperty("excluded_keywords")
     private final List<String> excludedKeywords;

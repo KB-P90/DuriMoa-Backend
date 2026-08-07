@@ -95,6 +95,58 @@ class CardStrategyServiceImplTest {
         Assertions.assertEquals("NEEDS_REVIEW", response.getOwners().get(0).getCards().get(1).getRecommendableStatus());
     }
 
+    // 결제 사용처가 없을 때는 특정 카테고리 고혜택보다 전 가맹점·기본 혜택을 우선 추천합니다.
+    @Test
+    void recommendCardsUsesOnlyAmountOnlyBenefitsWhenCategoryIsUnknown() {
+        CardStrategyMapper mapper = Mockito.mock(CardStrategyMapper.class);
+        CardStrategyServiceImpl service = new CardStrategyServiceImpl(
+                mapper,
+                new CardBenefitCalculator(),
+                fixedClock()
+        );
+
+        UserCardRecord cafeCard = userCardWithBenefit(
+                10L,
+                1L,
+                "김민준",
+                "신한",
+                "신한 카페특화",
+                "{\"benefits\":[{\"benefit_name\":\"카페 할인\",\"categories\":[\"CAFE\"],"
+                        + "\"benefit_rate\":0.2,\"monthly_limit_amount\":20000,"
+                        + "\"minimum_monthly_spend\":0}]}"
+        );
+        UserCardRecord defaultCard = userCardWithBenefit(
+                11L,
+                1L,
+                "김민준",
+                "KB국민",
+                "KB 기본",
+                "{\"benefits\":[{\"benefit_name\":\"전 가맹점 적립\",\"categories\":[\"ALL\"],"
+                        + "\"benefit_rate\":0.01,\"minimum_monthly_spend\":0}]}"
+        );
+
+        Mockito.when(mapper.selectActiveCoupleMembers(1L))
+                .thenReturn(Collections.singletonList(owner(1L, "김민준", "G")));
+        Mockito.when(mapper.selectUserCardsByUserIds(Collections.singletonList(1L)))
+                .thenReturn(Arrays.asList(cafeCard, defaultCard));
+        Mockito.when(mapper.selectCurrentMonthPerformances(
+                        Arrays.asList(10L, 11L),
+                        LocalDate.of(2026, 7, 1),
+                        LocalDate.of(2026, 7, 28)
+                ))
+                .thenReturn(Arrays.asList(performance(10L, 0L), performance(11L, 0L)));
+
+        CardRecommendationResponseDTO response = service.recommendCards(1L, 100_000L);
+
+        Assertions.assertEquals(11L, response.getBestCard().getCardId());
+        Assertions.assertEquals(1_000L, response.getBestCard().getExpectedBenefitAmount());
+        Assertions.assertEquals(11L, response.getOwners().get(0).getCards().get(0).getCardId());
+        Assertions.assertEquals(10L, response.getOwners().get(0).getCards().get(1).getCardId());
+        Assertions.assertEquals(0L, response.getOwners().get(0).getCards().get(1).getExpectedBenefitAmount());
+        Assertions.assertFalse(response.getOwners().get(0).getCards().get(1).getRecommendable());
+        Assertions.assertEquals("CATEGORY_REQUIRED", response.getOwners().get(0).getCards().get(1).getRecommendableStatus());
+    }
+
     // 활성 커플 권한이 있는 사용자 카드만 상세 조회를 허용합니다.
     @Test
     void getCardDetailRejectsUnauthorizedCardId() {
@@ -128,6 +180,7 @@ class CardStrategyServiceImplTest {
         Assertions.assertEquals("KB국민", response.getCompany());
         Assertions.assertEquals("UNKNOWN", response.getSaleStatus());
         Assertions.assertEquals(1, response.getBenefits().size());
+        Assertions.assertTrue(response.getBenefits().get(0).getAmountOnlyApplicable());
         Assertions.assertEquals("RECOMMENDABLE", response.getRecommendableStatus());
     }
 
@@ -176,6 +229,31 @@ class CardStrategyServiceImplTest {
         return card;
     }
 
+    // 혜택 JSON을 직접 지정하는 사용자 보유 카드 테스트 데이터를 만듭니다.
+    private UserCardRecord userCardWithBenefit(
+            Long cardId,
+            Long userId,
+            String ownerName,
+            String company,
+            String cardName,
+            String benefitJson
+    ) {
+        UserCardRecord card = new UserCardRecord();
+        card.setCardId(cardId);
+        card.setUserId(userId);
+        card.setOwnerName(ownerName);
+        card.setOwnerRole(userId.equals(1L) ? "G" : "B");
+        card.setCardProductId(cardId + 100L);
+        card.setCompany(company);
+        card.setCardName(cardName);
+        card.setAnnualFee(10_000);
+        card.setImage("/cards/test.png");
+        card.setBenefit(benefitJson);
+        card.setConditionText("전월 30만원 이상");
+        card.setConditionCheckedAt("2026-07-01 00:00:00");
+        return card;
+    }
+
     // 카드 인정 실적 테스트 데이터를 만듭니다.
     private CardPerformanceRecord performance(Long cardId, Long amount) {
         CardPerformanceRecord performance = new CardPerformanceRecord();
@@ -193,8 +271,9 @@ class CardStrategyServiceImplTest {
         cardDetail.setCardName("KB 웨딩");
         cardDetail.setAnnualFee(20_000);
         cardDetail.setImage("/cards/kb.png");
-        cardDetail.setBenefit("{\"benefits\":[{\"benefit_name\":\"웨딩\",\"benefit_rate\":0.02,"
-                + "\"monthly_limit_amount\":10000,\"minimum_monthly_spend\":300000}]}");
+        cardDetail.setBenefit("{\"benefits\":[{\"benefit_name\":\"전 가맹점 적립\",\"categories\":[\"ALL\"],"
+                + "\"benefit_rate\":0.02,\"monthly_limit_amount\":10000,"
+                + "\"minimum_monthly_spend\":300000}]}");
         cardDetail.setConditionText("전월 30만원 이상");
         cardDetail.setConditionCheckedAt("2026-07-01 00:00:00");
         return cardDetail;
