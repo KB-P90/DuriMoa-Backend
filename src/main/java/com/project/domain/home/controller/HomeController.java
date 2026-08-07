@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 @Api(tags = "Home", description = "홈 화면 조회 API")
 @RestController
@@ -28,8 +29,8 @@ public class HomeController {
     @ApiOperation(value = "홈 조회", notes = "인증 사용자 기준으로 홈 화면 뼈대와 5단계 준비 체크리스트를 조회합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<HomeResponseDTO>> getHome(
-            @AuthenticationPrincipal Long userId,
-            Authentication authentication
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication
     ) {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         HomeResponseDTO response = homeService.getHome(authenticatedUserId);

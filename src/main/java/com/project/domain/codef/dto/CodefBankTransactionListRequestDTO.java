@@ -42,6 +42,12 @@ public class CodefBankTransactionListRequestDTO {
     private String orderBy = "0";
 
     @Builder.Default
-    @ApiModelProperty(value = "조회 구분 (1: 전체)", example = "1")
-    private String inquireType = "1";
+    @ApiModelProperty(value = "조회 구분 ([계좌상세포함여부] 0: 미포함, 1: 포함)", example = "1")
+    private String inquiryType = "1";
+
+    @ApiModelProperty(value = "계좌비밀번호 (RSA 암호화된 비밀번호 또는 평문)", example = "1234")
+    private String accountPassword;
+
+    @ApiModelProperty(value = "생년월일 (YYYYMMDD)", example = "19950101")
+    private String birthDate;
 }
