@@ -12,7 +12,7 @@
         <result column="user_name" property="name"/>
         <result column="user_role" property="role"/>
         <result column="provider" property="provider"/>
-        <result column="profile_image" property="profileImage"/>
+        <result column="profile_image" property="profileImageUrl"/>
         <result column="is_shared" property="shared"/>
         <result column="phone" property="phone"/>
 
@@ -59,7 +59,7 @@
                u.name          AS user_name,
                u.role          AS user_role,
                u.provider      AS provider,
-               u.profile_image AS profile_image,
+               u.profile_image  AS profile_image,
                u.is_shared     AS is_shared,
                u.phone         AS phone,
 

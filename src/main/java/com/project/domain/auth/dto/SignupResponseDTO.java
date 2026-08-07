@@ -17,7 +17,7 @@ public class SignupResponseDTO {
     private String name;
     private String role;
     private String provider;
-    private byte[] profileImage;
+    private String profileImage;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;

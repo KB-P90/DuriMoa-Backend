@@ -15,6 +15,6 @@ public class UserProfileVO {
     private String password;
     private String name;
     private String role;
-    private byte[] profileImage;
+    private String profileImage;
     private Integer isShared;
 }
