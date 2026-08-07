@@ -21,3 +21,4 @@ logs/
 # Properties / Config
 database.properties
 codef.properties
+aws.properties
