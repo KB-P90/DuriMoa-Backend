@@ -1,0 +1,74 @@
+KB 두리모아 백엔드 - Docker Redis 실행 가이드
+
+1. Docker Desktop 실행
+
+Redis 실행 전에 Docker Desktop을 켜주세요.
+
+
+2. Redis 컨테이너 생성
+
+PowerShell에서 아래 명령어를 실행합니다.
+
+docker run --name durimoa-redis -p 6379:6379 -d redis:7-alpine
+
+docker run 명령어는 최초 한 번만 실행합니다.
+
+
+3. Redis 정상 실행 확인
+
+docker exec durimoa-redis redis-cli ping
+
+아래 결과가 나오면 정상입니다.
+
+PONG
+
+
+4. 백엔드 설정
+
+src/main/resources/database.properties에 아래 내용을 추가합니다.
+
+jwt.access-token-expiration=900000
+jwt.refresh-token-expiration=1209600000
+
+redis.host=localhost
+redis.port=6379
+
+auth.refresh-token-cookie-secure=false
+
+설정값:
+
+- Access Token: 15분
+- Refresh Token: 14일
+- Redis: localhost:6379
+- 로컬 HTTP 환경: Secure 쿠키 비활성화
+
+database.properties는 Git에 올리지 않습니다.
+
+
+5. Redis 컨테이너 다시 실행하기
+
+Docker Desktop이나 PC를 종료하면 Redis 컨테이너도 중지될 수 있습니다.
+
+이미 컨테이너를 생성했다면 docker run을 다시 실행하지 말고 아래 명령어로 다시 시작합니다.
+
+docker start durimoa-redis
+
+실행 확인:
+
+docker exec durimoa-redis redis-cli ping
+
+
+6. Redis 중지
+
+docker stop durimoa-redis
+
+컨테이너를 삭제하지 않으면 다음에 docker start 명령어로 다시 실행할 수 있습니다.
+
+
+7. 주의사항
+
+- docker run은 최초 한 번만 실행합니다.
+- 기존 컨테이너를 다시 실행할 때는 docker start를 사용합니다.
+- Refresh Token 원문을 Git, 로그, 메신저에 공유하지 않습니다.
+- database.properties와 JWT 비밀키를 Git에 올리지 않습니다.
+- Redis의 6379 포트를 외부 인터넷에 공개하지 않습니다.
