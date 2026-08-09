@@ -9,18 +9,19 @@ import com.project.domain.progress.dto.ActiveGoalDTO;
 import com.project.domain.progress.dto.CategoryExpenseDTO;
 import com.project.domain.progress.dto.GoalItemSourceDTO;
 import com.project.domain.progress.dto.MemberSourceDTO;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO.MonthlyProgressItemDTO;
 import com.project.domain.progress.dto.MonthlyExpenseDTO;
+import com.project.domain.progress.dto.ProgressItemCompletionRequestDTO;
+import com.project.domain.progress.dto.ProgressItemCompletionResponseDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.GoalItemProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.MemberProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressItemDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.OverallProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.PersonalProgressDTO;
 import com.project.domain.progress.mapper.ProgressMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -69,9 +70,60 @@ public class ProgressServiceImpl implements ProgressService {
                 .overall(buildOverall(activeGoal, memberIds, weddingCategoryCodes,
                         totalExpenseAmount, overallProgressRate))
                 .personal(buildPersonal(userId, couple, activeGoal))
-                .monthlyProgress(buildMonthlyProgress(activeGoal, memberIds,
-                        weddingCategoryCodes, overallProgressRate))
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MonthlyProgressResponseDTO getMonthlyProgress(Long userId) {
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(userId);
+        ActiveGoalDTO activeGoal = getActiveGoal(couple.getId());
+        List<Long> memberIds = List.of(couple.getGroomId(), couple.getBrideId());
+        List<String> weddingCategoryCodes = ExpenseCategory.getWeddingCodes();
+        Long totalExpenseAmount = defaultAmount(
+                progressMapper.findTotalWeddingExpense(memberIds, weddingCategoryCodes)
+        );
+
+        return buildMonthlyProgress(
+                activeGoal,
+                memberIds,
+                weddingCategoryCodes,
+                calculateIntegerRate(totalExpenseAmount, activeGoal.getTargetAmount())
+        );
+    }
+
+    @Override
+    @Transactional
+    public ProgressItemCompletionResponseDTO updateItemCompletion(
+            Long userId,
+            Long goalItemId,
+            ProgressItemCompletionRequestDTO request
+    ) {
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(userId);
+        Long goalId = progressMapper.findActiveGoalIdByGoalItemId(goalItemId, couple.getId());
+        if (goalId == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "활성 결혼 목표 항목을 찾을 수 없습니다.");
+        }
+
+        progressMapper.updateGoalItemCompletion(goalItemId, goalId, request.getCompleted());
+        return ProgressItemCompletionResponseDTO.builder()
+                .goalItemId(goalItemId)
+                .completed(request.getCompleted())
+                .completedItemCount(defaultCount(
+                        progressMapper.countCompletedIncludedGoalItems(goalId)))
+                .totalItemCount(defaultCount(progressMapper.countIncludedGoalItems(goalId)))
+                .build();
+    }
+
+    private ActiveGoalDTO getActiveGoal(Long coupleId) {
+        ActiveGoalDTO activeGoal = progressMapper.findActiveGoal(coupleId);
+        if (activeGoal == null) {
+            throw new CustomException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "활성 결혼 목표를 찾을 수 없습니다."
+            );
+        }
+        return activeGoal;
     }
 
     private OverallProgressDTO buildOverall(
@@ -188,17 +240,13 @@ public class ProgressServiceImpl implements ProgressService {
                 .build();
     }
 
-    private MonthlyProgressDTO buildMonthlyProgress(
+    private MonthlyProgressResponseDTO buildMonthlyProgress(
             ActiveGoalDTO activeGoal,
             List<Long> memberIds,
             List<String> weddingCategoryCodes,
             Integer overallProgressRate
     ) {
-        LocalDate firstExpenseDate = progressMapper.findFirstWeddingExpenseDate(
-                memberIds,
-                weddingCategoryCodes
-        );
-        YearMonth startMonth = resolveStartMonth(firstExpenseDate, activeGoal.getCreatedAt());
+        YearMonth startMonth = resolveStartMonth(activeGoal.getCreatedAt());
         YearMonth currentMonth = YearMonth.now();
         LocalDateTime startAt = startMonth.atDay(1).atStartOfDay();
         LocalDateTime endAt = currentMonth.atEndOfMonth().atTime(23, 59, 59);
@@ -239,7 +287,7 @@ public class ProgressServiceImpl implements ProgressService {
         }
 
         months.sort(Comparator.comparing(MonthlyProgressItemDTO::getYearMonth).reversed());
-        return MonthlyProgressDTO.builder()
+        return MonthlyProgressResponseDTO.builder()
                 .overallProgressRate(overallProgressRate)
                 .months(months)
                 .build();
@@ -295,12 +343,9 @@ public class ProgressServiceImpl implements ProgressService {
                 .doubleValue();
     }
 
-    private YearMonth resolveStartMonth(LocalDate firstExpenseDate, LocalDateTime createdAt) {
-        if (firstExpenseDate != null) {
-            return YearMonth.from(firstExpenseDate);
-        }
+    private YearMonth resolveStartMonth(LocalDateTime createdAt) {
         if (createdAt == null) {
-            return YearMonth.from(LocalDate.now());
+            return YearMonth.now();
         }
         return YearMonth.from(createdAt);
     }
@@ -314,6 +359,10 @@ public class ProgressServiceImpl implements ProgressService {
 
     private Long defaultAmount(Long amount) {
         return amount == null ? 0L : amount;
+    }
+
+    private Integer defaultCount(Integer count) {
+        return count == null ? 0 : count;
     }
 
     private void addIfNotNull(List<MemberProgressDTO> members, MemberProgressDTO member) {
