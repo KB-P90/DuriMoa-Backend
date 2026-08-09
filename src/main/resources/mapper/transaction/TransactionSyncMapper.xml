@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.transaction.mapper.TransactionSyncMapper">
+
+    <select id="findConnectedIdByUserId" resultType="string">
+        SELECT connected_id
+        FROM user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="findAccountsByUserId" resultType="com.project.domain.transaction.dto.TransactionSyncTargetDTO">
+        SELECT
+            a.id AS id,
+            a.company AS company,
+            a.number AS number,
+            MAX(ar.transaction_date) AS lastRecordDate
+        FROM account a
+        LEFT JOIN account_record ar
+            ON ar.account_id = a.id
+        WHERE a.user_id = #{userId}
+        GROUP BY a.id, a.company, a.number
+        ORDER BY a.id
+    </select>
+
+    <select id="findCardsByUserId" resultType="com.project.domain.transaction.dto.TransactionSyncTargetDTO">
+        SELECT
+            c.id AS id,
+            c.company AS company,
+            c.number AS number,
+            MAX(cr.used_date) AS lastRecordDate
+        FROM card c
+        LEFT JOIN card_record cr
+            ON cr.card_id = c.id
+        WHERE c.user_id = #{userId}
+        GROUP BY c.id, c.company, c.number
+        ORDER BY c.id
+    </select>
+
+    <insert id="insertAccountRecord">
+        INSERT IGNORE INTO account_record (
+            account_id, source_key, transaction_date, transaction_time,
+            out_amount, in_amount, after_transaction_balance,
+            description1, description2, description3, description4, raw_data
+        ) VALUES (
+            #{accountId}, #{sourceKey}, #{transactionDate}, #{transactionTime},
+            #{outAmount}, #{inAmount}, #{afterTransactionBalance},
+            #{description1}, #{description2}, #{description3}, #{description4}, CAST(#{rawData} AS JSON)
+        )
+    </insert>
+
+    <insert id="insertCardRecord">
+        INSERT IGNORE INTO card_record (
+            card_id, source_key, used_date, used_time, store_name,
+            used_amount, cancel_yn, cancel_amount, raw_data
+        ) VALUES (
+            #{cardId}, #{sourceKey}, #{usedDate}, #{usedTime}, #{storeName},
+            #{usedAmount}, #{cancelYn}, #{cancelAmount}, CAST(#{rawData} AS JSON)
+        )
+    </insert>
+</mapper>

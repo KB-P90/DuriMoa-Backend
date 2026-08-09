@@ -20,15 +20,18 @@ import javax.sql.DataSource;
 @Configuration
 @PropertySource({"classpath:/database.properties"})
 @MapperScan(basePackages = {
-    "com.project.domain.calendar.mapper",
-    "com.project.domain.onboarding.mapper",
-    "com.project.domain.codef.mapper"
+        "com.project.domain.calendar.mapper",
+        "com.project.domain.onboarding.mapper",
+        "com.project.domain.codef.mapper",
+        "com.project.domain.transaction.mapper"
 })
 @ComponentScan(basePackages = {
-    "com.project.common.config",
-    "com.project.domain.codef.service",
-    "com.project.domain.calendar.service",
-    "com.project.domain.onboarding.service"
+        "com.project.common.config",
+        "com.project.common.security",
+        "com.project.domain.codef.service",
+        "com.project.domain.calendar.service",
+        "com.project.domain.onboarding.service",
+        "com.project.domain.transaction.service"
 })
 @EnableTransactionManagement
 public class RootConfig {
@@ -62,7 +65,9 @@ public class RootConfig {
         SqlSessionFactoryBean sqlSessionFactory = new SqlSessionFactoryBean();
         sqlSessionFactory.setConfigLocation(applicationContext.getResource("classpath:/mybatis-config.xml"));
         sqlSessionFactory.setDataSource(dataSource());
-
+        sqlSessionFactory.setMapperLocations(
+                applicationContext.getResources("classpath:/mapper/**/*.xml")
+        );
         return sqlSessionFactory.getObject();
     }
 
