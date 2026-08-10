@@ -33,6 +33,38 @@
         ORDER BY gi.id ASC
     </select>
 
+    <select id="findActiveGoalIdByGoalItemId" resultType="long">
+        SELECT gi.goal_id
+        FROM goal_item gi
+        INNER JOIN goal g ON g.id = gi.goal_id
+        WHERE gi.id = #{goalItemId}
+          AND g.couple_id = #{coupleId}
+          AND g.is_main = TRUE
+          AND g.status = 'CONFIRMED'
+    </select>
+
+    <update id="updateGoalItemCompletion">
+        UPDATE goal_item
+        SET is_completed = #{completed}
+        WHERE id = #{goalItemId}
+          AND goal_id = #{goalId}
+    </update>
+
+    <select id="countCompletedIncludedGoalItems" resultType="int">
+        SELECT COUNT(*)
+        FROM goal_item
+        WHERE goal_id = #{goalId}
+          AND is_included = TRUE
+          AND is_completed = TRUE
+    </select>
+
+    <select id="countIncludedGoalItems" resultType="int">
+        SELECT COUNT(*)
+        FROM goal_item
+        WHERE goal_id = #{goalId}
+          AND is_included = TRUE
+    </select>
+
     <select id="findMembers"
             resultType="com.project.domain.progress.dto.MemberSourceDTO">
         SELECT
@@ -96,28 +128,6 @@
             #{category}
         </foreach>
         GROUP BY COALESCE(sr.changed_category, sr.category)
-    </select>
-
-    <select id="findFirstWeddingExpenseDate" resultType="java.time.LocalDate">
-        SELECT MIN(sr.record_date)
-        FROM service_record sr
-        WHERE sr.user_id IN
-        <foreach collection="userIds"
-                 item="userId"
-                 open="("
-                 separator=","
-                 close=")">
-            #{userId}
-        </foreach>
-          AND sr.type = 'EXPENSE'
-          AND COALESCE(sr.changed_category, sr.category) IN
-        <foreach collection="categories"
-                 item="category"
-                 open="("
-                 separator=","
-                 close=")">
-            #{category}
-        </foreach>
     </select>
 
     <select id="findMonthlyWeddingExpenses"

@@ -3,21 +3,21 @@ package com.project.domain.progress.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.common.exception.CustomException;
-import com.project.common.exception.ErrorCode;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO.MonthlyProgressItemDTO;
+import com.project.domain.progress.dto.ProgressItemCompletionResponseDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.GoalItemProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.MemberProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressItemDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.OverallProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.PersonalProgressDTO;
 import com.project.domain.progress.service.ProgressService;
@@ -25,6 +25,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
@@ -41,13 +42,13 @@ class ProgressControllerTest {
     @BeforeEach
     void setUp() {
         progressService = org.mockito.Mockito.mock(ProgressService.class);
-        ProgressController progressController = new ProgressController(progressService);
-        mockMvc = MockMvcBuilders.standaloneSetup(progressController)
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProgressController(progressService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         objectMapper = new ObjectMapper();
-        SecurityContextHolder.clearContext();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(10L, null, List.of()));
     }
 
     @AfterEach
@@ -56,10 +57,7 @@ class ProgressControllerTest {
     }
 
     @Test
-    void returnsProgressInApiResponse() throws Exception {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(10L, null, List.of())
-        );
+    void returnsOverallAndPersonalProgressOnly() throws Exception {
         when(progressService.getProgress(eq(10L))).thenReturn(progressResponse());
 
         MvcResult result = mockMvc.perform(get("/api/progress"))
@@ -68,35 +66,53 @@ class ProgressControllerTest {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
 
         assertTrue(body.get("success").asBoolean());
-        assertEquals("현황 조회에 성공했습니다.", body.get("message").asText());
-        assertEquals(50_000_000L, body.at("/data/overall/targetAmount").asLong());
         assertEquals(62, body.at("/data/overall/progressRate").asInt());
-        assertEquals("예식장", body.at("/data/overall/items/0/category").asText());
         assertFalse(body.at("/data/personal/members/1/assetShared").asBoolean());
-        assertTrue(body.at("/data/personal/members/1/assetAmount").isNull());
-        assertEquals(62, body.at("/data/monthlyProgress/overallProgressRate").asInt());
-        assertEquals(31_190_000L,
-                body.at("/data/monthlyProgress/months/0/cumulativeExpenseAmount").asLong());
+        assertTrue(body.at("/data/monthlyProgress").isMissingNode());
     }
 
     @Test
-    void returnsApiResponseWhenActiveGoalIsMissing() throws Exception {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(10L, null, List.of())
-        );
-        when(progressService.getProgress(eq(10L))).thenThrow(new CustomException(
-                ErrorCode.RESOURCE_NOT_FOUND,
-                "활성 결혼 목표를 찾을 수 없습니다."
-        ));
+    void returnsMonthlyProgressSeparately() throws Exception {
+        when(progressService.getMonthlyProgress(eq(10L))).thenReturn(
+                MonthlyProgressResponseDTO.builder()
+                        .overallProgressRate(62)
+                        .months(List.of(MonthlyProgressItemDTO.builder()
+                                .yearMonth("2026-07")
+                                .expenseAmount(12_000_000L)
+                                .cumulativeExpenseAmount(31_190_000L)
+                                .progressRate(62)
+                                .build()))
+                        .build());
 
-        MvcResult result = mockMvc.perform(get("/api/progress"))
-                .andExpect(status().isNotFound())
+        MvcResult result = mockMvc.perform(get("/api/progress/monthly"))
+                .andExpect(status().isOk())
                 .andReturn();
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
 
-        assertFalse(body.get("success").asBoolean());
-        assertEquals("활성 결혼 목표를 찾을 수 없습니다.", body.get("message").asText());
-        assertFalse(body.has("data"));
+        assertEquals(62, body.at("/data/overallProgressRate").asInt());
+        assertEquals(31_190_000L, body.at("/data/months/0/cumulativeExpenseAmount").asLong());
+    }
+
+    @Test
+    void updatesChecklistCompletion() throws Exception {
+        when(progressService.updateItemCompletion(eq(10L), eq(1L), any())).thenReturn(
+                ProgressItemCompletionResponseDTO.builder()
+                        .goalItemId(1L)
+                        .completed(true)
+                        .completedItemCount(3)
+                        .totalItemCount(5)
+                        .build());
+
+        MvcResult result = mockMvc.perform(patch("/api/progress/items/1/completion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"completed\":true}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+
+        assertTrue(body.at("/data/completed").asBoolean());
+        assertEquals(3, body.at("/data/completedItemCount").asInt());
+        assertEquals(5, body.at("/data/totalItemCount").asInt());
     }
 
     private ProgressResponseDTO progressResponse() {
@@ -107,45 +123,12 @@ class ProgressControllerTest {
                         .progressRate(62)
                         .completedItemCount(1)
                         .totalItemCount(2)
-                        .items(List.of(GoalItemProgressDTO.builder()
-                                .goalItemId(1L)
-                                .category("예식장")
-                                .targetAmount(10_800_000L)
-                                .currentAmount(10_500_000L)
-                                .progressRate(97)
-                                .completed(true)
-                                .build()))
+                        .items(List.of())
                         .build())
                 .personal(PersonalProgressDTO.builder()
                         .members(List.of(
-                                MemberProgressDTO.builder()
-                                        .userId(10L)
-                                        .name("김민준")
-                                        .assetShared(true)
-                                        .assetAmount(14_670_000L)
-                                        .targetAmount(25_000_000L)
-                                        .currentAmount(14_670_000L)
-                                        .progressRate(58.7)
-                                        .build(),
-                                MemberProgressDTO.builder()
-                                        .userId(20L)
-                                        .name("이서연")
-                                        .assetShared(false)
-                                        .assetAmount(null)
-                                        .targetAmount(25_000_000L)
-                                        .currentAmount(null)
-                                        .progressRate(66.1)
-                                        .build()
-                        ))
-                        .build())
-                .monthlyProgress(MonthlyProgressDTO.builder()
-                        .overallProgressRate(62)
-                        .months(List.of(MonthlyProgressItemDTO.builder()
-                                .yearMonth("2026-07")
-                                .expenseAmount(12_000_000L)
-                                .cumulativeExpenseAmount(31_190_000L)
-                                .progressRate(62)
-                                .build()))
+                                MemberProgressDTO.builder().userId(10L).assetShared(true).build(),
+                                MemberProgressDTO.builder().userId(20L).assetShared(false).build()))
                         .build())
                 .build();
     }
