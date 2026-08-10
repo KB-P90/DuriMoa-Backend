@@ -11,7 +11,7 @@ public class RefreshTokenCookieProvider {
 
     public static final String COOKIE_NAME = "refreshToken";
     private static final String COOKIE_PATH = "/api/auth";
-    private static final String SAME_SITE_POLICY = "Lax";
+    private static final String SAME_SITE_POLICY = "None";
 
     private final Boolean secure;
     private final Duration expiration;
