@@ -40,7 +40,7 @@ public class MonthlyServiceImpl implements MonthlyService {
     public MonthlyExpenseResponseDTO getMonthlyCategoryExpenses(Long userId, Integer year, Integer month) {
 
         List<ExpenseCategoryDTO> categories = monthlyMapper.selectMonthlyExpenseCategories(userId, year, month);
-        
+
         if (categories == null) {
             categories = Collections.emptyList();
         }
@@ -184,42 +184,45 @@ public class MonthlyServiceImpl implements MonthlyService {
         }
 
         String code = categoryCode.toUpperCase();
-        String title;
-        long expectedSavingAmount;
+//        String title;
+//        long expectedSavingAmount;
 
-        // 1. 구독/정기 지출 카테고리 (SUBSCRIPTION)
-        if (ExpenseCategory.SUBSCRIPTION.name().equals(code)) {
-            title = "사용하지 않는 구독 정리하기";
-            expectedSavingAmount = totalAmount;
-        }
-        // 2. 지출 횟수가 2회 이상인 경우 (빈도 절감 미션: N회 -> N/2회)
-        else if (txCount >= 2) {
-            int targetCount = Math.max(1, txCount / 2);
-            int reducedCount = txCount - targetCount;
-            long avgPerTx = totalAmount / txCount;
-            long rawSaving = reducedCount * avgPerTx;
+        String title = "";
+        long expectedSavingAmount = 0L;
 
-            expectedSavingAmount = Math.max(10000L, Math.round(rawSaving / 10000.0) * 10000L);
-
-            if (ExpenseCategory.CAFE.name().equals(code) && txCount <= 5) {
-                int weeklyCount = Math.max(1, txCount);
-                int targetWeekly = Math.max(1, weeklyCount / 2);
-                title = String.format("주 %d회에서 주 %d회로 줄이기", weeklyCount, targetWeekly);
-            } else if (ExpenseCategory.DELIVERY.name().equals(code)) {
-                title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
-            } else {
-                title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
-            }
-        }
-        // 3. 단건 지출이거나 횟수가 1회인 경우
-        else {
-            if (ExpenseCategory.SHOPPING.name().equals(code)) {
-                title = "계획 없는 쇼핑 줄이기";
-            } else {
-                title = "불필요한 지출 줄이기";
-            }
-            expectedSavingAmount = totalAmount;
-        }
+//        // 1. 구독/정기 지출 카테고리 (SUBSCRIPTION)
+//        if (ExpenseCategory.SUBSCRIPTION.name().equals(code)) {
+//            title = "사용하지 않는 구독 정리하기";
+//            expectedSavingAmount = totalAmount;
+//        }
+//        // 2. 지출 횟수가 2회 이상인 경우 (빈도 절감 미션: N회 -> N/2회)
+//        else if (txCount >= 2) {
+//            int targetCount = Math.max(1, txCount / 2);
+//            int reducedCount = txCount - targetCount;
+//            long avgPerTx = totalAmount / txCount;
+//            long rawSaving = reducedCount * avgPerTx;
+//
+//            expectedSavingAmount = Math.max(10000L, Math.round(rawSaving / 10000.0) * 10000L);
+//
+//            if (ExpenseCategory.CAFE.name().equals(code) && txCount <= 5) {
+//                int weeklyCount = Math.max(1, txCount);
+//                int targetWeekly = Math.max(1, weeklyCount / 2);
+//                title = String.format("주 %d회에서 주 %d회로 줄이기", weeklyCount, targetWeekly);
+//            } else if (ExpenseCategory.DELIVERY.name().equals(code)) {
+//                title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
+//            } else {
+//                title = String.format("월 %d회에서 월 %d회로 줄이기", txCount, targetCount);
+//            }
+//        }
+//        // 3. 단건 지출이거나 횟수가 1회인 경우
+//        else {
+//            if (ExpenseCategory.SHOPPING.name().equals(code)) {
+//                title = "계획 없는 쇼핑 줄이기";
+//            } else {
+//                title = "불필요한 지출 줄이기";
+//            }
+//            expectedSavingAmount = totalAmount;
+//        }
 
         return GeneratedMissionInfoVO.builder()
                 .title(title)

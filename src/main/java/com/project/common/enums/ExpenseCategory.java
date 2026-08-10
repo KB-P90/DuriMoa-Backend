@@ -10,22 +10,17 @@ import java.util.List;
 @Getter
 public enum ExpenseCategory {
     FOOD("식비", false),
-    TRANSPORT("교통", false),
+    LIVING("생활", false),
     SHOPPING("쇼핑", false),
-    CAFE("카페/간식", false),
-    DELIVERY("배달/외식", false),
-    SUBSCRIPTION("구독 서비스", false),
     CULTURE("문화/여가", false),
-    BEAUTY("미용/패션", false),
+    ETC("기타", false),
 
     WEDDINGHALL("예식장", true),
     STUDIO("스튜디오", true),
     MAKEUP("메이크업", true),
     DRESS("드레스", true),
-    JEWELRY("예물", true),
-    EMERGENCY("예비비", true),
+    EMERGENCY("예비비", true);
 
-    ETC("기타", false);
 
     private final String categoryName;
     private final boolean wedding;
