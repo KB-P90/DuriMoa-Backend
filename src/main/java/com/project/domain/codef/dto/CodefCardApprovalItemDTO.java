@@ -31,13 +31,69 @@ public class CodefCardApprovalItemDTO {
     @ApiModelProperty(value = "사용/승인 시각 (HHMMSS)", example = "143000")
     private String usedTime;
 
+    @JsonProperty("resMemberStoreName")
+    @JsonAlias({"resStoreName", "resMemberStoreName", "storeName", "resStore"})
+    @ApiModelProperty(value = "가맹점명", example = "배달의민족")
+    private String storeName;
+
     @JsonProperty("resUsedAmount")
     @JsonAlias({"resApprovedAmount", "resUsedAmount", "usedAmount", "approvedAmount"})
     @ApiModelProperty(value = "사용/승인 금액", example = "15000")
     private Long usedAmount;
 
-    @JsonProperty("resMemberStoreName")
-    @JsonAlias({"resStoreName", "resMemberStoreName", "storeName", "resStore"})
-    @ApiModelProperty(value = "가맹점명", example = "배달의민족")
-    private String storeName;
+    @JsonProperty("resPaymentType")
+    @ApiModelProperty(value = "결제 방법", example = "1:일시불, 2:할부, 3:그외")
+    private String paymentType;
+
+    @JsonProperty("resInstallmentMonth")
+    @ApiModelProperty(value = "할부 개월")
+    private Integer installmentMonth;
+
+    @JsonProperty("resApprovalNo")
+    @ApiModelProperty(value = "승인 번호", example="30012351")
+    private String approvalNo;
+
+    @JsonProperty("resPaymentDueDate")
+    @ApiModelProperty(value = "결제 예정일 (YYYYMMDD)")
+    private String paymentDueDate;
+
+    @JsonProperty("resHomeForeignType")
+    @ApiModelProperty(value = "국내/해외 구분", example = "1:국내, 2:해외")
+    private String domesticForeignType;
+
+    @JsonProperty("resMemberStoreCorpNo")
+    @ApiModelProperty(value = "가맹점 사업자 번호")
+    private String storeCorpNo;
+
+    @JsonProperty("resMemberStoreType")
+    @ApiModelProperty(value = "가맹점 업종")
+    private String storeType;
+
+    @JsonProperty("resMemberStoreNo")
+    @ApiModelProperty(value = "가맹점 번호")
+    private String storeNo;
+
+    @JsonProperty("resCancelYN")
+    @ApiModelProperty(value = "취소 여부", example="0:정상, 1:취소, 2: 부분취소, 3:거절")
+    private String cancelYn;
+
+    @JsonProperty("resCancelAmount")
+    @ApiModelProperty(value = "취소 금액")
+    private Long cancelAmount;
+
+    @JsonProperty("resVAT")
+    @ApiModelProperty(value = "부가세")
+    private Long vat;
+
+    @JsonProperty("resCashBack")
+    @ApiModelProperty(value = "캐시백/봉사료")
+    private Long cashBack;
+
+    @JsonProperty("resKRWAmt")
+    @ApiModelProperty(value = "원화 금액")
+    private Long krwAmount;
+
+    @JsonProperty("resAccountCurrency")
+    @ApiModelProperty(value = "통화 코드", example="KRW:한국원화, JPY:일본엔, USD:미국달러, EUR:유로, ...")
+    private String currency;
 }

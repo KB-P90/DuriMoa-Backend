@@ -329,31 +329,31 @@ public class OnboardingServiceImpl implements OnboardingService {
                             userId, companyName, numberStr, targetAccountName, accountId);
                 }
 
-                // CODEF 은행 계좌 거래내역 조회
-                CodefBankTransactionListRequestDTO bankReq = CodefBankTransactionListRequestDTO.builder()
-                        .connectedId(connectedId)
-                        .organization(organization)
-                        .account(numberStr)
-                        .startDate(startDate)
-                        .endDate(endDate)
-                        .orderBy("0")
-                        .inquiryType("1")
-                        .build();
-
-                log.info("[CODEF-REQ] 은행 거래내역 요청 - serviceType: {}, account: {}, range: {} ~ {}",
-                        codefConfig.getServiceType(), numberStr, startDate, endDate);
-                CodefApiResponseDTO<CodefBankTransactionResponseDTO> response = codefService.getBankTransactionList(bankReq);
-
-                if (response == null || !response.isSuccess()) {
-                    String code = (response != null && response.getResult() != null) ? response.getResult().getCode() : "UNKNOWN";
-                    String msg = (response != null && response.getResult() != null) ? response.getResult().getMessage() : "은행 거래내역 조회 실패";
-                    log.error("CODEF 은행 거래내역 조회 실패 - Code: {}, Message: {}", code, msg);
-                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 은행 거래내역 조회 실패 [" + code + "]: " + msg);
-                }
-
-                int savedCount = saveAccountRecords(accountId, response.getData());
-                log.info("사용자 [{}] 계좌 [{}] DB 저장 완료 건수: {}", userId, numberStr, savedCount);
-                totalSaved += savedCount;
+//                // CODEF 은행 계좌 거래내역 조회
+//                CodefBankTransactionListRequestDTO bankReq = CodefBankTransactionListRequestDTO.builder()
+//                        .connectedId(connectedId)
+//                        .organization(organization)
+//                        .account(numberStr)
+//                        .startDate(startDate)
+//                        .endDate(endDate)
+//                        .orderBy("0")
+//                        .inquiryType("1")
+//                        .build();
+//
+//                log.info("[CODEF-REQ] 은행 거래내역 요청 - serviceType: {}, account: {}, range: {} ~ {}",
+//                        codefConfig.getServiceType(), numberStr, startDate, endDate);
+//                CodefApiResponseDTO<CodefBankTransactionResponseDTO> response = codefService.getBankTransactionList(bankReq);
+//
+//                if (response == null || !response.isSuccess()) {
+//                    String code = (response != null && response.getResult() != null) ? response.getResult().getCode() : "UNKNOWN";
+//                    String msg = (response != null && response.getResult() != null) ? response.getResult().getMessage() : "은행 거래내역 조회 실패";
+//                    log.error("CODEF 은행 거래내역 조회 실패 - Code: {}, Message: {}", code, msg);
+//                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 은행 거래내역 조회 실패 [" + code + "]: " + msg);
+//                }
+//
+//                int savedCount = saveAccountRecords(accountId, response.getData());
+//                log.info("사용자 [{}] 계좌 [{}] DB 저장 완료 건수: {}", userId, numberStr, savedCount);
+//                totalSaved += savedCount;
                 processedNumbers.add(numberStr);
             } else {
                 // 카드 DB 레코드 조회 및 신규 생성
@@ -372,30 +372,30 @@ public class OnboardingServiceImpl implements OnboardingService {
                             userId, companyName, numberStr, targetCardName, cardId);
                 }
 
-                // CODEF 카드 승인 내역 조회
-                CodefCardApprovalListRequestDTO cardReq = CodefCardApprovalListRequestDTO.builder()
-                        .connectedId(connectedId)
-                        .organization(organization)
-                        .cardNo(numberStr)
-                        .startDate(startDate)
-                        .endDate(endDate)
-                        .inquiryType("1")
-                        .build();
-
-                log.info("[CODEF-REQ] 카드 승인내역 요청 - serviceType: {}, range: {} ~ {}",
-                        codefConfig.getServiceType(), startDate, endDate);
-                CodefApiResponseDTO<CodefCardApprovalResponseDTO> response = codefService.getCardApprovalList(cardReq);
-
-                if (response == null || !response.isSuccess()) {
-                    String code = (response != null && response.getResult() != null) ? response.getResult().getCode() : "UNKNOWN";
-                    String msg = (response != null && response.getResult() != null) ? response.getResult().getMessage() : "카드 승인내역 조회 실패";
-                    log.error("CODEF 카드 승인내역 조회 실패 - Code: {}, Message: {}", code, msg);
-                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 카드 승인내역 조회 실패 [" + code + "]: " + msg);
-                }
-
-                int savedCount = saveCardRecords(cardId, response.getData());
-                log.info("사용자 [{}] 카드 [{}] DB 저장 완료 건수: {}", userId, numberStr, savedCount);
-                totalSaved += savedCount;
+//                // CODEF 카드 승인 내역 조회
+//                CodefCardApprovalListRequestDTO cardReq = CodefCardApprovalListRequestDTO.builder()
+//                        .connectedId(connectedId)
+//                        .organization(organization)
+//                        .cardNo(numberStr)
+//                        .startDate(startDate)
+//                        .endDate(endDate)
+//                        .inquiryType("1")
+//                        .build();
+//
+//                log.info("[CODEF-REQ] 카드 승인내역 요청 - serviceType: {}, range: {} ~ {}",
+//                        codefConfig.getServiceType(), startDate, endDate);
+//                CodefApiResponseDTO<CodefCardApprovalResponseDTO> response = codefService.getCardApprovalList(cardReq);
+//
+//                if (response == null || !response.isSuccess()) {
+//                    String code = (response != null && response.getResult() != null) ? response.getResult().getCode() : "UNKNOWN";
+//                    String msg = (response != null && response.getResult() != null) ? response.getResult().getMessage() : "카드 승인내역 조회 실패";
+//                    log.error("CODEF 카드 승인내역 조회 실패 - Code: {}, Message: {}", code, msg);
+//                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "CODEF 카드 승인내역 조회 실패 [" + code + "]: " + msg);
+//                }
+//
+//                int savedCount = saveCardRecords(cardId, response.getData());
+//                log.info("사용자 [{}] 카드 [{}] DB 저장 완료 건수: {}", userId, numberStr, savedCount);
+//                totalSaved += savedCount;
                 processedNumbers.add(numberStr);
             }
         }

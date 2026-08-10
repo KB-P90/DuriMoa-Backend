@@ -315,10 +315,6 @@ CREATE TABLE `card_record`
     `used_date`             DATE NOT NULL COMMENT '사용 일자',
     `used_time`             TIME NULL COMMENT '사용 시각',
 
-    `card_number`           VARCHAR(30) NULL COMMENT '카드 번호',
-    `card_number1`          VARCHAR(30) NULL COMMENT '매출전표 카드 번호',
-    `card_name`             VARCHAR(100) NULL COMMENT '카드명',
-
     `store_name`            VARCHAR(200) NULL COMMENT '가맹점명',
     `used_amount`           BIGINT NOT NULL COMMENT '이용 금액',
 
@@ -331,8 +327,6 @@ CREATE TABLE `card_record`
     `domestic_foreign_type` VARCHAR(10) NULL COMMENT '국내/해외 구분',
     `store_corp_no`         VARCHAR(30) NULL COMMENT '가맹점 사업자 번호',
     `store_type`            VARCHAR(50) NULL COMMENT '가맹점 업종',
-    `store_tel_no`          VARCHAR(30) NULL COMMENT '가맹점 전화번호',
-    `store_address`         VARCHAR(500) NULL COMMENT '가맹점 주소',
     `store_no`              VARCHAR(50) NULL COMMENT '가맹점 번호',
 
     `cancel_yn`             VARCHAR(10) NOT NULL COMMENT '취소 여부',

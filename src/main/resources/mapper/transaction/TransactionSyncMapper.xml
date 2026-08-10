@@ -52,12 +52,20 @@
     </insert>
 
     <insert id="insertCardRecord">
-        INSERT IGNORE INTO card_record (
-            card_id, source_key, used_date, used_time, store_name,
-            used_amount, cancel_yn, cancel_amount, raw_data
+        INSERT INTO card_record (
+            card_id, source_key, used_date, used_time,
+            store_name, used_amount, payment_type, installment_month,
+            approval_no, payment_due_date,
+            domestic_foreign_type, store_corp_no, store_type, store_no,
+            cancel_yn, cancel_amount, vat, cash_back,
+            krw_amount, currency, raw_data
         ) VALUES (
-            #{cardId}, #{sourceKey}, #{usedDate}, #{usedTime}, #{storeName},
-            #{usedAmount}, #{cancelYn}, #{cancelAmount}, CAST(#{rawData} AS JSON)
+            #{cardId}, #{sourceKey}, #{usedDate}, #{usedTime},
+            #{storeName}, #{usedAmount}, #{paymentType}, #{installmentMonth},
+            #{approvalNo}, #{paymentDueDate},
+            #{domesticForeignType}, #{storeCorpNo}, #{storeType}, #{storeNo},
+            #{cancelYn}, #{cancelAmount}, #{vat}, #{cashBack},
+            #{krwAmount}, #{currency}, #{rawData}
         )
     </insert>
 </mapper>

@@ -210,22 +210,54 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private CardTransactionRecordDTO toCardRecord(Long cardId, CodefCardApprovalItemDTO item) {
         LocalDate usedDate = parseDate(item.getUsedDate(), "카드 사용일");
         LocalTime usedTime = parseTime(item.getUsedTime(), "카드 사용 시각");
-        long signedAmount = item.getUsedAmount() == null ? 0L : item.getUsedAmount();
-        long usedAmount = Math.abs(signedAmount);
-        boolean cancelled = signedAmount < 0;
+        LocalDate paymentDueDate = parseDateOrNull(item.getPaymentDueDate(), "카드 결제 예정일");
+
+        long usedAmount = item.getUsedAmount() == null ? 0L : Math.abs(item.getUsedAmount());
+
+        boolean cancelled = isCancelled(item.getCancelYn());
+        Long cancelAmount = item.getCancelAmount() == null ? null : Math.abs(item.getCancelAmount());
 
         return CardTransactionRecordDTO.builder()
                 .cardId(cardId)
-                .sourceKey(createSourceKey("CARD", cardId, item.getUsedDate(), item.getUsedTime(),
-                        item.getStoreName(), signedAmount))
+                .sourceKey(createSourceKey("CARD", cardId, item.getUsedDate(), item.getUsedTime(), item.getApprovalNo()))
                 .usedDate(usedDate)
                 .usedTime(usedTime)
+
                 .storeName(item.getStoreName())
                 .usedAmount(usedAmount)
+
+                .paymentType(item.getPaymentType())
+                .installmentMonth(item.getInstallmentMonth())
+
+                .approvalNo(item.getApprovalNo())
+                .paymentDueDate(paymentDueDate)
+
+                .domesticForeignType(item.getDomesticForeignType())
+                .storeCorpNo(item.getStoreCorpNo())
+                .storeType(item.getStoreType())
+                .storeNo(item.getStoreNo())
+
                 .cancelYn(cancelled ? "Y" : "N")
-                .cancelAmount(cancelled ? usedAmount : null)
+                .cancelAmount(cancelled ? cancelAmount : null)
+
+                .vat(item.getVat())
+                .cashBack(item.getCashBack())
+
+                .krwAmount(item.getKrwAmount())
+                .currency(item.getCurrency())
+
                 .rawData(toJson(item))
                 .build();
+    }
+
+    private LocalDate parseDateOrNull(String value, String fieldName) {
+        if (value == null || value.isBlank()) return null;
+
+        return parseDate(value, fieldName);
+    }
+
+    private boolean isCancelled(String cancelYn) {
+        return "1".equals(cancelYn) || "2".equals(cancelYn);
     }
 
     private LocalDate parseDate(String value, String fieldName) {
