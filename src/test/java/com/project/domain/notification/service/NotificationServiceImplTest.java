@@ -13,11 +13,15 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
+import com.project.domain.notification.dto.NotificationDeleteBatchResponseDTO;
+import com.project.domain.notification.dto.NotificationDeleteResponseDTO;
+import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
+import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import com.project.domain.notification.mapper.NotificationMapper;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -48,15 +52,20 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void markAsReadDeletesOnlyAuthenticatedUsersNotification() {
+    void markAsReadUpdatesOnlyAuthenticatedUsersNotification() {
         NotificationMapper notificationMapper = mock(NotificationMapper.class);
         NotificationService service = new NotificationServiceImpl(notificationMapper);
         when(notificationMapper.existsNotification(1L, 10L)).thenReturn(1);
-        when(notificationMapper.deleteNotification(1L, 10L)).thenReturn(1);
+        when(notificationMapper.updateNotificationRead(1L, 10L)).thenReturn(1);
+        when(notificationMapper.countUnreadNotifications(1L)).thenReturn(2);
 
-        service.markAsRead(1L, 10L);
+        NotificationReadResponseDTO response = service.markAsRead(1L, 10L);
 
-        verify(notificationMapper).deleteNotification(1L, 10L);
+        assertEquals(10L, response.getNoticeId());
+        assertEquals(true, response.getIsRead());
+        assertEquals(2, response.getUnreadCount());
+        verify(notificationMapper).updateNotificationRead(1L, 10L);
+        verify(notificationMapper, never()).deleteNotification(1L, 10L);
     }
 
     @Test
@@ -71,6 +80,69 @@ class NotificationServiceImplTest {
         );
 
         assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void markAllAsReadUpdatesUnreadNotifications() {
+        NotificationMapper notificationMapper = mock(NotificationMapper.class);
+        NotificationService service = new NotificationServiceImpl(notificationMapper);
+        when(notificationMapper.updateAllNotificationsRead(1L)).thenReturn(3);
+        when(notificationMapper.countUnreadNotifications(1L)).thenReturn(0);
+
+        NotificationReadAllResponseDTO response = service.markAllAsRead(1L);
+
+        assertEquals(3, response.getUpdatedCount());
+        assertEquals(0, response.getUnreadCount());
+        verify(notificationMapper).updateAllNotificationsRead(1L);
+    }
+
+    @Test
+    void deleteNotificationDeletesOnlyAuthenticatedUsersNotification() {
+        NotificationMapper notificationMapper = mock(NotificationMapper.class);
+        NotificationService service = new NotificationServiceImpl(notificationMapper);
+        when(notificationMapper.existsNotification(1L, 10L)).thenReturn(1);
+        when(notificationMapper.deleteNotification(1L, 10L)).thenReturn(1);
+        when(notificationMapper.countUnreadNotifications(1L)).thenReturn(1);
+
+        NotificationDeleteResponseDTO response = service.deleteNotification(1L, 10L);
+
+        assertEquals(10L, response.getNoticeId());
+        assertEquals(1, response.getUnreadCount());
+        verify(notificationMapper).deleteNotification(1L, 10L);
+    }
+
+    @Test
+    void deleteNotificationsDeduplicatesIdsBeforeDeleting() {
+        NotificationMapper notificationMapper = mock(NotificationMapper.class);
+        NotificationService service = new NotificationServiceImpl(notificationMapper);
+        NotificationDeleteBatchRequestDTO request = NotificationDeleteBatchRequestDTO.builder()
+                .noticeIds(List.of(1L, 2L, 2L, 3L))
+                .build();
+        when(notificationMapper.deleteNotifications(1L, List.of(1L, 2L, 3L))).thenReturn(3);
+        when(notificationMapper.countUnreadNotifications(1L)).thenReturn(0);
+
+        NotificationDeleteBatchResponseDTO response = service.deleteNotifications(1L, request);
+
+        assertEquals(3, response.getDeletedCount());
+        assertEquals(0, response.getUnreadCount());
+        verify(notificationMapper).deleteNotifications(1L, List.of(1L, 2L, 3L));
+    }
+
+    @Test
+    void deleteNotificationsRejectsEmptyIds() {
+        NotificationMapper notificationMapper = mock(NotificationMapper.class);
+        NotificationService service = new NotificationServiceImpl(notificationMapper);
+        NotificationDeleteBatchRequestDTO request = NotificationDeleteBatchRequestDTO.builder()
+                .noticeIds(Collections.emptyList())
+                .build();
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                () -> service.deleteNotifications(1L, request)
+        );
+
+        assertEquals(ErrorCode.INVALID_INPUT_VALUE, exception.getErrorCode());
+        verify(notificationMapper, never()).deleteNotifications(any(), any());
     }
 
     @Test
@@ -129,7 +201,7 @@ class NotificationServiceImplTest {
         NotificationService service = new NotificationServiceImpl(notificationMapper);
         NotificationCreateRequestDTO request = NotificationCreateRequestDTO.builder()
                 .userId(1L)
-                .type("TOO_LONG_TYPE")
+                .type("TOO_LONG_NOTIFICATION_TYPE_NAME_OVER_FIFTY_CHARACTERS")
                 .title("목표 변경")
                 .content("목표가 변경되었습니다.")
                 .build();
@@ -162,19 +234,6 @@ class NotificationServiceImplTest {
                 .type("GOAL")
                 .title("목표 변경")
                 .content("목표가 변경되었습니다.")
-                .build();
-    }
-
-    @SuppressWarnings("unused")
-    private NotificationResponseDTO notification() {
-        return NotificationResponseDTO.builder()
-                .id(1L)
-                .userId(1L)
-                .type("GOAL")
-                .title("목표 변경")
-                .content("목표가 변경되었습니다.")
-                .isRead(false)
-                .createdAt(LocalDateTime.of(2026, 7, 31, 10, 30))
                 .build();
     }
 }

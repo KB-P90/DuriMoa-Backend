@@ -92,15 +92,33 @@
           AND user_id = #{userId}
     </select>
 
+    <update id="updateNotificationRead">
+        UPDATE notification
+        SET is_read = TRUE
+        WHERE id = #{notificationId}
+          AND user_id = #{userId}
+    </update>
+
+    <update id="updateAllNotificationsRead">
+        UPDATE notification
+        SET is_read = TRUE
+        WHERE user_id = #{userId}
+          AND is_read = FALSE
+    </update>
+
     <delete id="deleteNotification">
         DELETE FROM notification
         WHERE id = #{notificationId}
           AND user_id = #{userId}
     </delete>
 
-    <delete id="deleteAllNotifications">
+    <delete id="deleteNotifications">
         DELETE FROM notification
         WHERE user_id = #{userId}
+          AND id IN
+        <foreach collection="notificationIds" item="notificationId" open="(" separator="," close=")">
+            #{notificationId}
+        </foreach>
     </delete>
 
     <select id="selectNotificationSettingsByUserId"

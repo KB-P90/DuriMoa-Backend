@@ -3,6 +3,9 @@ package com.project.domain.notification.controller;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
+import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
+import com.project.domain.notification.dto.NotificationDeleteBatchResponseDTO;
+import com.project.domain.notification.dto.NotificationDeleteResponseDTO;
 import com.project.domain.notification.dto.NotificationListResponseDTO;
 import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
@@ -10,13 +13,16 @@ import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import com.project.domain.notification.service.NotificationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,7 +36,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    @ApiOperation(value = "내 알림 목록 조회", notes = "인증 사용자의 알림 목록을 최신순으로 조회합니다.")
+    @ApiOperation(value = "알림 목록 조회", notes = "인증 사용자의 알림 목록을 최신순으로 조회합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<NotificationListResponseDTO>> getNotifications(
             @ApiIgnore @AuthenticationPrincipal Long userId,
@@ -57,8 +63,8 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success("읽지 않은 알림 개수 조회에 성공했습니다.", response));
     }
 
-    @ApiOperation(value = "알림 읽음 처리", notes = "인증 사용자의 특정 알림을 읽음 상태로 변경합니다.")
-    @DeleteMapping("/{noticeId}")
+    @ApiOperation(value = "개별 알림 읽음 처리", notes = "인증 사용자의 특정 알림을 읽음 상태로 변경합니다.")
+    @PatchMapping("/{noticeId}/read")
     public ResponseEntity<ApiResponse<NotificationReadResponseDTO>> markAsRead(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication,
@@ -67,11 +73,11 @@ public class NotificationController {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         NotificationReadResponseDTO response =
                 notificationService.markAsRead(authenticatedUserId, noticeId);
-        return ResponseEntity.ok(ApiResponse.success("알림을 삭제했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("알림을 읽음 처리했습니다.", response));
     }
 
     @ApiOperation(value = "전체 알림 읽음 처리", notes = "인증 사용자의 모든 읽지 않은 알림을 읽음 상태로 변경합니다.")
-    @DeleteMapping
+    @PatchMapping("/read-all")
     public ResponseEntity<ApiResponse<NotificationReadAllResponseDTO>> markAllAsRead(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication
@@ -79,7 +85,33 @@ public class NotificationController {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
         NotificationReadAllResponseDTO response =
                 notificationService.markAllAsRead(authenticatedUserId);
-        return ResponseEntity.ok(ApiResponse.success("모든 알림을 삭제했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("모든 알림을 읽음 처리했습니다.", response));
+    }
+
+    @ApiOperation(value = "개별 알림 삭제", notes = "인증 사용자의 특정 알림을 삭제합니다.")
+    @DeleteMapping("/{noticeId}")
+    public ResponseEntity<ApiResponse<NotificationDeleteResponseDTO>> deleteNotification(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication,
+            @PathVariable("noticeId") Long noticeId
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        NotificationDeleteResponseDTO response =
+                notificationService.deleteNotification(authenticatedUserId, noticeId);
+        return ResponseEntity.ok(ApiResponse.success("알림을 삭제했습니다.", response));
+    }
+
+    @ApiOperation(value = "선택 알림 삭제", notes = "인증 사용자의 선택된 알림들을 삭제합니다.")
+    @DeleteMapping("/batch")
+    public ResponseEntity<ApiResponse<NotificationDeleteBatchResponseDTO>> deleteNotifications(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication,
+            @Valid @RequestBody NotificationDeleteBatchRequestDTO request
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        NotificationDeleteBatchResponseDTO response =
+                notificationService.deleteNotifications(authenticatedUserId, request);
+        return ResponseEntity.ok(ApiResponse.success("선택한 알림을 삭제했습니다.", response));
     }
 
     private Long resolveAuthenticatedUserId(Long userId, Authentication authentication) {
