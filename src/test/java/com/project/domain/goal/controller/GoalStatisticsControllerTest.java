@@ -8,8 +8,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.domain.goal.dto.GoalAllRegionsEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetTypeEstimateResponseDTO;
+import com.project.domain.goal.dto.GoalRegionEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.service.GoalStatisticsService;
 import java.nio.charset.StandardCharsets;
@@ -113,6 +115,37 @@ class GoalStatisticsControllerTest {
         assertEquals("알뜰형", response.at("/data/estimates/0/type").asText());
         assertEquals(23_200_000L, response.at("/data/estimates/0/totalAmount").asLong());
         assertEquals(35_000_000L, response.at("/data/estimates/2/totalAmount").asLong());
+    }
+
+    @Test
+    void getAllRegionsGoalBudgetEstimateReturnsCommonResponse() throws Exception {
+        GoalAllRegionsEstimateResponseDTO estimate = GoalAllRegionsEstimateResponseDTO.builder()
+                .regions(Arrays.asList(
+                        GoalRegionEstimateResponseDTO.builder()
+                                .region("서울")
+                                .totalAmount(8_690_000L)
+                                .build(),
+                        GoalRegionEstimateResponseDTO.builder()
+                                .region("부산")
+                                .totalAmount(5_300_000L)
+                                .build()
+                ))
+                .build();
+        when(goalStatisticsService.findAllRegionsGoalBudgetEstimate()).thenReturn(estimate);
+
+        MvcResult result = mockMvc.perform(get("/api/goal/stat/all-regions"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals(true, response.get("success").asBoolean());
+        assertEquals(
+                "주요 지역 예상 결혼 예산 조회에 성공했습니다.",
+                response.get("message").asText()
+        );
+        assertEquals("서울", response.at("/data/regions/0/region").asText());
+        assertEquals(8_690_000L, response.at("/data/regions/0/totalAmount").asLong());
+        assertEquals("부산", response.at("/data/regions/1/region").asText());
     }
 
     private JsonNode readResponse(MvcResult result) throws Exception {

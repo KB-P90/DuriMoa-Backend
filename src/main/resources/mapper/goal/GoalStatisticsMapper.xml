@@ -48,6 +48,28 @@
           </foreach>
     </select>
 
+    <select id="selectGoalStatisticsForAllRegionsEstimate"
+            resultMap="GoalStatisticsResultMap">
+        SELECT
+            id,
+            region,
+            category,
+            high_10,
+            high_25,
+            mid_50,
+            low_25,
+            low_10
+        FROM wedding_statistics
+        WHERE region IN
+        <foreach collection="regions" item="region" open="(" separator="," close=")">
+            #{region}
+        </foreach>
+          AND category IN
+        <foreach collection="categories" item="category" open="(" separator="," close=")">
+            #{category}
+        </foreach>
+    </select>
+
     <insert id="upsertGoalStatistics">
         INSERT INTO wedding_statistics (
             region,

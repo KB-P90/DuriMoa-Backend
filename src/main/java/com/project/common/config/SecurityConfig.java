@@ -59,7 +59,8 @@ public class SecurityConfig {
                 .antMatchers(
                         HttpMethod.GET,
                         "/api/goal/stat",
-                        "/api/goal/stat/estimate")
+                        "/api/goal/stat/estimate",
+                        "/api/goal/stat/all-regions")
                     .permitAll()
                 .antMatchers("/api/notifications/**", "/api/notification-settings/**")
                     .authenticated()
