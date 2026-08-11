@@ -82,7 +82,7 @@ class ProgressServiceImplTest {
         stubConnectedCoupleAndGoal(goalMonth);
         when(progressMapper.findTotalWeddingExpense(anyList(), anyList())).thenReturn(2_000_000L);
         when(progressMapper.findFirstWeddingExpenseDate(anyList(), anyList()))
-                .thenReturn(firstExpenseMonth.atDay(15).atStartOfDay());
+                .thenReturn(firstExpenseMonth.atDay(15));
         when(progressMapper.findMonthlyWeddingExpenses(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(List.of(new MonthlyExpenseDTO(firstExpenseMonth.toString(), 2_000_000L)));

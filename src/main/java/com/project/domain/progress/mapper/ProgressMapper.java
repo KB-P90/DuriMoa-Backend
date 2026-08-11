@@ -5,6 +5,7 @@ import com.project.domain.progress.dto.CategoryExpenseDTO;
 import com.project.domain.progress.dto.GoalItemSourceDTO;
 import com.project.domain.progress.dto.MemberSourceDTO;
 import com.project.domain.progress.dto.MonthlyExpenseDTO;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -42,7 +43,7 @@ public interface ProgressMapper {
             @Param("categories") List<String> categories
     );
 
-    LocalDateTime findFirstWeddingExpenseDate(
+    LocalDate findFirstWeddingExpenseDate(
             @Param("userIds") List<Long> userIds,
             @Param("categories") List<String> categories
     );

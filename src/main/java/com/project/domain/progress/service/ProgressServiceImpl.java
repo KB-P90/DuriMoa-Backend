@@ -22,6 +22,7 @@ import com.project.domain.progress.dto.ProgressResponseDTO.PersonalProgressDTO;
 import com.project.domain.progress.mapper.ProgressMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -246,7 +247,7 @@ public class ProgressServiceImpl implements ProgressService {
             List<String> weddingCategoryCodes,
             Integer overallProgressRate
     ) {
-        LocalDateTime firstExpenseDate = progressMapper.findFirstWeddingExpenseDate(
+        LocalDate firstExpenseDate = progressMapper.findFirstWeddingExpenseDate(
                 memberIds,
                 weddingCategoryCodes
         );
@@ -348,7 +349,7 @@ public class ProgressServiceImpl implements ProgressService {
     }
 
     private YearMonth resolveStartMonth(
-            LocalDateTime firstExpenseDate,
+            LocalDate firstExpenseDate,
             LocalDateTime goalCreatedAt
     ) {
         if (firstExpenseDate == null && goalCreatedAt == null) {

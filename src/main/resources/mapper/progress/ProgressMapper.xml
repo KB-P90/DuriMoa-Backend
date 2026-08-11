@@ -104,7 +104,7 @@
         </foreach>
     </select>
 
-    <select id="findFirstWeddingExpenseDate" resultType="java.time.LocalDateTime">
+    <select id="findFirstWeddingExpenseDate" resultType="java.time.LocalDate">
         SELECT MIN(sr.record_date)
         FROM service_record sr
         WHERE sr.user_id IN
