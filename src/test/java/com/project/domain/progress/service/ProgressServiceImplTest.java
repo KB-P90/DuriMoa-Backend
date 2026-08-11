@@ -76,13 +76,16 @@ class ProgressServiceImplTest {
     }
 
     @Test
-    void getsMonthlyProgressFromGoalCreationMonth() {
-        YearMonth startMonth = YearMonth.now().minusMonths(2);
-        stubConnectedCoupleAndGoal(startMonth);
+    void getsMonthlyProgressFromEarliestExpenseMonth() {
+        YearMonth goalMonth = YearMonth.now();
+        YearMonth firstExpenseMonth = goalMonth.minusMonths(2);
+        stubConnectedCoupleAndGoal(goalMonth);
         when(progressMapper.findTotalWeddingExpense(anyList(), anyList())).thenReturn(2_000_000L);
+        when(progressMapper.findFirstWeddingExpenseDate(anyList(), anyList()))
+                .thenReturn(firstExpenseMonth.atDay(15).atStartOfDay());
         when(progressMapper.findMonthlyWeddingExpenses(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(List.of(new MonthlyExpenseDTO(YearMonth.now().toString(), 2_000_000L)));
+                .thenReturn(List.of(new MonthlyExpenseDTO(firstExpenseMonth.toString(), 2_000_000L)));
 
         MonthlyProgressResponseDTO result = progressService.getMonthlyProgress(USER_ID);
 
@@ -90,7 +93,9 @@ class ProgressServiceImplTest {
         assertEquals(3, result.getMonths().size());
         assertEquals(YearMonth.now().toString(), result.getMonths().get(0).getYearMonth());
         assertEquals(2_000_000L, result.getMonths().get(0).getCumulativeExpenseAmount());
-        assertEquals(0L, result.getMonths().get(1).getExpenseAmount());
+        assertEquals(2_000_000L, result.getMonths().get(2).getExpenseAmount());
+        verify(progressMapper).findMonthlyWeddingExpenses(
+                anyList(), anyList(), eq(firstExpenseMonth.atDay(1).atStartOfDay()), any(LocalDateTime.class));
     }
 
     @Test

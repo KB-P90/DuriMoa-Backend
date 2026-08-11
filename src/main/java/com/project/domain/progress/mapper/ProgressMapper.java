@@ -42,6 +42,11 @@ public interface ProgressMapper {
             @Param("categories") List<String> categories
     );
 
+    LocalDateTime findFirstWeddingExpenseDate(
+            @Param("userIds") List<Long> userIds,
+            @Param("categories") List<String> categories
+    );
+
     List<CategoryExpenseDTO> findCategoryWeddingExpenses(
             @Param("userIds") List<Long> userIds,
             @Param("categories") List<String> categories
