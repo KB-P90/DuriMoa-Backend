@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .antMatchers(
                         "/api/auth/signup",
                         "/api/auth/login",
+                        "/api/auth/kakao/login",
+                        "/api/auth/kakao/signup",
                         "/api/auth/refresh",
                         "/api/auth/logout",
                         "/swagger-ui.html",

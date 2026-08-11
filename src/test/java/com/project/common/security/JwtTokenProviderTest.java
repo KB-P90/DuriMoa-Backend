@@ -14,6 +14,7 @@ class JwtTokenProviderTest {
 
     private static final Long ACCESS_TOKEN_EXPIRATION = 3600000L;
     private static final Long REFRESH_TOKEN_EXPIRATION = 1209600000L;
+    private static final Long KAKAO_SIGNUP_TOKEN_EXPIRATION = 600000L;
     private static final String SECRET =
             Encoders.BASE64.encode(Keys.secretKeyFor(
                     io.jsonwebtoken.SignatureAlgorithm.HS256).getEncoded());
@@ -45,6 +46,24 @@ class JwtTokenProviderTest {
     }
 
     @Test
+    void createsAndParsesKakaoSignupToken() {
+        JwtTokenProvider tokenProvider = createTokenProvider(ACCESS_TOKEN_EXPIRATION);
+
+        String token = tokenProvider.createKakaoSignupToken(
+                "123456789",
+                "카카오 사용자",
+                "https://example.com/profile.png");
+
+        assertTrue(tokenProvider.validateKakaoSignupToken(token));
+        assertFalse(tokenProvider.validateAccessToken(token));
+        assertEquals("123456789", tokenProvider.getKakaoProviderId(token));
+        assertEquals("카카오 사용자", tokenProvider.getKakaoName(token));
+        assertEquals(
+                "https://example.com/profile.png",
+                tokenProvider.getKakaoProfileImage(token));
+    }
+
+    @Test
     void rejectsExpiredToken() throws InterruptedException {
         JwtTokenProvider tokenProvider = createTokenProvider(1L);
         String token = tokenProvider.createAccessToken(1L, "G");
@@ -67,6 +86,7 @@ class JwtTokenProviderTest {
         return new JwtTokenProvider(
                 SECRET,
                 accessTokenExpiration,
-                REFRESH_TOKEN_EXPIRATION);
+                REFRESH_TOKEN_EXPIRATION,
+                KAKAO_SIGNUP_TOKEN_EXPIRATION);
     }
 }

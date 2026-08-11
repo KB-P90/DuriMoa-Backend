@@ -5,6 +5,10 @@ import com.project.common.security.RefreshTokenCookieProvider;
 import com.project.domain.auth.dto.LoginRequestDTO;
 import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.LoginResultDTO;
+import com.project.domain.auth.dto.KakaoLoginRequestDTO;
+import com.project.domain.auth.dto.KakaoLoginResponseDTO;
+import com.project.domain.auth.dto.KakaoLoginResultDTO;
+import com.project.domain.auth.dto.KakaoSignupRequestDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.dto.TokenRefreshResponseDTO;
@@ -54,6 +58,41 @@ public class AuthController {
                         HttpHeaders.SET_COOKIE,
                         refreshTokenCookieProvider.createCookie(result.getRefreshToken()).toString())
                 .body(ApiResponse.success("로그인이 완료되었습니다.", result.getResponse()));
+    }
+
+    @ApiOperation(
+            value = "카카오 로그인",
+            notes = "카카오 인가 코드를 검증하고 기존 회원 로그인 또는 추가정보 입력용 토큰을 반환합니다.")
+    @PostMapping("/kakao/login")
+    public ResponseEntity<ApiResponse<KakaoLoginResponseDTO>> loginWithKakao(
+            @Valid @RequestBody KakaoLoginRequestDTO request) {
+        KakaoLoginResultDTO result = authService.loginWithKakao(request);
+        ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
+        if (result.getRefreshToken() != null) {
+            responseBuilder.header(
+                    HttpHeaders.SET_COOKIE,
+                    refreshTokenCookieProvider.createCookie(result.getRefreshToken()).toString());
+        }
+        String message = Boolean.TRUE.equals(result.getResponse().getSignupRequired())
+                ? "카카오 인증이 완료되었습니다. 추가정보를 입력해 주세요."
+                : "카카오 로그인이 완료되었습니다.";
+        return responseBuilder.body(ApiResponse.success(message, result.getResponse()));
+    }
+
+    @ApiOperation(
+            value = "카카오 회원가입 완료",
+            notes = "카카오 가입 토큰, 역할 및 약관 동의 정보를 검증한 후 회원가입과 로그인을 완료합니다.")
+    @PostMapping("/kakao/signup")
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> signupWithKakao(
+            @Valid @RequestBody KakaoSignupRequestDTO request) {
+        LoginResultDTO result = authService.signupWithKakao(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        refreshTokenCookieProvider.createCookie(result.getRefreshToken()).toString())
+                .body(ApiResponse.success(
+                        "카카오 회원가입이 완료되었습니다.",
+                        result.getResponse()));
     }
 
     @ApiOperation(
