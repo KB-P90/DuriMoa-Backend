@@ -1,0 +1,5 @@
+# Kakao Login Configuration
+kakao.client-id=
+kakao.client-secret=
+kakao.redirect-uri=http://localhost:5173/auth/kakao/callback
+kakao.signup-token-expiration=600000

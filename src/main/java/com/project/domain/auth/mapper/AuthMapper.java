@@ -22,6 +22,16 @@ public interface AuthMapper {
 
     LoginUserDTO findLoginUserById(@Param("userId") Long userId);
 
+    LoginUserDTO findLoginUserByProviderId(
+            @Param("provider") String provider,
+            @Param("providerId") String providerId);
+
+    Integer insertKakaoUser(
+            @Param("providerId") String providerId,
+            @Param("name") String name,
+            @Param("role") String role,
+            @Param("profileImage") String profileImage);
+
     Integer insertTermsAgreement(
             @Param("userId") Long userId,
             @Param("termsType") String termsType,

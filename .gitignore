@@ -22,3 +22,4 @@ logs/
 database.properties
 codef.properties
 aws.properties
+kakao.properties
