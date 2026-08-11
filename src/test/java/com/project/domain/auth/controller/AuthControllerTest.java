@@ -9,6 +9,8 @@ import com.project.common.security.RefreshTokenCookieProvider;
 import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserResponseDTO;
+import com.project.domain.auth.dto.KakaoLoginResponseDTO;
+import com.project.domain.auth.dto.KakaoLoginResultDTO;
 import com.project.domain.auth.dto.TokenRefreshResponseDTO;
 import com.project.domain.auth.dto.TokenRefreshResultDTO;
 import com.project.domain.auth.service.AuthService;
@@ -136,6 +138,88 @@ class AuthControllerTest {
         assertEquals(
                 "Bearer newAccessToken",
                 response.at("/data/accessToken").asText());
+        assertTrue(result.getResponse().getHeader("Set-Cookie").contains("HttpOnly"));
+    }
+
+    @Test
+    void kakaoLoginReturnsSignupTokenForNewUser() throws Exception {
+        KakaoLoginResponseDTO response = KakaoLoginResponseDTO.signupRequired(
+                "signupToken",
+                "카카오 사용자",
+                "https://example.com/profile.png");
+        when(authService.loginWithKakao(any()))
+                .thenReturn(new KakaoLoginResultDTO(response, null));
+
+        MvcResult result = mockMvc.perform(post("/api/auth/kakao/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"authorizationCode\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode body = readResponse(result);
+
+        assertTrue(body.at("/data/signupRequired").asBoolean());
+        assertEquals("signupToken", body.at("/data/signupToken").asText());
+        assertEquals("카카오 사용자", body.at("/data/name").asText());
+        assertEquals(null, result.getResponse().getHeader("Set-Cookie"));
+    }
+
+    @Test
+    void kakaoLoginSetsRefreshTokenCookieForExistingUser() throws Exception {
+        LoginUserResponseDTO user = new LoginUserResponseDTO(
+                7L, null, "카카오 사용자", "B",
+                "https://example.com/profile.png", "KAKAO");
+        KakaoLoginResponseDTO response = KakaoLoginResponseDTO.loggedIn(
+                "Bearer accessToken",
+                user);
+        when(authService.loginWithKakao(any()))
+                .thenReturn(new KakaoLoginResultDTO(response, "refreshToken"));
+        when(refreshTokenCookieProvider.createCookie("refreshToken")).thenReturn(
+                ResponseCookie.from("refreshToken", "refreshToken")
+                        .httpOnly(true)
+                        .path("/api/auth")
+                        .build());
+
+        MvcResult result = mockMvc.perform(post("/api/auth/kakao/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"authorizationCode\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode body = readResponse(result);
+
+        assertEquals(false, body.at("/data/signupRequired").asBoolean());
+        assertEquals("Bearer accessToken", body.at("/data/accessToken").asText());
+        assertTrue(result.getResponse().getHeader("Set-Cookie").contains("HttpOnly"));
+    }
+
+    @Test
+    void kakaoSignupReturnsServiceTokensAndRefreshCookie() throws Exception {
+        LoginUserResponseDTO user = new LoginUserResponseDTO(
+                8L, null, "카카오 사용자", "G",
+                "https://example.com/profile.png", "KAKAO");
+        when(authService.signupWithKakao(any())).thenReturn(new LoginResultDTO(
+                new LoginResponseDTO("Bearer accessToken", user),
+                "refreshToken"));
+        when(refreshTokenCookieProvider.createCookie("refreshToken")).thenReturn(
+                ResponseCookie.from("refreshToken", "refreshToken")
+                        .httpOnly(true)
+                        .path("/api/auth")
+                        .build());
+
+        MvcResult result = mockMvc.perform(post("/api/auth/kakao/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"signupToken\":\"signupToken\","
+                                + "\"role\":\"G\","
+                                + "\"serviceTermsAgreed\":true,"
+                                + "\"privacyTermsAgreed\":true,"
+                                + "\"marketingTermsAgreed\":false"
+                                + "}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode body = readResponse(result);
+
+        assertEquals("Bearer accessToken", body.at("/data/accessToken").asText());
+        assertEquals("KAKAO", body.at("/data/user/provider").asText());
         assertTrue(result.getResponse().getHeader("Set-Cookie").contains("HttpOnly"));
     }
 

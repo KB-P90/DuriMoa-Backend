@@ -2,6 +2,11 @@ package com.project.domain.auth.service;
 
 import com.project.common.security.JwtTokenProvider;
 import com.project.common.exception.CustomException;
+import com.project.domain.auth.client.KakaoAuthClient;
+import com.project.domain.auth.dto.KakaoLoginRequestDTO;
+import com.project.domain.auth.dto.KakaoLoginResultDTO;
+import com.project.domain.auth.dto.KakaoSignupRequestDTO;
+import com.project.domain.auth.dto.KakaoUserInfoDTO;
 import com.project.domain.auth.dto.LoginRequestDTO;
 import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
@@ -48,6 +53,9 @@ class AuthServiceImplTest {
     @Mock
     private CoupleInvitationService coupleInvitationService;
 
+    @Mock
+    private KakaoAuthClient kakaoAuthClient;
+
     private AuthServiceImpl authService;
 
     @BeforeEach
@@ -57,7 +65,8 @@ class AuthServiceImplTest {
                 passwordEncoder,
                 jwtTokenProvider,
                 refreshTokenRepository,
-                coupleInvitationService);
+                coupleInvitationService,
+                kakaoAuthClient);
     }
 
     @Test
@@ -174,6 +183,111 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void signupRejectsMissingPhoneBeforeDatabaseAccess() throws Exception {
+        SignupRequestDTO request = createRequest(
+                null,
+                "password123",
+                "password123",
+                "홍길동",
+                "G");
+
+        assertThrows(CustomException.class, () -> authService.signup(request));
+        verifyNoInteractions(authMapper);
+    }
+
+    @Test
+    void kakaoLoginReturnsSignupTokenForNewUser() throws Exception {
+        KakaoLoginRequestDTO request = new KakaoLoginRequestDTO();
+        setField(request, "code", "authorizationCode");
+        KakaoUserInfoDTO kakaoUser = new KakaoUserInfoDTO(
+                123456789L,
+                "카카오 사용자",
+                "https://example.com/profile.png");
+        when(kakaoAuthClient.getUserInfo("authorizationCode")).thenReturn(kakaoUser);
+        when(authMapper.findLoginUserByProviderId("KAKAO", "123456789")).thenReturn(null);
+        when(jwtTokenProvider.createKakaoSignupToken(
+                "123456789",
+                "카카오 사용자",
+                "https://example.com/profile.png"))
+                .thenReturn("signupToken");
+
+        KakaoLoginResultDTO result = authService.loginWithKakao(request);
+
+        assertEquals(true, result.getResponse().getSignupRequired());
+        assertEquals("signupToken", result.getResponse().getSignupToken());
+        assertEquals("카카오 사용자", result.getResponse().getName());
+        assertEquals(null, result.getRefreshToken());
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void kakaoLoginIssuesServiceTokensForExistingUser() throws Exception {
+        KakaoLoginRequestDTO request = new KakaoLoginRequestDTO();
+        setField(request, "code", "authorizationCode");
+        KakaoUserInfoDTO kakaoUser = new KakaoUserInfoDTO(
+                123456789L,
+                "카카오 사용자",
+                "https://example.com/profile.png");
+        LoginUserDTO loginUser = new LoginUserDTO(
+                7L, null, null, "카카오 사용자", "B",
+                "https://example.com/profile.png", "KAKAO");
+        when(kakaoAuthClient.getUserInfo("authorizationCode")).thenReturn(kakaoUser);
+        when(authMapper.findLoginUserByProviderId("KAKAO", "123456789"))
+                .thenReturn(loginUser);
+        when(jwtTokenProvider.createAccessToken(7L, "B")).thenReturn("accessToken");
+        when(jwtTokenProvider.createRefreshToken(7L)).thenReturn("refreshToken");
+        when(jwtTokenProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(14));
+
+        KakaoLoginResultDTO result = authService.loginWithKakao(request);
+
+        assertEquals(false, result.getResponse().getSignupRequired());
+        assertEquals("Bearer accessToken", result.getResponse().getAccessToken());
+        assertEquals("refreshToken", result.getRefreshToken());
+        verify(refreshTokenRepository).save(7L, "refreshToken", Duration.ofDays(14));
+    }
+
+    @Test
+    void kakaoSignupStoresUserTermsAndIssuesServiceTokens() throws Exception {
+        KakaoSignupRequestDTO request = createKakaoSignupRequest(true, true, false);
+        LoginUserDTO loginUser = new LoginUserDTO(
+                8L, null, null, "카카오 사용자", "G",
+                "https://example.com/profile.png", "KAKAO");
+        when(jwtTokenProvider.validateKakaoSignupToken("signupToken")).thenReturn(true);
+        when(jwtTokenProvider.getKakaoProviderId("signupToken")).thenReturn("123456789");
+        when(jwtTokenProvider.getKakaoName("signupToken")).thenReturn("카카오 사용자");
+        when(jwtTokenProvider.getKakaoProfileImage("signupToken"))
+                .thenReturn("https://example.com/profile.png");
+        when(authMapper.findLoginUserByProviderId("KAKAO", "123456789"))
+                .thenReturn(null, loginUser);
+        when(jwtTokenProvider.createAccessToken(8L, "G")).thenReturn("accessToken");
+        when(jwtTokenProvider.createRefreshToken(8L)).thenReturn("refreshToken");
+        when(jwtTokenProvider.getRefreshTokenExpiration()).thenReturn(Duration.ofDays(14));
+
+        LoginResultDTO result = authService.signupWithKakao(request);
+
+        verify(authMapper).insertKakaoUser(
+                "123456789",
+                "카카오 사용자",
+                "G",
+                "https://example.com/profile.png");
+        verify(authMapper).insertTermsAgreement(8L, "SERVICE", true);
+        verify(authMapper).insertTermsAgreement(8L, "PRIVACY", true);
+        verify(authMapper).insertTermsAgreement(8L, "MARKETING", false);
+        verify(coupleInvitationService).createInviteCode(8L);
+        assertEquals("Bearer accessToken", result.getResponse().getAccessToken());
+    }
+
+    @Test
+    void kakaoSignupRejectsMissingRequiredTerms() throws Exception {
+        KakaoSignupRequestDTO request = createKakaoSignupRequest(false, true, false);
+
+        assertThrows(CustomException.class, () -> authService.signupWithKakao(request));
+
+        verifyNoInteractions(kakaoAuthClient);
+        verify(jwtTokenProvider, never()).validateKakaoSignupToken(anyString());
+    }
+
+    @Test
     void refreshRotatesTokenAndReturnsNewAccessToken() {
         LoginUserDTO loginUser = new LoginUserDTO(
                 1L, null, null, null, "G", null, null);
@@ -285,6 +399,19 @@ class AuthServiceImplTest {
         LoginRequestDTO request = new LoginRequestDTO();
         setField(request, "phone", phone);
         setField(request, "password", password);
+        return request;
+    }
+
+    private KakaoSignupRequestDTO createKakaoSignupRequest(
+            Boolean serviceTermsAgreed,
+            Boolean privacyTermsAgreed,
+            Boolean marketingTermsAgreed) throws Exception {
+        KakaoSignupRequestDTO request = new KakaoSignupRequestDTO();
+        setField(request, "signupToken", "signupToken");
+        setField(request, "role", "G");
+        setField(request, "serviceTermsAgreed", serviceTermsAgreed);
+        setField(request, "privacyTermsAgreed", privacyTermsAgreed);
+        setField(request, "marketingTermsAgreed", marketingTermsAgreed);
         return request;
     }
 

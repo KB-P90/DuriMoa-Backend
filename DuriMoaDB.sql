@@ -34,12 +34,13 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE `user`
 (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '사용자 ID',
-    `phone`         VARCHAR(20)  NOT NULL COMMENT '핸드폰 번호',
+    `phone`         VARCHAR(20)  NULL COMMENT '핸드폰 번호; 소셜 로그인 사용자는 NULL 가능',
     `password`      VARCHAR(255) NULL COMMENT '암호화된 비밀번호; 소셜 로그인 사용자는 NULL 가능',
     `name`          VARCHAR(50)  NOT NULL COMMENT '이름',
     `role`          VARCHAR(10)  NOT NULL COMMENT '역할: B(신부), G(신랑)',
     `profile_image` VARCHAR(500) NULL COMMENT '프로필 이미지 S3 URL',
     `provider`      VARCHAR(10)  NOT NULL DEFAULT 'LOCAL' COMMENT 'LOCAL, KAKAO, NAVER',
+    `provider_id`   VARCHAR(255) NULL COMMENT '소셜 로그인 제공자 사용자 ID',
     `income`        BIGINT       NOT NULL DEFAULT 0 COMMENT '연소득',
     `asset`         BIGINT       NOT NULL DEFAULT 0 COMMENT '총자산',
     `connected_id`  VARCHAR(255) NULL COMMENT '커넥티드 ID',
@@ -48,7 +49,19 @@ CREATE TABLE `user`
     `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_phone` (`phone`)
+    UNIQUE KEY `uk_user_phone` (`phone`),
+    UNIQUE KEY `uk_user_provider_id` (`provider`, `provider_id`),
+    CONSTRAINT `chk_user_provider_fields`
+        CHECK (
+            (`provider` = 'LOCAL'
+                AND `phone` IS NOT NULL
+                AND `password` IS NOT NULL
+                AND `provider_id` IS NULL)
+            OR
+            (`provider` <> 'LOCAL'
+                AND `password` IS NULL
+                AND `provider_id` IS NOT NULL)
+        )
 );
 
 -- 약관 동의

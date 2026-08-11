@@ -87,6 +87,41 @@
           AND is_deleted = FALSE
     </select>
 
+    <select id="findLoginUserByProviderId" resultMap="loginUserMap">
+        SELECT
+            id AS user_id,
+            phone,
+            password,
+            name,
+            role,
+            profile_image,
+            provider
+        FROM `user`
+        WHERE provider = #{provider}
+          AND provider_id = #{providerId}
+          AND is_deleted = FALSE
+    </select>
+
+    <insert id="insertKakaoUser">
+        INSERT INTO `user` (
+            phone,
+            password,
+            name,
+            role,
+            profile_image,
+            provider,
+            provider_id
+        ) VALUES (
+            NULL,
+            NULL,
+            #{name},
+            #{role},
+            #{profileImage},
+            'KAKAO',
+            #{providerId}
+        )
+    </insert>
+
     <insert id="insertTermsAgreement">
         INSERT INTO terms_agreement (
             user_id,

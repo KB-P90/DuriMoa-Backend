@@ -8,6 +8,12 @@ import com.project.domain.auth.dto.LoginResponseDTO;
 import com.project.domain.auth.dto.LoginResultDTO;
 import com.project.domain.auth.dto.LoginUserDTO;
 import com.project.domain.auth.dto.LoginUserResponseDTO;
+import com.project.domain.auth.client.KakaoAuthClient;
+import com.project.domain.auth.dto.KakaoLoginRequestDTO;
+import com.project.domain.auth.dto.KakaoLoginResponseDTO;
+import com.project.domain.auth.dto.KakaoLoginResultDTO;
+import com.project.domain.auth.dto.KakaoSignupRequestDTO;
+import com.project.domain.auth.dto.KakaoUserInfoDTO;
 import com.project.domain.auth.dto.SignupRequestDTO;
 import com.project.domain.auth.dto.SignupResponseDTO;
 import com.project.domain.auth.dto.TokenRefreshResponseDTO;
@@ -28,16 +34,19 @@ public class AuthServiceImpl implements AuthService {
     private static final String SERVICE_TERMS = "SERVICE";
     private static final String PRIVACY_TERMS = "PRIVACY";
     private static final String MARKETING_TERMS = "MARKETING";
+    private static final String KAKAO_PROVIDER = "KAKAO";
 
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CoupleInvitationService coupleInvitationService;
+    private final KakaoAuthClient kakaoAuthClient;
 
     @Override
     @Transactional
     public SignupResponseDTO signup(SignupRequestDTO request) {
+        validateLocalSignupRequest(request);
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT_VALUE,
@@ -90,22 +99,91 @@ public class AuthServiceImpl implements AuthService {
                     "휴대폰 번호 또는 비밀번호가 일치하지 않습니다.");
         }
 
-        String accessToken =
-                jwtTokenProvider.createAccessToken(loginUser.getUserId(), loginUser.getRole());
-        String refreshToken = jwtTokenProvider.createRefreshToken(loginUser.getUserId());
-        refreshTokenRepository.save(
+        return issueLoginTokens(loginUser);
+    }
+
+    @Override
+    @Transactional
+    public KakaoLoginResultDTO loginWithKakao(KakaoLoginRequestDTO request) {
+        KakaoUserInfoDTO kakaoUser = kakaoAuthClient.getUserInfo(request.getCode());
+        String providerId = String.valueOf(kakaoUser.getId());
+        LoginUserDTO loginUser = authMapper.findLoginUserByProviderId(
+                KAKAO_PROVIDER,
+                providerId);
+
+        if (loginUser != null) {
+            LoginResultDTO loginResult = issueLoginTokens(loginUser);
+            return new KakaoLoginResultDTO(
+                    KakaoLoginResponseDTO.loggedIn(
+                            loginResult.getResponse().getAccessToken(),
+                            loginResult.getResponse().getUser()),
+                    loginResult.getRefreshToken());
+        }
+
+        validateKakaoProfile(kakaoUser);
+        String signupToken = jwtTokenProvider.createKakaoSignupToken(
+                providerId,
+                kakaoUser.getName(),
+                kakaoUser.getProfileImage());
+        return new KakaoLoginResultDTO(
+                KakaoLoginResponseDTO.signupRequired(
+                        signupToken,
+                        kakaoUser.getName(),
+                        kakaoUser.getProfileImage()),
+                null);
+    }
+
+    @Override
+    @Transactional
+    public LoginResultDTO signupWithKakao(KakaoSignupRequestDTO request) {
+        validateRequiredTerms(
+                request.getServiceTermsAgreed(),
+                request.getPrivacyTermsAgreed());
+        if (!jwtTokenProvider.validateKakaoSignupToken(request.getSignupToken())) {
+            throw new CustomException(
+                    ErrorCode.UNAUTHORIZED,
+                    "유효하지 않거나 만료된 카카오 가입 토큰입니다.");
+        }
+
+        String providerId = jwtTokenProvider.getKakaoProviderId(request.getSignupToken());
+        String name = jwtTokenProvider.getKakaoName(request.getSignupToken());
+        String profileImage = jwtTokenProvider.getKakaoProfileImage(request.getSignupToken());
+        if (providerId == null || providerId.isBlank() || name == null || name.isBlank()) {
+            throw new CustomException(
+                    ErrorCode.UNAUTHORIZED,
+                    "유효하지 않은 카카오 가입 정보입니다.");
+        }
+        if (authMapper.findLoginUserByProviderId(KAKAO_PROVIDER, providerId) != null) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "이미 가입된 카카오 계정입니다.");
+        }
+
+        try {
+            authMapper.insertKakaoUser(
+                    providerId,
+                    name,
+                    request.getRole(),
+                    profileImage);
+        } catch (DuplicateKeyException exception) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "이미 가입된 카카오 계정입니다.");
+        }
+
+        LoginUserDTO loginUser = authMapper.findLoginUserByProviderId(
+                KAKAO_PROVIDER,
+                providerId);
+        if (loginUser == null) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        saveTermsAgreements(
                 loginUser.getUserId(),
-                refreshToken,
-                jwtTokenProvider.getRefreshTokenExpiration());
-        LoginUserResponseDTO user = new LoginUserResponseDTO(
-                loginUser.getUserId(),
-                loginUser.getPhone(),
-                loginUser.getName(),
-                loginUser.getRole(),
-                loginUser.getProfileImage(),
-                loginUser.getProvider());
-        LoginResponseDTO response = new LoginResponseDTO("Bearer " + accessToken, user);
-        return new LoginResultDTO(response, refreshToken);
+                request.getServiceTermsAgreed(),
+                request.getPrivacyTermsAgreed(),
+                request.getMarketingTermsAgreed());
+        coupleInvitationService.createInviteCode(loginUser.getUserId());
+        return issueLoginTokens(loginUser);
     }
 
     @Override
@@ -154,9 +232,74 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void saveTermsAgreements(Long userId, SignupRequestDTO request) {
-        authMapper.insertTermsAgreement(userId, SERVICE_TERMS, request.getServiceTermsAgreed());
-        authMapper.insertTermsAgreement(userId, PRIVACY_TERMS, request.getPrivacyTermsAgreed());
-        authMapper.insertTermsAgreement(userId, MARKETING_TERMS, request.getMarketingTermsAgreed());
+        saveTermsAgreements(
+                userId,
+                request.getServiceTermsAgreed(),
+                request.getPrivacyTermsAgreed(),
+                request.getMarketingTermsAgreed());
+    }
+
+    private void saveTermsAgreements(
+            Long userId,
+            Boolean serviceTermsAgreed,
+            Boolean privacyTermsAgreed,
+            Boolean marketingTermsAgreed) {
+        authMapper.insertTermsAgreement(userId, SERVICE_TERMS, serviceTermsAgreed);
+        authMapper.insertTermsAgreement(userId, PRIVACY_TERMS, privacyTermsAgreed);
+        authMapper.insertTermsAgreement(userId, MARKETING_TERMS, marketingTermsAgreed);
+    }
+
+    private LoginResultDTO issueLoginTokens(LoginUserDTO loginUser) {
+        String accessToken =
+                jwtTokenProvider.createAccessToken(loginUser.getUserId(), loginUser.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(loginUser.getUserId());
+        refreshTokenRepository.save(
+                loginUser.getUserId(),
+                refreshToken,
+                jwtTokenProvider.getRefreshTokenExpiration());
+        LoginUserResponseDTO user = new LoginUserResponseDTO(
+                loginUser.getUserId(),
+                loginUser.getPhone(),
+                loginUser.getName(),
+                loginUser.getRole(),
+                loginUser.getProfileImage(),
+                loginUser.getProvider());
+        return new LoginResultDTO(
+                new LoginResponseDTO("Bearer " + accessToken, user),
+                refreshToken);
+    }
+
+    private void validateLocalSignupRequest(SignupRequestDTO request) {
+        if (request.getPhone() == null
+                || request.getPhone().isBlank()
+                || request.getPassword() == null
+                || request.getPassword().isBlank()) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "일반 회원가입에는 휴대폰 번호와 비밀번호가 필요합니다.");
+        }
+    }
+
+    private void validateRequiredTerms(
+            Boolean serviceTermsAgreed,
+            Boolean privacyTermsAgreed) {
+        if (!Boolean.TRUE.equals(serviceTermsAgreed)
+                || !Boolean.TRUE.equals(privacyTermsAgreed)) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "필수 약관에 동의해야 회원가입이 가능합니다.");
+        }
+    }
+
+    private void validateKakaoProfile(KakaoUserInfoDTO kakaoUser) {
+        if (kakaoUser.getName() == null
+                || kakaoUser.getName().isBlank()
+                || kakaoUser.getProfileImage() == null
+                || kakaoUser.getProfileImage().isBlank()) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "카카오 이름과 프로필 사진 제공에 동의해야 합니다.");
+        }
     }
 
     private CustomException invalidRefreshTokenException() {
