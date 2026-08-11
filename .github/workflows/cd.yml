@@ -88,6 +88,7 @@ jobs:
             docker run -d \
               --name durimoa-backend \
               --restart unless-stopped \
+              --network durimoa-network \
               -p 8080:8080 \
               durimoa-backend
 
