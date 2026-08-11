@@ -14,7 +14,6 @@ public class ProgressResponseDTO {
 
     private OverallProgressDTO overall;
     private PersonalProgressDTO personal;
-    private MonthlyProgressDTO monthlyProgress;
 
     @Getter
     @Builder
@@ -68,25 +67,4 @@ public class ProgressResponseDTO {
         private Double progressRate;
     }
 
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class MonthlyProgressDTO {
-
-        private Integer overallProgressRate;
-        private List<MonthlyProgressItemDTO> months;
-    }
-
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class MonthlyProgressItemDTO {
-
-        private String yearMonth;
-        private Long expenseAmount;
-        private Long cumulativeExpenseAmount;
-        private Integer progressRate;
-    }
 }

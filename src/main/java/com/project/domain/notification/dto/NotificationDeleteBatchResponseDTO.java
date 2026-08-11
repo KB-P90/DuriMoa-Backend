@@ -1,0 +1,22 @@
+package com.project.domain.notification.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@ApiModel(description = "선택 알림 삭제 응답")
+public class NotificationDeleteBatchResponseDTO {
+
+    @ApiModelProperty(value = "삭제된 알림 개수", example = "3")
+    private Integer deletedCount;
+
+    @ApiModelProperty(value = "전체 읽지 않은 알림 개수", example = "0")
+    private Integer unreadCount;
+}

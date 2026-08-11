@@ -4,6 +4,9 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
+import com.project.domain.notification.dto.NotificationDeleteBatchResponseDTO;
+import com.project.domain.notification.dto.NotificationDeleteResponseDTO;
 import com.project.domain.notification.dto.NotificationListResponseDTO;
 import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
@@ -12,8 +15,11 @@ import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import com.project.domain.notification.mapper.NotificationMapper;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,9 +96,12 @@ public class NotificationServiceImpl implements NotificationService {
         validateNotificationId(notificationId);
         validateNotificationExists(authenticatedUserId, notificationId);
 
-        Integer deletedCount = notificationMapper.deleteNotification(authenticatedUserId, notificationId);
-        if (deletedCount == null || deletedCount != 1) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "삭제할 알림을 찾을 수 없습니다.");
+        Integer updatedCount = notificationMapper.updateNotificationRead(
+                authenticatedUserId,
+                notificationId
+        );
+        if (updatedCount == null || updatedCount != 1) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "읽음 처리할 알림을 찾을 수 없습니다.");
         }
         Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
         return NotificationReadResponseDTO.builder()
@@ -106,10 +115,54 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public NotificationReadAllResponseDTO markAllAsRead(Long authenticatedUserId) {
         validateUserId(authenticatedUserId);
-        Integer updatedCount = notificationMapper.deleteAllNotifications(authenticatedUserId);
+        Integer updatedCount = notificationMapper.updateAllNotificationsRead(authenticatedUserId);
         Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
         return NotificationReadAllResponseDTO.builder()
                 .updatedCount(updatedCount == null ? 0 : updatedCount)
+                .unreadCount(unreadCount == null ? 0 : unreadCount)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public NotificationDeleteResponseDTO deleteNotification(
+            Long authenticatedUserId,
+            Long notificationId
+    ) {
+        validateUserId(authenticatedUserId);
+        validateNotificationId(notificationId);
+        validateNotificationExists(authenticatedUserId, notificationId);
+
+        Integer deletedCount = notificationMapper.deleteNotification(
+                authenticatedUserId,
+                notificationId
+        );
+        if (deletedCount == null || deletedCount != 1) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "삭제할 알림을 찾을 수 없습니다.");
+        }
+        Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
+        return NotificationDeleteResponseDTO.builder()
+                .noticeId(notificationId)
+                .unreadCount(unreadCount == null ? 0 : unreadCount)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public NotificationDeleteBatchResponseDTO deleteNotifications(
+            Long authenticatedUserId,
+            NotificationDeleteBatchRequestDTO request
+    ) {
+        validateUserId(authenticatedUserId);
+        List<Long> notificationIds = resolveNotificationIds(request);
+
+        Integer deletedCount = notificationMapper.deleteNotifications(
+                authenticatedUserId,
+                notificationIds
+        );
+        Integer unreadCount = notificationMapper.countUnreadNotifications(authenticatedUserId);
+        return NotificationDeleteBatchResponseDTO.builder()
+                .deletedCount(deletedCount == null ? 0 : deletedCount)
                 .unreadCount(unreadCount == null ? 0 : unreadCount)
                 .build();
     }
@@ -187,10 +240,24 @@ public class NotificationServiceImpl implements NotificationService {
         if (size <= 0 || size > MAX_SIZE) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT_VALUE,
-                    "size는 1 이상 100 이하이어야 합니다."
+                    "size는 1 이상 100 이하여야 합니다."
             );
         }
         return size;
+    }
+
+    private List<Long> resolveNotificationIds(NotificationDeleteBatchRequestDTO request) {
+        if (request == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "삭제할 알림 정보가 필요합니다.");
+        }
+        if (request.getNoticeIds() == null || request.getNoticeIds().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "삭제할 알림 ID 목록은 필수입니다.");
+        }
+        Set<Long> uniqueNotificationIds = new LinkedHashSet<>(request.getNoticeIds());
+        for (Long notificationId : uniqueNotificationIds) {
+            validateNotificationId(notificationId);
+        }
+        return new ArrayList<>(uniqueNotificationIds);
     }
 
     private void validateCreateRequest(NotificationCreateRequestDTO request) {
@@ -234,7 +301,7 @@ public class NotificationServiceImpl implements NotificationService {
     private void validateNotificationExists(Long userId, Long notificationId) {
         Integer exists = notificationMapper.existsNotification(userId, notificationId);
         if (exists == null || exists != 1) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "읽음 처리할 알림을 찾을 수 없습니다.");
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "알림을 찾을 수 없습니다.");
         }
     }
 
