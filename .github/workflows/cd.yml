@@ -34,6 +34,7 @@ jobs:
           DATABASE_PROPERTIES: ${{ secrets.DATABASE_PROPERTIES }}
           CODEF_PROPERTIES: ${{ secrets.CODEF_PROPERTIES }}
           AWS_PROPERTIES: ${{ secrets.AWS_PROPERTIES }}
+          KAKAO_PROPERTIES: ${{ secrets.KAKAO_PROPERTIES }}
         run: |
           printf '%s' "$DATABASE_PROPERTIES" > src/main/resources/database.properties
           printf '%s' "$CODEF_PROPERTIES" > src/main/resources/codef.properties
