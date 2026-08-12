@@ -35,8 +35,8 @@ public class MonthlyController {
     private final MonthlyService monthlyService;
 
     @ApiOperation(
-            value = "카테고리별 지출 조회",
-            notes = "인증 사용자 기준, 연도, 월을 입력받아 해당 월의 카테고리별 지출 금액, 전월 대비 비율, 지출 비율을 조회합니다."
+            value = "월별 카테고리별 지출 및 피드백 조회",
+            notes = "인증 사용자 기준, 연도, 월을 입력받아 해당 월의 본인 및 상대방의 카테고리별 지출 금액, 소득 대비 지출 비율 및 지출 피드백을 조회합니다."
     )
     @GetMapping("/monthly")
     public ResponseEntity<ApiResponse<MonthlyExpenseResponseDTO>> getMonthlyCategoryExpenses(
@@ -56,7 +56,7 @@ public class MonthlyController {
         }
 
         MonthlyExpenseResponseDTO response = monthlyService.getMonthlyCategoryExpenses(authenticatedUserId, year, month);
-        return ResponseEntity.ok(ApiResponse.success("월별 카테고리별 지출 목록을 조회했습니다.", response));
+        return ResponseEntity.ok(ApiResponse.success("월별 카테고리별 지출 및 피드백을 조회했습니다.", response));
     }
 
     @ApiOperation(

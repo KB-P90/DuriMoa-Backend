@@ -20,12 +20,12 @@ public class ExpenseCategoryDTO {
     @ApiModelProperty(value = "카테고리 코드", example = "FOOD")
     private String categoryCode;
 
-    @ApiModelProperty(value = "지출 금액", example = "620000")
+    @ApiModelProperty(value = "카테고리 명", example = "식비")
+    private String categoryName;
+
+    @ApiModelProperty(value = "지출 금액", example = "300000")
     private Long amount;
 
-    @ApiModelProperty(value = "전월 대비 증감률 (%)", example = "18", required = false)
-    private Integer comparisonRate;
-
-    @ApiModelProperty(value = "총 지출 대비 비율 (%)", example = "80")
-    private Integer expenseRate;
+    @ApiModelProperty(value = "소득 대비 비율 (%)", example = "30")
+    private Integer rate;
 }

@@ -2,8 +2,11 @@ package com.project.domain.monthly.mapper;
 
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
+import com.project.domain.monthly.dto.RawCategoryExpenseDTO;
 import com.project.domain.monthly.dto.SavingMissionDTO;
 import com.project.domain.monthly.dto.SavingMissionEntityDTO;
+import com.project.domain.monthly.dto.UserSummaryDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,6 +18,16 @@ public interface MonthlyMapper {
 
     List<ExpenseCategoryDTO> selectMonthlyExpenseCategories(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 
+    UserSummaryDTO selectUserSummary(@Param("userId") Long userId);
+
+    Long selectConnectedPartnerId(@Param("userId") Long userId);
+
+    List<RawCategoryExpenseDTO> selectCategoryExpensesByUserAndMonth(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
+
+    Long selectMonthlyIncomeBase(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
+
+    List<ExpenseFeedbackDTO> selectMonthlyFeedbacks(@Param("userId") Long userId, @Param("partnerId") Long partnerId, @Param("year") Integer year, @Param("month") Integer month);
+
     List<SavingMissionDTO> selectMonthlySavingMissions(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 
     int updateSavingMissionStatusToInProgress(@Param("userId") Long userId, @Param("missionId") Long missionId);
@@ -23,3 +36,4 @@ public interface MonthlyMapper {
 
     int insertSavingMission(SavingMissionEntityDTO mission);
 }
+

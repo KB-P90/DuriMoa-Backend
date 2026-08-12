@@ -66,8 +66,9 @@ class MonthlyControllerTest {
         MonthlyExpenseResponseDTO responseDTO = MonthlyExpenseResponseDTO.builder()
                 .year(2026)
                 .month(7)
-                .totalAmount(3200000L)
-                .expenseCategories(Collections.emptyList())
+                .me(null)
+                .partner(null)
+                .feedbacks(Collections.emptyList())
                 .build();
 
         Mockito.when(monthlyService.getMonthlyCategoryExpenses(eq(userId), eq(2026), eq(7)))
@@ -85,7 +86,7 @@ class MonthlyControllerTest {
 
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
-        Assertions.assertEquals("월별 카테고리별 지출 목록을 조회했습니다.", response.get("message").asText());
+        Assertions.assertEquals("월별 카테고리별 지출 및 피드백을 조회했습니다.", response.get("message").asText());
         Mockito.verify(monthlyService).getMonthlyCategoryExpenses(eq(userId), eq(2026), eq(7));
     }
 

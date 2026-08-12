@@ -19,7 +19,7 @@ public class RecommendedMissionDTO {
     @ApiModelProperty(value = "생성된 절약 미션 ID", example = "101")
     private Long missionId;
 
-    @ApiModelProperty(value = "추천 대상 소비 카테고리 코드", example = "CAFE")
+    @ApiModelProperty(value = "추천 대상 소비 카테고리 코드", example = "FOOD")
     private String categoryCode;
 
     @ApiModelProperty(value = "사용자가 수행할 절약 미션 내용", example = "주 3회에서 주 1회로 줄이기")

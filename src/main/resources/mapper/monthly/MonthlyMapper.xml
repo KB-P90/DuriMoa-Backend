@@ -84,6 +84,84 @@
 
     </select>
 
+    <select id="selectUserSummary" resultType="com.project.domain.monthly.dto.UserSummaryDTO">
+        SELECT
+            id AS userId,
+            name
+        FROM user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectMonthlyIncomeBase" resultType="java.lang.Long">
+        SELECT
+            CASE
+                WHEN SUM(
+                    CASE
+                        WHEN COALESCE(changed_category, category) = 'SALARY' THEN amount
+                        ELSE 0
+                    END
+                ) &gt; 0
+                THEN SUM(
+                    CASE
+                        WHEN COALESCE(changed_category, category) = 'SALARY' THEN amount
+                        ELSE 0
+                    END
+                )
+                ELSE COALESCE(SUM(amount), 0)
+            END AS income_base
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND type = 'INCOME'
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
+    </select>
+
+    <select id="selectConnectedPartnerId" resultType="java.lang.Long">
+        SELECT
+            CASE
+                WHEN groom_id = #{userId} THEN bride_id
+                ELSE groom_id
+            END AS partner_id
+        FROM couple
+        WHERE (groom_id = #{userId} OR bride_id = #{userId})
+          AND status = 'CONNECTED'
+        LIMIT 1
+    </select>
+
+    <select id="selectCategoryExpensesByUserAndMonth" resultType="com.project.domain.monthly.dto.RawCategoryExpenseDTO">
+        SELECT
+            COALESCE(changed_category, category) AS categoryCode,
+            SUM(amount) AS amount
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND type = 'EXPENSE'
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
+        GROUP BY COALESCE(changed_category, category)
+        ORDER BY amount DESC
+    </select>
+
+    <select id="selectMonthlyFeedbacks" resultType="com.project.domain.monthly.dto.ExpenseFeedbackDTO">
+        SELECT
+            ef.id AS feedbackId,
+            ef.writer_id AS writerUserId,
+            u.name AS writerName,
+            ef.receiver_id AS receiverId,
+            ef.content AS content
+        FROM expense_feedback ef
+        INNER JOIN user u ON u.id = ef.writer_id
+        WHERE ef.year = #{year}
+          AND ef.month = #{month}
+          AND (
+              (ef.writer_id = #{userId} OR ef.receiver_id = #{userId})
+              <if test="partnerId != null">
+              OR (ef.writer_id = #{partnerId} OR ef.receiver_id = #{partnerId})
+              </if>
+          )
+        ORDER BY ef.id ASC
+    </select>
+
     <resultMap id="SavingMissionResultMap" type="com.project.domain.monthly.dto.SavingMissionDTO">
         <result property="missionId" column="mission_id"/>
         <result property="categoryCode" column="category_code"/>
