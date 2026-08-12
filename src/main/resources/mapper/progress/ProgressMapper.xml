@@ -71,6 +71,7 @@
             u.id AS userId,
             u.name AS name,
             u.role AS role,
+            u.profile_image AS profileImage,
             u.asset AS asset,
             u.is_shared AS assetShared
         FROM user u

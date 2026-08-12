@@ -60,6 +60,8 @@ public class ProgressResponseDTO {
 
         private Long userId;
         private String name;
+        private String role;
+        private String profileImage;
         private Boolean assetShared;
         private Long assetAmount;
         private Long targetAmount;

@@ -233,6 +233,8 @@ public class ProgressServiceImpl implements ProgressService {
         return MemberProgressDTO.builder()
                 .userId(member.getUserId())
                 .name(member.getName())
+                .role(member.getRole())
+                .profileImage(member.getProfileImage())
                 .assetShared(assetShared)
                 .assetAmount(assetShared ? currentAmount : null)
                 .targetAmount(targetAmount)
