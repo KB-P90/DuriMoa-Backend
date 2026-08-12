@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -38,7 +39,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TransactionSyncServiceImpl implements TransactionSyncService {
 
-    private static final int DEFAULT_LOOKBACK_MONTHS = 1;
+    // 카드, 계좌 연결 후 첫 동기화 시 받아올 기간 (3개월)
+    private static final int INITIAL_LOOKBACK_MONTHS = 3;
+    private static final int SYNC_OVERLAP_DAYS = 1;
+
     private static final DateTimeFormatter CODEF_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final DateTimeFormatter CODEF_TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmmss");
 
@@ -50,30 +54,44 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     @Transactional
     public TransactionSyncResponseDTO syncUserTransactions(Long userId) {
         String connectedId = getConnectedId(userId);
+
         List<TransactionSyncTargetDTO> accounts = transactionSyncMapper.findAccountsByUserId(userId);
         List<TransactionSyncTargetDTO> cards = transactionSyncMapper.findCardsByUserId(userId);
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime lastSyncAt = transactionSyncMapper.findLastSyncAtByUserId(userId);
 
         int fetchedCount = 0;
         int savedCount = 0;
         int duplicateCount = 0;
-        LocalDate today = LocalDate.now();
 
         for (TransactionSyncTargetDTO account : accounts) {
-            TransactionSyncResponseDTO response = syncAccountTransactions(connectedId, account, today);
+            TransactionSyncResponseDTO response = syncAccountTransactions(connectedId, account, lastSyncAt, today);
+
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
             duplicateCount += response.getDuplicateCount();
         }
 
         for (TransactionSyncTargetDTO card : cards) {
-            TransactionSyncResponseDTO response = syncCardTransactions(connectedId, card, today);
+            TransactionSyncResponseDTO response = syncCardTransactions(connectedId, card, lastSyncAt, today);
+
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
             duplicateCount += response.getDuplicateCount();
         }
 
-        log.info("CODEF 사용자 전체 원본 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}",
-                userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount);
+        // 전체 원본 거래 동기화 성공 시 checkpoint 갱신
+        LocalDateTime now = LocalDateTime.now();
+
+        if (lastSyncAt == null) {
+            transactionSyncMapper.insertLastSync(userId, now);
+        } else {
+            transactionSyncMapper.updateLastSync(userId, now);
+        }
+
+        log.info("CODEF 사용자 전체 원본 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}, lastSyncAt: {}",
+                userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount, now);
 
         return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size());
     }
@@ -81,78 +99,98 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private TransactionSyncResponseDTO syncAccountTransactions(
             String connectedId,
             TransactionSyncTargetDTO account,
+            LocalDateTime lastSyncAt,
             LocalDate today
     ) {
         CodefInstitution institution = validateInstitution(account.getCompany(), "BK");
-        String startDate = resolveStartDate(account.getLastRecordDate(), today);
-        String endDate = formatCodefDate(today);
+
+        LocalDate startDate = resolveStartDate(lastSyncAt, account.isHasRecords(), today);
+
+        String startDateString = formatCodefDate(startDate);
+        String endDateString = formatCodefDate(today);
 
         CodefApiResponseDTO<CodefBankTransactionResponseDTO> response = codefService.getBankTransactionList(
                 CodefBankTransactionListRequestDTO.builder()
                         .connectedId(connectedId)
                         .organization(institution.getOrganizationCode())
                         .account(account.getNumber())
-                        .startDate(startDate)
-                        .endDate(endDate)
+                        .startDate(startDateString)
+                        .endDate(endDateString)
                         .orderBy("1")
                         .inquiryType("1")
                         .build()
         );
         validateCodefResponse(response, "은행 거래내역");
+        log.info("CODEF 계좌 거래내역 응답 원본: {}", response.getData().getItems());
 
         List<CodefBankTransactionItemDTO> items = response.getData() == null
                 ? List.of() : response.getData().getItems();
+
         int savedCount = 0;
         int duplicateCount = 0;
+
         for (CodefBankTransactionItemDTO item : items) {
             AccountTransactionRecordDTO record = toAccountRecord(account.getId(), item);
+
             if (transactionSyncMapper.insertAccountRecord(record) == 1) {
                 savedCount++;
             } else {
                 duplicateCount++;
             }
         }
+
         log.info("CODEF 계좌 원본 거래 동기화 완료 - accountId: {}, range: {} ~ {}, fetched: {}, saved: {}, duplicate: {}",
-                account.getId(), startDate, endDate, items.size(), savedCount, duplicateCount);
+                account.getId(), startDateString, endDateString, items.size(), savedCount, duplicateCount);
+
         return buildResponse(items.size(), savedCount, duplicateCount, 1, 0);
     }
 
     private TransactionSyncResponseDTO syncCardTransactions(
             String connectedId,
             TransactionSyncTargetDTO card,
+            LocalDateTime lastSyncAt,
             LocalDate today
     ) {
         CodefInstitution institution = validateInstitution(card.getCompany(), "CD");
-        String startDate = resolveStartDate(card.getLastRecordDate(), today);
-        String endDate = formatCodefDate(today);
+
+        LocalDate startDate = resolveStartDate(lastSyncAt, card.isHasRecords(), today);
+
+        String startDateString = formatCodefDate(startDate);
+        String endDateString = formatCodefDate(today);
 
         CodefApiResponseDTO<CodefCardApprovalResponseDTO> response = codefService.getCardApprovalList(
                 CodefCardApprovalListRequestDTO.builder()
                         .connectedId(connectedId)
                         .organization(institution.getOrganizationCode())
                         .cardNo(card.getNumber())
-                        .startDate(startDate)
-                        .endDate(endDate)
+                        .startDate(startDateString)
+                        .endDate(endDateString)
                         .orderBy("1")
                         .inquiryType("0")
                         .build()
         );
         validateCodefResponse(response, "카드 승인내역");
+        log.info("CODEF 카드 거래내역 응답 원본: {}", response.getData().getItems());
 
         List<CodefCardApprovalItemDTO> items = response.getData() == null
                 ? List.of() : response.getData().getItems();
+
         int savedCount = 0;
         int duplicateCount = 0;
+
         for (CodefCardApprovalItemDTO item : items) {
             CardTransactionRecordDTO record = toCardRecord(card.getId(), item);
+
             if (transactionSyncMapper.insertCardRecord(record) == 1) {
                 savedCount++;
             } else {
                 duplicateCount++;
             }
         }
+
         log.info("CODEF 카드 원본 거래 동기화 완료 - cardId: {}, range: {} ~ {}, fetched: {}, saved: {}, duplicate: {}",
-                card.getId(), startDate, endDate, items.size(), savedCount, duplicateCount);
+                card.getId(), startDateString, endDateString, items.size(), savedCount, duplicateCount);
+
         return buildResponse(items.size(), savedCount, duplicateCount, 0, 1);
     }
 
@@ -268,9 +306,14 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         }
     }
 
-    private String resolveStartDate(LocalDate lastRecordDate, LocalDate today) {
-        LocalDate startDate = lastRecordDate == null ? today.minusMonths(DEFAULT_LOOKBACK_MONTHS) : lastRecordDate;
-        return formatCodefDate(startDate);
+    private LocalDate resolveStartDate(LocalDateTime lastSyncAt, boolean hasRecords, LocalDate today) {
+        // 해당 카드/계좌가 최초 등록됐을 경우
+        if (!hasRecords) return today.minusMonths(INITIAL_LOOKBACK_MONTHS);
+
+        // 기존 카드/계좌
+        if (lastSyncAt != null) return lastSyncAt.toLocalDate().minusDays(SYNC_OVERLAP_DAYS);
+
+        return today.minusMonths(INITIAL_LOOKBACK_MONTHS);
     }
 
     private String formatCodefDate(LocalDate date) {
@@ -302,9 +345,11 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
     private String createSourceKey(Object... values) {
         StringBuilder source = new StringBuilder();
+
         for (Object value : values) {
             source.append(value == null ? "<null>" : value).append('|');
         }
+
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(source.toString().getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder(digest.length * 2);

@@ -6,6 +6,7 @@ import com.project.domain.transaction.dto.TransactionSyncTargetDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -16,6 +17,12 @@ public interface TransactionSyncMapper {
     List<TransactionSyncTargetDTO> findAccountsByUserId(@Param("userId") Long userId);
 
     List<TransactionSyncTargetDTO> findCardsByUserId(@Param("userId") Long userId);
+
+    LocalDateTime findLastSyncAtByUserId(Long userId);
+
+    int insertLastSync(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
+
+    int updateLastSync(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
 
     int insertAccountRecord(AccountTransactionRecordDTO recordDTO);
 

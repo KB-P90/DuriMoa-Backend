@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS `card`;
 DROP TABLE IF EXISTS `account_record`;
 DROP TABLE IF EXISTS `card_record`;
 DROP TABLE IF EXISTS `service_record`;
-DROP TABLE IF EXISTS `last_update`;
+DROP TABLE IF EXISTS `last_sync`;
 DROP TABLE IF EXISTS `saving_missions`;
 DROP TABLE IF EXISTS `notification`;
 DROP TABLE IF EXISTS `notification_setting`;
@@ -267,17 +267,17 @@ CREATE TABLE `card`
 -- 계좌 원본 거래 내역
 CREATE TABLE `account_record`
 (
-    `id`                        BIGINT NOT NULL AUTO_INCREMENT COMMENT '계좌 원본 거래 내역 ID',
-    `account_id`                BIGINT NOT NULL COMMENT '계좌 ID',
+    `id`                        BIGINT       NOT NULL AUTO_INCREMENT COMMENT '계좌 원본 거래 내역 ID',
+    `account_id`                BIGINT       NOT NULL COMMENT '계좌 ID',
 
-    `source_key` CHAR(64) NOT NULL COMMENT 'CODEF 거래 식별용 해시',
+    `source_key`                CHAR(64)     NOT NULL COMMENT 'CODEF 거래 식별용 해시',
 
-    `transaction_date`          DATE NOT NULL COMMENT '거래 일자',
-    `transaction_time`          TIME NULL COMMENT '거래 시각',
+    `transaction_date`          DATE         NOT NULL COMMENT '거래 일자',
+    `transaction_time`          TIME         NULL COMMENT '거래 시각',
 
-    `out_amount`                BIGINT NOT NULL DEFAULT 0 COMMENT '출금 금액',
-    `in_amount`                 BIGINT NOT NULL DEFAULT 0 COMMENT '입금 금액',
-    `after_transaction_balance` BIGINT NULL COMMENT '거래 후 잔액',
+    `out_amount`                BIGINT       NOT NULL DEFAULT 0 COMMENT '출금 금액',
+    `in_amount`                 BIGINT       NOT NULL DEFAULT 0 COMMENT '입금 금액',
+    `after_transaction_balance` BIGINT       NULL COMMENT '거래 후 잔액',
 
     `description1`              VARCHAR(255) NULL COMMENT '거래내역 비고1',
     `description2`              VARCHAR(255) NULL COMMENT '거래내역 비고2',
@@ -285,9 +285,9 @@ CREATE TABLE `account_record`
     `description4`              VARCHAR(255) NULL COMMENT '거래내역 비고4',
 
     -- 원본 데이터
-    `raw_data` JSON NULL COMMENT 'CODEF 원본 응답 데이터',
+    `raw_data`                  JSON         NULL COMMENT 'CODEF 원본 응답 데이터',
 
-    `created_at`                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    `created_at`                DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
 
@@ -307,41 +307,41 @@ CREATE TABLE `account_record`
 -- 카드 원본 거래 내역
 CREATE TABLE `card_record`
 (
-    `id`                    BIGINT NOT NULL AUTO_INCREMENT COMMENT '카드 원본 승인 내역 ID',
-    `card_id`               BIGINT NOT NULL COMMENT '카드 ID',
+    `id`                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '카드 원본 승인 내역 ID',
+    `card_id`               BIGINT       NOT NULL COMMENT '카드 ID',
 
-    `source_key` CHAR(64) NOT NULL COMMENT 'CODEF 거래 식별용 해시',
+    `source_key`            CHAR(64)     NOT NULL COMMENT 'CODEF 거래 식별용 해시',
 
-    `used_date`             DATE NOT NULL COMMENT '사용 일자',
-    `used_time`             TIME NULL COMMENT '사용 시각',
+    `used_date`             DATE         NOT NULL COMMENT '사용 일자',
+    `used_time`             TIME         NULL COMMENT '사용 시각',
 
     `store_name`            VARCHAR(200) NULL COMMENT '가맹점명',
-    `used_amount`           BIGINT NOT NULL COMMENT '이용 금액',
+    `used_amount`           BIGINT       NOT NULL COMMENT '이용 금액',
 
-    `payment_type`          VARCHAR(10) NULL COMMENT '결제 방법',
-    `installment_month`     INT NULL COMMENT '할부 개월',
+    `payment_type`          VARCHAR(10)  NULL COMMENT '결제 방법',
+    `installment_month`     INT          NULL COMMENT '할부 개월',
 
-    `approval_no`           VARCHAR(50) NULL COMMENT '승인 번호',
-    `payment_due_date`      DATE NULL COMMENT '결제 예정일',
+    `approval_no`           VARCHAR(50)  NULL COMMENT '승인 번호',
+    `payment_due_date`      DATE         NULL COMMENT '결제 예정일',
 
-    `domestic_foreign_type` VARCHAR(10) NULL COMMENT '국내/해외 구분',
-    `store_corp_no`         VARCHAR(30) NULL COMMENT '가맹점 사업자 번호',
-    `store_type`            VARCHAR(50) NULL COMMENT '가맹점 업종',
-    `store_no`              VARCHAR(50) NULL COMMENT '가맹점 번호',
+    `domestic_foreign_type` VARCHAR(10)  NULL COMMENT '국내/해외 구분',
+    `store_corp_no`         VARCHAR(30)  NULL COMMENT '가맹점 사업자 번호',
+    `store_type`            VARCHAR(50)  NULL COMMENT '가맹점 업종',
+    `store_no`              VARCHAR(50)  NULL COMMENT '가맹점 번호',
 
-    `cancel_yn`             VARCHAR(10) NOT NULL COMMENT '취소 여부',
-    `cancel_amount`         BIGINT NULL COMMENT '취소 금액',
+    `cancel_yn`             VARCHAR(10)  NOT NULL COMMENT '취소 여부',
+    `cancel_amount`         BIGINT       NULL COMMENT '취소 금액',
 
-    `vat`                   BIGINT NULL COMMENT '부가세',
-    `cash_back`             BIGINT NULL COMMENT '봉사료',
+    `vat`                   BIGINT       NULL COMMENT '부가세',
+    `cash_back`             BIGINT       NULL COMMENT '봉사료',
 
-    `krw_amount`            BIGINT NULL COMMENT '원화 금액',
-    `currency`              VARCHAR(10) NULL COMMENT '통화 코드',
+    `krw_amount`            BIGINT       NULL COMMENT '원화 금액',
+    `currency`              VARCHAR(10)  NULL COMMENT '통화 코드',
 
     -- 원본 데이터
-    `raw_data` JSON NULL COMMENT 'CODEF 원본 응답 데이터',
+    `raw_data`              JSON         NULL COMMENT 'CODEF 원본 응답 데이터',
 
-    `created_at`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    `created_at`            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
 
@@ -382,17 +382,20 @@ CREATE TABLE `service_record`
 );
 
 -- 마지막 갱신
-CREATE TABLE `last_update`
+CREATE TABLE `last_sync`
 (
-    `id`         BIGINT   NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
-    `user_id`    BIGINT   NOT NULL COMMENT '사용자 ID',
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정 일시',
+    `id`           BIGINT   NOT NULL AUTO_INCREMENT,
+    `user_id`      BIGINT   NOT NULL,
+    `last_sync_at` DATETIME NULL,
+    `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (`id`),
-    KEY `idx_account_user_id` (`user_id`),
-    CONSTRAINT `fk_last_update_user`
-        FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-            ON UPDATE CASCADE ON DELETE CASCADE
+    UNIQUE KEY `uk_last_sync_user_id` (`user_id`),
+
+    CONSTRAINT `fk_last_sync_user`
+        FOREIGN KEY (`user_id`)
+            REFERENCES `user` (`id`)
 );
 
 -- 절약 미션

@@ -15,5 +15,6 @@ public class TransactionSyncTargetDTO {
     private Long id;
     private String company;
     private String number;
-    private LocalDate lastRecordDate;
+
+    private boolean hasRecords;
 }

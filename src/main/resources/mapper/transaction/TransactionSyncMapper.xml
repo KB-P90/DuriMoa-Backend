@@ -16,12 +16,13 @@
             a.id AS id,
             a.company AS company,
             a.number AS number,
-            MAX(ar.transaction_date) AS lastRecordDate
+            EXISTS(
+                SELECT 1
+                FROM account_record ar
+                WHERE ar.account_id = a.id
+            ) AS has_records
         FROM account a
-        LEFT JOIN account_record ar
-            ON ar.account_id = a.id
         WHERE a.user_id = #{userId}
-        GROUP BY a.id, a.company, a.number
         ORDER BY a.id
     </select>
 
@@ -30,14 +31,44 @@
             c.id AS id,
             c.company AS company,
             c.number AS number,
-            MAX(cr.used_date) AS lastRecordDate
+            EXISTS (
+                SELECT 1
+                FROM card_record cr
+                WHERE cr.card_id = c.id
+            ) AS has_records
         FROM card c
-        LEFT JOIN card_record cr
-            ON cr.card_id = c.id
         WHERE c.user_id = #{userId}
-        GROUP BY c.id, c.company, c.number
         ORDER BY c.id
     </select>
+
+    <select id="findLastSyncAtByUserId" resultType="java.time.LocalDateTime">
+        SELECT last_sync_at
+        FROM last_sync
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insertLastSync">
+        INSERT INTO last_sync (
+            user_id,
+            last_sync_at,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            #{userId},
+            #{lastSyncAt},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateLastSync">
+        UPDATE last_sync
+        SET
+            last_sync_at = #{lastSyncAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
 
     <insert id="insertAccountRecord">
         INSERT IGNORE INTO account_record (
