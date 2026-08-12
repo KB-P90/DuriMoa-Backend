@@ -11,12 +11,14 @@ import static org.mockito.Mockito.when;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.goal.domain.GoalStatisticsVO;
+import com.project.domain.goal.dto.GoalAllRegionsEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.mapper.GoalStatisticsMapper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class GoalStatisticsServiceImplTest {
@@ -150,6 +152,57 @@ class GoalStatisticsServiceImplTest {
         );
     }
 
+    @Test
+    void findAllRegionsGoalBudgetEstimateReturnsCsvOrderAndSeoulDisplayName() {
+        GoalStatisticsMapper mapper = mock(GoalStatisticsMapper.class);
+        GoalStatisticsService service = new GoalStatisticsServiceImpl(mapper);
+        List<String> regions = Arrays.asList(
+                "서울(강남외)", "부산", "대구", "인천", "광주", "대전", "경기도"
+        );
+        List<String> categories = Arrays.asList("예식장", "스튜디오", "드레스", "메이크업");
+        List<GoalStatisticsVO> statistics = regions.stream()
+                .flatMap(region -> categories.stream()
+                        .map(category -> statistics(region, category, 1L, 100L, 1_000L)))
+                .collect(Collectors.toList());
+        when(mapper.selectGoalStatisticsForAllRegionsEstimate(regions, categories))
+                .thenReturn(statistics);
+
+        GoalAllRegionsEstimateResponseDTO response =
+                service.findAllRegionsGoalBudgetEstimate();
+
+        assertEquals(7, response.getRegions().size());
+        assertEquals("서울", response.getRegions().get(0).getRegion());
+        assertEquals(400L, response.getRegions().get(0).getTotalAmount());
+        assertEquals("부산", response.getRegions().get(1).getRegion());
+        assertEquals("경기도", response.getRegions().get(6).getRegion());
+        verify(mapper).selectGoalStatisticsForAllRegionsEstimate(regions, categories);
+    }
+
+    @Test
+    void findAllRegionsGoalBudgetEstimateThrowsWhenRegionIsIncomplete() {
+        GoalStatisticsMapper mapper = mock(GoalStatisticsMapper.class);
+        GoalStatisticsService service = new GoalStatisticsServiceImpl(mapper);
+        List<String> regions = Arrays.asList(
+                "서울(강남외)", "부산", "대구", "인천", "광주", "대전", "경기도"
+        );
+        List<String> categories = Arrays.asList("예식장", "스튜디오", "드레스", "메이크업");
+        List<GoalStatisticsVO> statistics = regions.stream()
+                .flatMap(region -> categories.stream()
+                        .filter(category -> !("부산".equals(region) && "메이크업".equals(category)))
+                        .map(category -> statistics(region, category, 1L, 100L, 1_000L)))
+                .collect(Collectors.toList());
+        when(mapper.selectGoalStatisticsForAllRegionsEstimate(regions, categories))
+                .thenReturn(statistics);
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                service::findAllRegionsGoalBudgetEstimate
+        );
+
+        assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+        assertEquals("예상 예산 산정에 필요한 통계 정보가 부족합니다.", exception.getMessage());
+    }
+
     private GoalStatisticsVO statistics(
             String category,
             Long lower25,
@@ -158,6 +211,22 @@ class GoalStatisticsServiceImplTest {
     ) {
         return GoalStatisticsVO.builder()
                 .region("서울(강남)")
+                .category(category)
+                .low25(lower25)
+                .mid50(median)
+                .high25(upper25)
+                .build();
+    }
+
+    private GoalStatisticsVO statistics(
+            String region,
+            String category,
+            Long lower25,
+            Long median,
+            Long upper25
+    ) {
+        return GoalStatisticsVO.builder()
+                .region(region)
                 .category(category)
                 .low25(lower25)
                 .mid50(median)

@@ -1,6 +1,7 @@
 package com.project.domain.goal.controller;
 
 import com.project.common.response.ApiResponse;
+import com.project.domain.goal.dto.GoalAllRegionsEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.service.GoalStatisticsService;
@@ -51,6 +52,21 @@ public class GoalStatisticsController {
                 goalStatisticsService.findGoalBudgetEstimate(region);
         return ResponseEntity.ok(
                 ApiResponse.success("유형별 예상 결혼 예산 조회에 성공했습니다.", response)
+        );
+    }
+
+    @ApiOperation(
+            value = "주요 지역 예상 결혼 예산 조회",
+            notes = "주요 지역별 예식장, 스튜디오, 드레스, 메이크업 중간값을 합산한 "
+                    + "균형형 예상 결혼 예산을 조회합니다."
+    )
+    @GetMapping("/stat/all-regions")
+    public ResponseEntity<ApiResponse<GoalAllRegionsEstimateResponseDTO>>
+            getAllRegionsGoalBudgetEstimate() {
+        GoalAllRegionsEstimateResponseDTO response =
+                goalStatisticsService.findAllRegionsGoalBudgetEstimate();
+        return ResponseEntity.ok(
+                ApiResponse.success("주요 지역 예상 결혼 예산 조회에 성공했습니다.", response)
         );
     }
 }

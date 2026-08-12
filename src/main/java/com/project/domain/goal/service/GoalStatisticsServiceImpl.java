@@ -4,8 +4,10 @@ import com.project.common.enums.ExpenseCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.goal.domain.GoalStatisticsVO;
+import com.project.domain.goal.dto.GoalAllRegionsEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalBudgetTypeEstimateResponseDTO;
+import com.project.domain.goal.dto.GoalRegionEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.mapper.GoalStatisticsMapper;
 import java.util.Arrays;
@@ -32,6 +34,15 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
             STATISTICS_CATEGORIES.stream()
                     .map(ExpenseCategory::getCategoryName)
                     .collect(Collectors.toList());
+    private static final List<String> ESTIMATE_REGIONS = Arrays.asList(
+            "서울(강남외)",
+            "부산",
+            "대구",
+            "인천",
+            "광주",
+            "대전",
+            "경기도"
+    );
 
     private final GoalStatisticsMapper goalStatisticsMapper;
 
@@ -90,6 +101,42 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
                         buildEstimate("균형형", balancedTotal),
                         buildEstimate("플렉스형", flexTotal)
                 ))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GoalAllRegionsEstimateResponseDTO findAllRegionsGoalBudgetEstimate() {
+        List<GoalStatisticsVO> statistics =
+                goalStatisticsMapper.selectGoalStatisticsForAllRegionsEstimate(
+                        ESTIMATE_REGIONS,
+                        ESTIMATE_CATEGORIES
+                );
+        if (statistics == null) {
+            throwIncompleteStatisticsException();
+        }
+
+        Map<String, List<GoalStatisticsVO>> statisticsByRegion = statistics.stream()
+                .filter(statistic -> statistic != null && statistic.getRegion() != null)
+                .collect(Collectors.groupingBy(GoalStatisticsVO::getRegion));
+
+        List<GoalRegionEstimateResponseDTO> regions = ESTIMATE_REGIONS.stream()
+                .map(region -> buildRegionEstimate(region, statisticsByRegion.get(region)))
+                .collect(Collectors.toList());
+
+        return GoalAllRegionsEstimateResponseDTO.builder()
+                .regions(regions)
+                .build();
+    }
+
+    private GoalRegionEstimateResponseDTO buildRegionEstimate(
+            String region,
+            List<GoalStatisticsVO> statistics
+    ) {
+        validateEstimateStatistics(statistics);
+        return GoalRegionEstimateResponseDTO.builder()
+                .region("서울(강남외)".equals(region) ? "서울" : region)
+                .totalAmount(sumAmounts(statistics, GoalStatisticsVO::getMid50))
                 .build();
     }
 
