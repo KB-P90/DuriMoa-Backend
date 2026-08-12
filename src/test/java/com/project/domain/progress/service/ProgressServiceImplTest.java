@@ -63,7 +63,7 @@ class ProgressServiceImplTest {
         ));
         when(progressMapper.findMembers(USER_ID, PARTNER_ID)).thenReturn(List.of(
                 new MemberSourceDTO(USER_ID, "User", "G", "https://example.com/groom.jpg",
-                        14_670_000L, true),
+                        14_670_000L, false),
                 new MemberSourceDTO(PARTNER_ID, "Partner", "B", null, 16_520_000L, false)
         ));
 
@@ -75,9 +75,14 @@ class ProgressServiceImplTest {
         assertEquals("G", result.getPersonal().getMembers().get(0).getRole());
         assertEquals("https://example.com/groom.jpg",
                 result.getPersonal().getMembers().get(0).getProfileImage());
+        assertFalse(result.getPersonal().getMembers().get(0).getAssetShared());
+        assertEquals(14_670_000L, result.getPersonal().getMembers().get(0).getAssetAmount());
+        assertEquals(14_670_000L, result.getPersonal().getMembers().get(0).getCurrentAmount());
         assertEquals("B", result.getPersonal().getMembers().get(1).getRole());
         assertNull(result.getPersonal().getMembers().get(1).getProfileImage());
         assertFalse(result.getPersonal().getMembers().get(1).getAssetShared());
+        assertNull(result.getPersonal().getMembers().get(1).getAssetAmount());
+        assertNull(result.getPersonal().getMembers().get(1).getCurrentAmount());
         verify(progressMapper, never()).findMonthlyWeddingExpenses(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class));
     }

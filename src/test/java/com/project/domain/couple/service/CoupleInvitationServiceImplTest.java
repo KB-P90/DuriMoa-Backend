@@ -8,6 +8,7 @@ import com.project.domain.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -205,7 +206,14 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).acceptOwnInvitation(2L, 1L);
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
-        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
+        ArgumentCaptor<NotificationCreateRequestDTO> notificationCaptor =
+                ArgumentCaptor.forClass(NotificationCreateRequestDTO.class);
+        verify(notificationService).createNotification(notificationCaptor.capture());
+        NotificationCreateRequestDTO notification = notificationCaptor.getValue();
+        assertEquals(1L, notification.getUserId());
+        assertEquals("COUPLE_ACCEPTED", notification.getType());
+        assertEquals("COUPLE", notification.getTargetType());
+        assertEquals(2L, notification.getTargetId());
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }
