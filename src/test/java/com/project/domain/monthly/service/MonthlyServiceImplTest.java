@@ -1,7 +1,10 @@
 package com.project.domain.monthly.service;
 
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.RawCategoryExpenseDTO;
+import com.project.domain.monthly.dto.UserSummaryDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -24,52 +27,70 @@ class MonthlyServiceImplTest {
     private MonthlyServiceImpl monthlyService;
 
     @Test
-    @DisplayName("월별 카테고리 지출 조회 시 총 소비 금액(totalAmount)이 합산되어 올바르게 반환된다.")
-    void getMonthlyCategoryExpenses_CalculatesTotalAmount() {
+    @DisplayName("월별 카테고리 지출 조회 시 본인 및 상대방의 카테고리별 지출과 소득 대비 비율이 계산되고 피드백이 조회된다.")
+    void getMonthlyCategoryExpenses_CalculatesIncomeWeightedRates() {
         Long userId = 1L;
+        Long partnerId = 2L;
         Integer year = 2026;
         Integer month = 7;
 
-        List<ExpenseCategoryDTO> mockCategories = List.of(
-                ExpenseCategoryDTO.builder()
-                        .categoryId(1L)
-                        .categoryCode("SHOPPING")
-                        .amount(200000L)
-                        .comparisonRate(10)
-                        .expenseRate(44)
-                        .build(),
-                ExpenseCategoryDTO.builder()
-                        .categoryId(2L)
-                        .categoryCode("FOOD")
-                        .amount(150000L)
-                        .comparisonRate(10)
-                        .expenseRate(33)
-                        .build(),
-                ExpenseCategoryDTO.builder()
-                        .categoryId(3L)
-                        .categoryCode("TRANSPORT")
-                        .amount(70000L)
-                        .comparisonRate(10)
-                        .expenseRate(16)
-                        .build(),
-                ExpenseCategoryDTO.builder()
-                        .categoryId(4L)
-                        .categoryCode("CAFE")
-                        .amount(30000L)
-                        .comparisonRate(10)
-                        .expenseRate(7)
-                        .build()
+        UserSummaryDTO meSummary = UserSummaryDTO.builder()
+                .userId(userId)
+                .name("나")
+                .build();
+
+        UserSummaryDTO partnerSummary = UserSummaryDTO.builder()
+                .userId(partnerId)
+                .name("상대방")
+                .build();
+
+        List<RawCategoryExpenseDTO> meExpenses = List.of(
+                RawCategoryExpenseDTO.builder().categoryCode("FOOD").amount(300000L).build(),
+                RawCategoryExpenseDTO.builder().categoryCode("LIVING").amount(200000L).build(),
+                RawCategoryExpenseDTO.builder().categoryCode("SHOPPING").amount(4000000L).build(),
+                RawCategoryExpenseDTO.builder().categoryCode("WEDDINGHALL").amount(1500000L).build()
         );
 
-        Mockito.when(monthlyMapper.selectMonthlyExpenseCategories(userId, year, month))
-                .thenReturn(mockCategories);
+        List<RawCategoryExpenseDTO> partnerExpenses = List.of(
+                RawCategoryExpenseDTO.builder().categoryCode("FOOD").amount(300000L).build(),
+                RawCategoryExpenseDTO.builder().categoryCode("LIVING").amount(300000L).build()
+        );
+
+        List<ExpenseFeedbackDTO> feedbacks = List.of(
+                ExpenseFeedbackDTO.builder().feedbackId(1L).writerUserId(partnerId).writerName("상대방").receiverId(partnerId).content("저번달보다 쇼핑을 줄였네").build()
+        );
+
+        Mockito.when(monthlyMapper.selectUserSummary(userId)).thenReturn(meSummary);
+        Mockito.when(monthlyMapper.selectConnectedPartnerId(userId)).thenReturn(partnerId);
+        Mockito.when(monthlyMapper.selectUserSummary(partnerId)).thenReturn(partnerSummary);
+        Mockito.when(monthlyMapper.selectCategoryExpensesByUserAndMonth(userId, year, month)).thenReturn(meExpenses);
+        Mockito.when(monthlyMapper.selectCategoryExpensesByUserAndMonth(partnerId, year, month)).thenReturn(partnerExpenses);
+        Mockito.when(monthlyMapper.selectMonthlyIncomeBase(userId, year, month)).thenReturn(3000000L);
+        Mockito.when(monthlyMapper.selectMonthlyIncomeBase(partnerId, year, month)).thenReturn(5000000L);
+        Mockito.when(monthlyMapper.selectMonthlyFeedbacks(userId, partnerId, year, month)).thenReturn(feedbacks);
 
         MonthlyExpenseResponseDTO response = monthlyService.getMonthlyCategoryExpenses(userId, year, month);
 
         Assertions.assertNotNull(response);
         Assertions.assertEquals(2026, response.getYear());
         Assertions.assertEquals(7, response.getMonth());
-        Assertions.assertEquals(450000L, response.getTotalAmount());
-        Assertions.assertEquals(4, response.getExpenseCategories().size());
+
+        Assertions.assertNotNull(response.getMe());
+        Assertions.assertEquals("나", response.getMe().getName());
+        List<ExpenseCategoryDTO> meCategories = response.getMe().getExpenseCategories();
+        Assertions.assertEquals(3, meCategories.size());
+        Assertions.assertEquals(10, meCategories.get(0).getRate());
+        Assertions.assertEquals(100, meCategories.get(2).getRate());
+        Assertions.assertTrue(meCategories.stream()
+                .noneMatch(category -> "WEDDINGHALL".equals(category.getCategoryCode())));
+
+        Assertions.assertNotNull(response.getPartner());
+        Assertions.assertEquals("상대방", response.getPartner().getName());
+        List<ExpenseCategoryDTO> partnerCategories = response.getPartner().getExpenseCategories();
+        Assertions.assertEquals(2, partnerCategories.size());
+        Assertions.assertEquals(6, partnerCategories.get(0).getRate());
+
+        Assertions.assertEquals(1, response.getFeedbacks().size());
+        Assertions.assertEquals("저번달보다 쇼핑을 줄였네", response.getFeedbacks().get(0).getContent());
     }
 }

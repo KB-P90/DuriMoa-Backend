@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS `card_product`;
 DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `codef_access_token`;
+DROP TABLE IF EXISTS `expense_feedback`;
 -- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -407,6 +408,32 @@ CREATE TABLE `codef_access_token`
     token_type   VARCHAR(20),
     expires_at   DATETIME NOT NULL,
     created_at   DATETIME NOT NULL
+);
+
+-- 지출 피드백
+CREATE TABLE `expense_feedback`
+(
+    `id`          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '지출 피드백 ID',
+    `writer_id`   BIGINT      NOT NULL COMMENT '피드백 작성자 ID',
+    `receiver_id` BIGINT      NOT NULL COMMENT '피드백 대상 사용자 ID',
+    `year`        INT         NOT NULL COMMENT '피드백 대상 연도',
+    `month`       INT         NOT NULL COMMENT '피드백 대상 월',
+    `content`     VARCHAR(100) NOT NULL COMMENT '지출 피드백 내용',
+    `created_at`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+    PRIMARY KEY (`id`),
+
+    UNIQUE KEY `uk_expense_feedback_writer_year_month` (`writer_id`, `year`, `month`),
+
+    CONSTRAINT `fk_expense_feedback_writer`
+        FOREIGN KEY (`writer_id`) REFERENCES `user` (`id`)
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+
+    CONSTRAINT `fk_expense_feedback_receiver`
+        FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`)
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
 );
 
 /*
