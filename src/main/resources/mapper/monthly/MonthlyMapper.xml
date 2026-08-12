@@ -168,6 +168,24 @@
           )
     </update>
 
+    <select id="selectActiveUserIds" resultType="java.lang.Long">
+        SELECT
+            id
+        FROM user
+        WHERE is_deleted = FALSE
+        ORDER BY id
+    </select>
+
+    <select id="existsSavingMissionByUserAndMonth" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM saving_missions
+            WHERE user_id = #{userId}
+              AND YEAR(created_at) = #{year}
+              AND MONTH(created_at) = #{month}
+        )
+    </select>
+
     <resultMap id="CategoryExpenseAnalysisResultMap" type="com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO">
         <result property="categoryCode" column="category_code"/>
         <result property="totalAmount" column="total_amount"/>
