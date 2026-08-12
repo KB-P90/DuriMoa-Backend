@@ -423,6 +423,8 @@ CREATE TABLE `expense_feedback`
 
     PRIMARY KEY (`id`),
 
+    UNIQUE KEY `uk_expense_feedback_writer_year_month` (`writer_id`, `year`, `month`),
+
     CONSTRAINT `fk_expense_feedback_writer`
         FOREIGN KEY (`writer_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE

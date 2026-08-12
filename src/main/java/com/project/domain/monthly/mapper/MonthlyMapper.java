@@ -3,6 +3,8 @@ package com.project.domain.monthly.mapper;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO;
 import com.project.domain.monthly.dto.RawCategoryExpenseDTO;
 import com.project.domain.monthly.dto.SavingMissionDTO;
 import com.project.domain.monthly.dto.SavingMissionEntityDTO;
@@ -27,6 +29,10 @@ public interface MonthlyMapper {
     Long selectMonthlyIncomeBase(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 
     List<ExpenseFeedbackDTO> selectMonthlyFeedbacks(@Param("userId") Long userId, @Param("partnerId") Long partnerId, @Param("year") Integer year, @Param("month") Integer month);
+
+    int upsertExpenseFeedback(ExpenseFeedbackEntityDTO feedback);
+
+    ExpenseFeedbackCreateResponseDTO selectExpenseFeedbackById(@Param("feedbackId") Long feedbackId);
 
     List<SavingMissionDTO> selectMonthlySavingMissions(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 

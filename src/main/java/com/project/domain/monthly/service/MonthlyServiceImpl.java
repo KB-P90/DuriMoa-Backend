@@ -8,6 +8,9 @@ import com.project.common.response.ApiResponse;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateRequestDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.RawCategoryExpenseDTO;
 import com.project.domain.monthly.dto.RecommendedMissionDTO;
@@ -168,6 +171,33 @@ public class MonthlyServiceImpl implements MonthlyService {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    @Override
+    @Transactional
+    public ExpenseFeedbackCreateResponseDTO createOrUpdateExpenseFeedback(
+            Long userId, ExpenseFeedbackCreateRequestDTO requestDTO) {
+        Long partnerId = monthlyMapper.selectConnectedPartnerId(userId);
+        if (partnerId == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "연결된 파트너를 찾을 수 없습니다.");
+        }
+
+        ExpenseFeedbackEntityDTO feedback = ExpenseFeedbackEntityDTO.builder()
+                .writerUserId(userId)
+                .receiverUserId(partnerId)
+                .year(requestDTO.getYear())
+                .month(requestDTO.getMonth())
+                .content(requestDTO.getContent())
+                .build();
+
+        monthlyMapper.upsertExpenseFeedback(feedback);
+
+        ExpenseFeedbackCreateResponseDTO response =
+                monthlyMapper.selectExpenseFeedbackById(feedback.getFeedbackId());
+        if (response == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "등록된 피드백을 찾을 수 없습니다.");
+        }
+        return response;
     }
 
     @Override

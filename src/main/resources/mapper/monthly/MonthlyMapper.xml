@@ -162,6 +162,47 @@
         ORDER BY ef.id ASC
     </select>
 
+    <insert id="upsertExpenseFeedback"
+            parameterType="com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO"
+            useGeneratedKeys="true"
+            keyProperty="feedbackId"
+            keyColumn="id">
+        INSERT INTO expense_feedback (
+            writer_id,
+            receiver_id,
+            year,
+            month,
+            content
+        ) VALUES (
+            #{writerUserId},
+            #{receiverUserId},
+            #{year},
+            #{month},
+            #{content}
+        )
+        ON DUPLICATE KEY UPDATE
+            id = LAST_INSERT_ID(id),
+            receiver_id = VALUES(receiver_id),
+            content = VALUES(content)
+    </insert>
+
+    <select id="selectExpenseFeedbackById"
+            resultType="com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO">
+        SELECT
+            ef.id AS feedbackId,
+            ef.writer_id AS writerUserId,
+            writer.name AS writerName,
+            ef.receiver_id AS receiverUserId,
+            receiver.name AS receiverName,
+            ef.year AS year,
+            ef.month AS month,
+            ef.content AS content
+        FROM expense_feedback ef
+        INNER JOIN user writer ON writer.id = ef.writer_id
+        INNER JOIN user receiver ON receiver.id = ef.receiver_id
+        WHERE ef.id = #{feedbackId}
+    </select>
+
     <resultMap id="SavingMissionResultMap" type="com.project.domain.monthly.dto.SavingMissionDTO">
         <result property="missionId" column="mission_id"/>
         <result property="categoryCode" column="category_code"/>

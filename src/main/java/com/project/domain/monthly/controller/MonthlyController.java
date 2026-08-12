@@ -3,6 +3,8 @@ package com.project.domain.monthly.controller;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateRequestDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.validation.Valid;
 import java.time.LocalDate;
 
 @Api(tags = "Monthly Expense", description = "월별 지출 관리 API")
@@ -60,8 +63,24 @@ public class MonthlyController {
     }
 
     @ApiOperation(
+            value = "월별 지출 피드백 생성",
+            notes = "연결된 파트너에게 월별 지출 피드백을 등록합니다. 같은 작성자가 같은 연월에 다시 등록하면 기존 피드백을 수정합니다."
+    )
+    @PostMapping("/feedback")
+    public ResponseEntity<ApiResponse<ExpenseFeedbackCreateResponseDTO>> createExpenseFeedback(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication,
+            @Valid @RequestBody ExpenseFeedbackCreateRequestDTO requestDTO
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        ExpenseFeedbackCreateResponseDTO response =
+                monthlyService.createOrUpdateExpenseFeedback(authenticatedUserId, requestDTO);
+        return ResponseEntity.ok(ApiResponse.success("피드백을 등록했습니다.", response));
+    }
+
+    @ApiOperation(
             value = "월별 절약 미션 조회",
-            notes = "연도와 월을 입력받아 해당 월의 절약 미션 목록, 총 예상 절감 금액, 미션 도전 가능 여부(isSelectable)를 조회합니다."
+            notes = "연도와 월을 입력받아 해당 월의 절약 미션 목록을 조회합니다."
     )
     @GetMapping("/saving-missions")
     public ResponseEntity<ApiResponse<SavingMissionResponseDTO>> getMonthlySavingMissions(
