@@ -2,6 +2,7 @@ package com.project.domain.progress.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,8 +62,9 @@ class ProgressServiceImplTest {
                 new CategoryExpenseDTO("WEDDINGHALL", 10_500_000L)
         ));
         when(progressMapper.findMembers(USER_ID, PARTNER_ID)).thenReturn(List.of(
-                new MemberSourceDTO(USER_ID, "User", "G", 14_670_000L, true),
-                new MemberSourceDTO(PARTNER_ID, "Partner", "B", 16_520_000L, false)
+                new MemberSourceDTO(USER_ID, "User", "G", "https://example.com/groom.jpg",
+                        14_670_000L, true),
+                new MemberSourceDTO(PARTNER_ID, "Partner", "B", null, 16_520_000L, false)
         ));
 
         ProgressResponseDTO result = progressService.getProgress(USER_ID);
@@ -70,6 +72,11 @@ class ProgressServiceImplTest {
         assertEquals(227, result.getOverall().getProgressRate());
         assertEquals(1, result.getOverall().getCompletedItemCount());
         assertEquals(USER_ID, result.getPersonal().getMembers().get(0).getUserId());
+        assertEquals("G", result.getPersonal().getMembers().get(0).getRole());
+        assertEquals("https://example.com/groom.jpg",
+                result.getPersonal().getMembers().get(0).getProfileImage());
+        assertEquals("B", result.getPersonal().getMembers().get(1).getRole());
+        assertNull(result.getPersonal().getMembers().get(1).getProfileImage());
         assertFalse(result.getPersonal().getMembers().get(1).getAssetShared());
         verify(progressMapper, never()).findMonthlyWeddingExpenses(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class));
