@@ -24,6 +24,10 @@ public class HomeResponseDTO {
     @JsonProperty("saving_alert")
     private final SavingAlertResponseDTO savingAlert;
 
+    // 홈 상단 알림 버튼의 새 알림 상태입니다.
+    @JsonProperty("notification_summary")
+    private final NotificationSummaryResponseDTO notificationSummary;
+
     // 절약 미션 요약과 대표 미션을 나중에 연결하기 위한 응답 영역입니다.
     @JsonProperty("saving_mission_summary")
     private final SavingMissionSummaryResponseDTO savingMissionSummary;

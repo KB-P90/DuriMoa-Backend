@@ -36,7 +36,7 @@
                 WHEN c.bride_id = #{userId} THEN c.groom_id
             END
            AND partner.is_deleted = FALSE
-        WHERE c.status = 'CONNECTED'
+        WHERE c.status = #{connectedStatus}
           AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
           AND c.groom_id IS NOT NULL
           AND c.bride_id IS NOT NULL
@@ -74,7 +74,7 @@
                     SELECT 1
                     FROM goal g
                     WHERE g.couple_id = #{coupleId}
-                      AND g.status IN ('NORMAL', 'PENDING', 'CONFIRMED')
+                      AND g.status IN (#{normalStatus}, #{pendingStatus}, #{confirmedStatus})
                 ) THEN TRUE
                 ELSE FALSE
             END AS wedding_goal_created,
@@ -95,7 +95,7 @@
                 FROM goal g
                 WHERE g.couple_id = #{coupleId}
                   AND g.is_main = TRUE
-                  AND g.status = 'CONFIRMED'
+                  AND g.status = #{confirmedStatus}
                 ORDER BY
                     g.id DESC
                 LIMIT 1
@@ -105,8 +105,6 @@
     <select id="selectAssetSummary" resultType="com.project.domain.home.model.HomeRecord$HomeAssetSummaryRecord">
         SELECT
             g.total_budget AS total_budget_amount,
-            COALESCE(total_saving.total_saved_amount, 0) AS total_saved_amount,
-            COALESCE(personal_saving.personal_saved_amount, 0) AS personal_saved_amount,
             CAST(FLOOR(
                 g.total_budget
                 * CASE
@@ -115,96 +113,75 @@
                   END
                 / 100
             ) AS SIGNED) AS personal_target_amount,
-            COALESCE(expense.wedding_expense_amount, 0) AS wedding_expense_amount,
-            GREATEST(
-                g.total_budget - COALESCE(total_saving.total_saved_amount, 0),
-                0
-            ) AS remaining_wedding_fund_amount,
             DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS base_date
         FROM goal g
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(ar.amount), 0) AS total_saved_amount
-            FROM account a
-            INNER JOIN account_record ar
-                ON ar.account_id = a.id
-            WHERE a.user_id IN (#{groomId}, #{brideId})
-              AND ar.type = 'SAVING'
-        ) total_saving
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(ar.amount), 0) AS personal_saved_amount
-            FROM account a
-            INNER JOIN account_record ar
-                ON ar.account_id = a.id
-            WHERE a.user_id = #{userId}
-              AND ar.type = 'SAVING'
-        ) personal_saving
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(account_expense.account_expense_amount, 0)
-                + COALESCE(card_expense.card_expense_amount, 0) AS wedding_expense_amount
-            FROM (
-                SELECT 1 AS expense_base
-            ) expense_base
-            LEFT JOIN (
-                SELECT
-                    COALESCE(SUM(ar.amount), 0) AS account_expense_amount
-                FROM account a
-                INNER JOIN account_record ar
-                    ON ar.account_id = a.id
-                WHERE a.user_id IN (#{groomId}, #{brideId})
-                  AND ar.type = 'EXPENSE'
-                  AND ar.category = '결혼비용'
-            ) account_expense
-                ON 1 = 1
-            LEFT JOIN (
-                SELECT
-                    COALESCE(SUM(cr.amount), 0) AS card_expense_amount
-                FROM card cd
-                INNER JOIN card_record cr
-                    ON cr.card_id = cd.id
-                WHERE cd.user_id IN (#{groomId}, #{brideId})
-                  AND cr.type = 'EXPENSE'
-                  AND cr.category = '결혼비용'
-            ) card_expense
-                ON 1 = 1
-        ) expense
-            ON 1 = 1
         WHERE g.id = #{goalId}
+    </select>
+
+    <select id="selectHomeMemberAssets" resultType="com.project.domain.home.model.HomeRecord$HomeMemberAssetRecord">
+        SELECT
+            u.id AS user_id,
+            u.asset AS asset,
+            u.is_shared AS asset_shared
+        FROM `user` u
+        WHERE u.id IN (#{groomId}, #{brideId})
+          AND u.is_deleted = FALSE
+    </select>
+
+    <select id="selectAssetRecords" resultType="com.project.domain.home.model.HomeRecord$HomeAssetRecord">
+        SELECT
+            sr.user_id AS user_id,
+            sr.type AS record_type,
+            COALESCE(sr.changed_category, sr.category) AS category,
+            SUM(sr.amount) AS amount,
+            'SERVICE' AS source
+        FROM service_record sr
+        WHERE sr.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            sr.user_id,
+            sr.type,
+            COALESCE(sr.changed_category, sr.category)
+        UNION ALL
+        SELECT
+            a.user_id AS user_id,
+            ar.type AS record_type,
+            ar.category AS category,
+            SUM(ar.amount) AS amount,
+            'ACCOUNT' AS source
+        FROM account a
+        INNER JOIN account_record ar
+            ON ar.account_id = a.id
+        WHERE a.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            a.user_id,
+            ar.type,
+            ar.category
+        UNION ALL
+        SELECT
+            cd.user_id AS user_id,
+            cr.type AS record_type,
+            cr.category AS category,
+            SUM(cr.amount) AS amount,
+            'CARD' AS source
+        FROM card cd
+        INNER JOIN card_record cr
+            ON cr.card_id = cd.id
+        WHERE cd.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            cd.user_id,
+            cr.type,
+            cr.category
     </select>
 
     <select id="selectExpectedBudgetPreviewRegions" resultType="com.project.domain.home.model.HomeRecord$HomeBudgetPreviewRecord">
         SELECT
             ws.region AS region,
-            CASE ws.region
-                WHEN '서울(강남)' THEN '서울'
-                WHEN '서울(강남외)' THEN '서울'
-                WHEN '경기도' THEN '경기'
-                ELSE ws.region
-            END AS display_region,
-            SUM(ws.mid_50) AS balanced_amount
+            ws.category AS category,
+            ws.mid_50 AS balanced_amount
         FROM wedding_statistics ws
-        WHERE ws.category IN ('예식장', '스튜디오', '드레스', '메이크업')
-          AND ws.region IN ('서울(강남)', '경기도', '인천', '부산', '대구', '광주', '대전')
-        GROUP BY ws.region
-        HAVING COUNT(DISTINCT ws.category) = 4
         ORDER BY
-            CASE
-                WHEN ws.region = '서울(강남)' THEN 1
-                WHEN ws.region = '경기도' THEN 2
-                WHEN ws.region = '인천' THEN 3
-                WHEN ws.region = '부산' THEN 4
-                WHEN ws.region = '대구' THEN 5
-                WHEN ws.region = '광주' THEN 6
-                WHEN ws.region = '대전' THEN 7
-                ELSE 99
-            END,
-            SUM(ws.mid_50) DESC,
-            ws.region ASC
-        LIMIT 7
+            ws.region ASC,
+            ws.category ASC
     </select>
 
     <select id="selectLatestSavingAlert" resultType="com.project.domain.home.model.HomeRecord$HomeSavingAlertRecord">
@@ -221,6 +198,14 @@
         LIMIT 1
     </select>
 
+    <select id="countUnreadNotifications" resultType="java.lang.Integer">
+        SELECT
+            COUNT(n.id)
+        FROM notification n
+        WHERE n.user_id = #{userId}
+          AND n.is_read = FALSE
+    </select>
+
     <select id="selectSavingMissionSummary" resultType="com.project.domain.home.model.HomeRecord$HomeSavingMissionSummaryRecord">
         SELECT
             COALESCE((
@@ -229,7 +214,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status IN (#{inProgressStatus}, #{challengeStatus})
             ), 0) AS total_expected_saving_amount,
             (
                 SELECT COUNT(sm.id)
@@ -237,7 +222,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status = #{inProgressStatus}
             ) AS in_progress_mission_count,
             (
                 SELECT COUNT(sm.id)
@@ -245,7 +230,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '완료'
+                  AND sm.status = #{completedStatus}
             ) AS completed_mission_count,
             representative.id AS mission_id,
             representative.category AS category_code,
@@ -262,8 +247,13 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status IN (#{inProgressStatus}, #{challengeStatus})
                 ORDER BY
+                    CASE
+                        WHEN sm.status = #{inProgressStatus} THEN 1
+                        WHEN sm.status = #{challengeStatus} THEN 2
+                        ELSE 9
+                    END,
                     sm.created_at DESC,
                     sm.id DESC
                 LIMIT 1
