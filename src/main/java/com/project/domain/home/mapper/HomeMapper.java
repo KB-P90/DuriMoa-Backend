@@ -43,6 +43,9 @@ public interface HomeMapper {
     // 홈 알림 배너에 표시할 인증 사용자의 최신 알림 1건을 조회합니다.
     HomeSavingAlertRecord selectLatestSavingAlert(@Param("userId") Long userId);
 
+    // 홈 상단 알림 버튼에 표시할 읽지 않은 알림 개수를 조회합니다.
+    Integer countUnreadNotifications(@Param("userId") Long userId);
+
     // 현재 월 홈 도전중 절약미션 요약과 대표 미션을 조회합니다.
     HomeSavingMissionSummaryRecord selectSavingMissionSummary(
             @Param("userId") Long userId,

@@ -93,6 +93,7 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
         Mockito.when(mapper.selectChecklistEvidence(1L, 100L, 1L, 2L)).thenReturn(fullEvidence());
         Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
+        Mockito.when(mapper.countUnreadNotifications(1L)).thenReturn(2);
         Mockito.when(mapper.selectSavingMissionSummary(
                 Mockito.eq(1L),
                 Mockito.anyInt(),
@@ -114,6 +115,8 @@ class HomeServiceImplTest {
         Assertions.assertEquals(18_810_000L, response.getAssetSummary().getRemainingWeddingFundAmount());
         Assertions.assertEquals(31_190_000L, response.getGoalSummary().getJointGoal().getCurrentAmount());
         Assertions.assertEquals(62, response.getGoalSummary().getJointGoal().getAchievementRate());
+        Assertions.assertEquals(2, response.getNotificationSummary().getUnreadCount());
+        Assertions.assertTrue(response.getNotificationSummary().getHasUnread());
         Assertions.assertEquals(30_000_000L, response.getGoalSummary().getPersonalGoal().getTargetAmount());
         Assertions.assertEquals(11_900_000L, response.getGoalSummary().getPersonalGoal().getCurrentAmount());
         Assertions.assertEquals(39, response.getGoalSummary().getPersonalGoal().getAchievementRate());
@@ -194,7 +197,6 @@ class HomeServiceImplTest {
         summary.setPersonalSavedAmount(11_900_000L);
         summary.setPersonalTargetAmount(30_000_000L);
         summary.setWeddingExpenseAmount(1_000_000L);
-        summary.setRemainingWeddingFundAmount(18_810_000L);
         summary.setBaseDate("2026-08-03");
         return summary;
     }

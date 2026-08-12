@@ -105,8 +105,22 @@
     <select id="selectAssetSummary" resultType="com.project.domain.home.model.HomeRecord$HomeAssetSummaryRecord">
         SELECT
             g.total_budget AS total_budget_amount,
-            COALESCE(total_saving.total_saved_amount, 0) AS total_saved_amount,
-            COALESCE(personal_saving.personal_saved_amount, 0) AS personal_saved_amount,
+            CASE
+                WHEN service_summary.total_saved_amount > 0 THEN service_summary.total_saved_amount
+                WHEN COALESCE(account_summary.total_saved_amount, 0)
+                    + COALESCE(card_summary.total_saved_amount, 0) > 0
+                    THEN COALESCE(account_summary.total_saved_amount, 0)
+                        + COALESCE(card_summary.total_saved_amount, 0)
+                ELSE COALESCE(asset_summary.total_saved_amount, 0)
+            END AS total_saved_amount,
+            CASE
+                WHEN service_summary.personal_saved_amount > 0 THEN service_summary.personal_saved_amount
+                WHEN COALESCE(account_summary.personal_saved_amount, 0)
+                    + COALESCE(card_summary.personal_saved_amount, 0) > 0
+                    THEN COALESCE(account_summary.personal_saved_amount, 0)
+                        + COALESCE(card_summary.personal_saved_amount, 0)
+                ELSE COALESCE(asset_summary.personal_saved_amount, 0)
+            END AS personal_saved_amount,
             CAST(FLOOR(
                 g.total_budget
                 * CASE
@@ -115,63 +129,131 @@
                   END
                 / 100
             ) AS SIGNED) AS personal_target_amount,
-            COALESCE(expense.wedding_expense_amount, 0) AS wedding_expense_amount,
-            GREATEST(
-                g.total_budget - COALESCE(total_saving.total_saved_amount, 0),
-                0
-            ) AS remaining_wedding_fund_amount,
+            COALESCE(service_summary.wedding_expense_amount, 0)
+                + COALESCE(account_summary.wedding_expense_amount, 0)
+                + COALESCE(card_summary.wedding_expense_amount, 0) AS wedding_expense_amount,
             DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS base_date
         FROM goal g
         LEFT JOIN (
             SELECT
-                COALESCE(SUM(ar.amount), 0) AS total_saved_amount
+                COALESCE(SUM(
+                    CASE
+                        WHEN sr.type = 'SAVING'
+                         AND COALESCE(sr.changed_category, sr.category)
+                            IN ('WEDDINGSAVING', '결혼 저축', '결혼비용')
+                            THEN sr.amount
+                        ELSE 0
+                    END
+                ), 0) AS total_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN sr.user_id = #{userId}
+                         AND sr.type = 'SAVING'
+                         AND COALESCE(sr.changed_category, sr.category)
+                            IN ('WEDDINGSAVING', '결혼 저축', '결혼비용')
+                            THEN sr.amount
+                        ELSE 0
+                    END
+                ), 0) AS personal_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN sr.type = 'EXPENSE'
+                         AND COALESCE(sr.changed_category, sr.category) IN (
+                            'WEDDINGHALL', 'STUDIO', 'MAKEUP', 'DRESS', 'JEWELRY', 'EMERGENCY',
+                            '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비', '결혼비용'
+                         )
+                            THEN sr.amount
+                        ELSE 0
+                    END
+                ), 0) AS wedding_expense_amount
+            FROM service_record sr
+            WHERE sr.user_id IN (#{groomId}, #{brideId})
+        ) service_summary
+            ON 1 = 1
+        LEFT JOIN (
+            SELECT
+                COALESCE(SUM(
+                    CASE
+                        WHEN u.id = #{userId} OR u.is_shared = TRUE THEN u.asset
+                        ELSE 0
+                    END
+                ), 0) AS total_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN u.id = #{userId} THEN u.asset
+                        ELSE 0
+                    END
+                ), 0) AS personal_saved_amount
+            FROM `user` u
+            WHERE u.id IN (#{groomId}, #{brideId})
+              AND u.is_deleted = FALSE
+        ) asset_summary
+            ON 1 = 1
+        LEFT JOIN (
+            SELECT
+                COALESCE(SUM(
+                    CASE
+                        WHEN ar.type = 'SAVING'
+                         AND ar.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
+                            THEN ar.amount
+                        ELSE 0
+                    END
+                ), 0) AS total_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN a.user_id = #{userId}
+                         AND ar.type = 'SAVING'
+                         AND ar.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
+                            THEN ar.amount
+                        ELSE 0
+                    END
+                ), 0) AS personal_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN ar.type = 'EXPENSE'
+                         AND ar.category IN ('결혼비용', '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비')
+                            THEN ar.amount
+                        ELSE 0
+                    END
+                ), 0) AS wedding_expense_amount
             FROM account a
             INNER JOIN account_record ar
                 ON ar.account_id = a.id
             WHERE a.user_id IN (#{groomId}, #{brideId})
-              AND ar.type = 'SAVING'
-        ) total_saving
+        ) account_summary
             ON 1 = 1
         LEFT JOIN (
             SELECT
-                COALESCE(SUM(ar.amount), 0) AS personal_saved_amount
-            FROM account a
-            INNER JOIN account_record ar
-                ON ar.account_id = a.id
-            WHERE a.user_id = #{userId}
-              AND ar.type = 'SAVING'
-        ) personal_saving
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(account_expense.account_expense_amount, 0)
-                + COALESCE(card_expense.card_expense_amount, 0) AS wedding_expense_amount
-            FROM (
-                SELECT 1 AS expense_base
-            ) expense_base
-            LEFT JOIN (
-                SELECT
-                    COALESCE(SUM(ar.amount), 0) AS account_expense_amount
-                FROM account a
-                INNER JOIN account_record ar
-                    ON ar.account_id = a.id
-                WHERE a.user_id IN (#{groomId}, #{brideId})
-                  AND ar.type = 'EXPENSE'
-                  AND ar.category = '결혼비용'
-            ) account_expense
-                ON 1 = 1
-            LEFT JOIN (
-                SELECT
-                    COALESCE(SUM(cr.amount), 0) AS card_expense_amount
-                FROM card cd
-                INNER JOIN card_record cr
-                    ON cr.card_id = cd.id
-                WHERE cd.user_id IN (#{groomId}, #{brideId})
-                  AND cr.type = 'EXPENSE'
-                  AND cr.category = '결혼비용'
-            ) card_expense
-                ON 1 = 1
-        ) expense
+                COALESCE(SUM(
+                    CASE
+                        WHEN cr.type = 'SAVING'
+                         AND cr.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
+                            THEN cr.amount
+                        ELSE 0
+                    END
+                ), 0) AS total_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN cd.user_id = #{userId}
+                         AND cr.type = 'SAVING'
+                         AND cr.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
+                            THEN cr.amount
+                        ELSE 0
+                    END
+                ), 0) AS personal_saved_amount,
+                COALESCE(SUM(
+                    CASE
+                        WHEN cr.type = 'EXPENSE'
+                         AND cr.category IN ('결혼비용', '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비')
+                            THEN cr.amount
+                        ELSE 0
+                    END
+                ), 0) AS wedding_expense_amount
+            FROM card cd
+            INNER JOIN card_record cr
+                ON cr.card_id = cd.id
+            WHERE cd.user_id IN (#{groomId}, #{brideId})
+        ) card_summary
             ON 1 = 1
         WHERE g.id = #{goalId}
     </select>
@@ -221,6 +303,14 @@
         LIMIT 1
     </select>
 
+    <select id="countUnreadNotifications" resultType="java.lang.Integer">
+        SELECT
+            COUNT(n.id)
+        FROM notification n
+        WHERE n.user_id = #{userId}
+          AND n.is_read = FALSE
+    </select>
+
     <select id="selectSavingMissionSummary" resultType="com.project.domain.home.model.HomeRecord$HomeSavingMissionSummaryRecord">
         SELECT
             COALESCE((
@@ -229,7 +319,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status IN ('도전중', '도전하기')
             ), 0) AS total_expected_saving_amount,
             (
                 SELECT COUNT(sm.id)
@@ -262,8 +352,13 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status IN ('도전중', '도전하기')
                 ORDER BY
+                    CASE
+                        WHEN sm.status = '도전중' THEN 1
+                        WHEN sm.status = '도전하기' THEN 2
+                        ELSE 9
+                    END,
                     sm.created_at DESC,
                     sm.id DESC
                 LIMIT 1

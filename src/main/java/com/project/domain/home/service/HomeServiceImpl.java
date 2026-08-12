@@ -10,6 +10,7 @@ import com.project.domain.home.dto.GoalProgressResponseDTO;
 import com.project.domain.home.dto.GoalSummaryResponseDTO;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.dto.MissionResponseDTO;
+import com.project.domain.home.dto.NotificationSummaryResponseDTO;
 import com.project.domain.home.dto.SavingAlertResponseDTO;
 import com.project.domain.home.dto.SavingMissionSummaryResponseDTO;
 import com.project.domain.home.dto.SetupChecklistResponseDTO;
@@ -28,7 +29,10 @@ import com.project.domain.home.model.HomeSetupChecklistResult;
 import com.project.domain.home.model.HomeSetupChecklistResult.StepResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -77,6 +81,7 @@ public class HomeServiceImpl implements HomeService {
         HomeSavingAlertRecord savingAlert = setupCompleted
                 ? homeMapper.selectLatestSavingAlert(authenticatedUserId)
                 : null;
+        Integer unreadNotificationCount = homeMapper.countUnreadNotifications(authenticatedUserId);
         HomeSavingMissionSummaryRecord savingMissionSummary = setupCompleted
                 ? selectSavingMissionSummary(authenticatedUserId)
                 : null;
@@ -89,6 +94,7 @@ public class HomeServiceImpl implements HomeService {
                 .couple(buildCoupleResponse(user, couple, evidenceRecord))
                 .assetSummary(setupCompleted ? buildAssetSummary(assetSummary) : null)
                 .savingAlert(setupCompleted ? buildSavingAlert(savingAlert) : null)
+                .notificationSummary(buildNotificationSummary(unreadNotificationCount))
                 .savingMissionSummary(setupCompleted ? buildSavingMissionSummary(savingMissionSummary) : null)
                 .goalSummary(setupCompleted ? buildGoalSummary(evidenceRecord, assetSummary) : null)
                 .setupChecklist(buildSetupChecklistResponse(checklistResult))
@@ -171,7 +177,7 @@ public class HomeServiceImpl implements HomeService {
                 .coupleStatus(couple.getCoupleStatus())
                 .goalId(evidenceRecord == null ? null : evidenceRecord.getMainGoalId())
                 .weddingDate(evidenceRecord == null ? null : evidenceRecord.getWeddingDate())
-                .remainingMonths(null)
+                .remainingMonths(calculateRemainingMonths(evidenceRecord))
                 .budgetPlanId(null)
                 .build();
     }
@@ -209,7 +215,7 @@ public class HomeServiceImpl implements HomeService {
                 .totalBudgetAmount(summaryRecord.getTotalBudgetAmount())
                 .totalSavedAmount(nullToZero(summaryRecord.getTotalSavedAmount()))
                 .weddingExpenseAmount(nullToZero(summaryRecord.getWeddingExpenseAmount()))
-                .remainingWeddingFundAmount(nullToZero(summaryRecord.getRemainingWeddingFundAmount()))
+                .remainingWeddingFundAmount(calculateRemainingWeddingFundAmount(summaryRecord))
                 .baseDate(summaryRecord.getBaseDate())
                 .build();
     }
@@ -225,6 +231,15 @@ public class HomeServiceImpl implements HomeService {
                 .title(savingAlert.getTitle())
                 .message(savingAlert.getMessage())
                 .createdAt(savingAlert.getCreatedAt())
+                .build();
+    }
+
+    // 홈 알림 버튼에 필요한 읽지 않은 알림 상태를 응답으로 변환합니다.
+    private NotificationSummaryResponseDTO buildNotificationSummary(Integer unreadNotificationCount) {
+        Integer safeUnreadCount = unreadNotificationCount == null ? 0 : unreadNotificationCount;
+        return NotificationSummaryResponseDTO.builder()
+                .unreadCount(safeUnreadCount)
+                .hasUnread(safeUnreadCount > 0)
                 .build();
     }
 
@@ -369,6 +384,38 @@ public class HomeServiceImpl implements HomeService {
                 .multiply(BigDecimal.valueOf(100L))
                 .divide(BigDecimal.valueOf(targetAmount), 0, RoundingMode.DOWN)
                 .intValue();
+    }
+
+    // 결혼 예정일까지 남은 개월 수를 계산합니다.
+    private Integer calculateRemainingMonths(HomeChecklistEvidenceRecord evidenceRecord) {
+        if (evidenceRecord == null || evidenceRecord.getWeddingDate() == null) {
+            return null;
+        }
+        try {
+            LocalDate weddingDate = LocalDate.parse(evidenceRecord.getWeddingDate());
+            LocalDate today = LocalDate.now();
+            if (!weddingDate.isAfter(today)) {
+                return 0;
+            }
+            return Math.toIntExact(ChronoUnit.MONTHS.between(
+                    YearMonth.from(today),
+                    YearMonth.from(weddingDate)
+            ));
+        } catch (DateTimeParseException exception) {
+            return null;
+        }
+    }
+
+    // 총 예산에서 현재 모은 금액을 차감해 남은 결혼 자금을 계산합니다.
+    private Long calculateRemainingWeddingFundAmount(HomeAssetSummaryRecord summaryRecord) {
+        if (summaryRecord.getRemainingWeddingFundAmount() != null) {
+            return nullToZero(summaryRecord.getRemainingWeddingFundAmount());
+        }
+        Long totalBudgetAmount = summaryRecord.getTotalBudgetAmount();
+        if (totalBudgetAmount == null) {
+            return 0L;
+        }
+        return Math.max(totalBudgetAmount - nullToZero(summaryRecord.getTotalSavedAmount()), 0L);
     }
 
     // 비어 있는 금액 값을 0으로 변환합니다.
