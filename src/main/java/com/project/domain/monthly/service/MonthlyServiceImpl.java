@@ -209,6 +209,11 @@ public class MonthlyServiceImpl implements MonthlyService {
             missions = Collections.emptyList();
         }
 
+        YearMonth requestedYearMonth = YearMonth.of(year, month);
+        if (!requestedYearMonth.equals(YearMonth.now())) {
+            missions.forEach(mission -> mission.setIsSelectable(false));
+        }
+
         long totalExpectedSavingAmount = missions.stream()
                 .mapToLong(m -> m.getExpectedSavingAmount() != null ? m.getExpectedSavingAmount() : 0L)
                 .sum();
@@ -227,7 +232,9 @@ public class MonthlyServiceImpl implements MonthlyService {
     public void startSavingMission(Long userId, Long missionId) {
         int updatedRows = monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
         if (updatedRows == 0) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "해당 절약 미션을 찾을 수 없거나 이미 도전 중인 미션입니다.");
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "현재 월의 도전하기 미션만 도전할 수 있습니다.");
         }
     }
 

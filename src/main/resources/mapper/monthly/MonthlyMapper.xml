@@ -139,7 +139,13 @@
             expected_saving AS expected_saving_amount,
             status,
             CASE
-                WHEN status = '도전하기' THEN true
+                WHEN status = '도전하기'
+                     AND created_at &gt;= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')
+                     AND created_at &lt; DATE_ADD(
+                         DATE_FORMAT(CURRENT_DATE, '%Y-%m-01'),
+                         INTERVAL 1 MONTH
+                     )
+                THEN true
                 ELSE false
             END AS is_selectable
         FROM saving_missions
@@ -155,6 +161,11 @@
         WHERE id = #{missionId}
           AND user_id = #{userId}
           AND status = '도전하기'
+          AND created_at &gt;= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')
+          AND created_at &lt; DATE_ADD(
+              DATE_FORMAT(CURRENT_DATE, '%Y-%m-01'),
+              INTERVAL 1 MONTH
+          )
     </update>
 
     <resultMap id="CategoryExpenseAnalysisResultMap" type="com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO">
