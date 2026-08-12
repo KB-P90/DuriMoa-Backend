@@ -83,7 +83,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
                 "https://www.durimoa.site",
-                "https://dev.durimoa.site"
+                "https://dev.durimoa.site",
+                "https://durimoa.kro.kr"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
