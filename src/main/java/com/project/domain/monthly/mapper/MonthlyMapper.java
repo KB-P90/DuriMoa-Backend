@@ -1,7 +1,6 @@
 package com.project.domain.monthly.mapper;
 
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
-import com.project.domain.monthly.dto.ExpenseCategoryDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO;
@@ -17,8 +16,6 @@ import java.util.List;
 
 @Mapper
 public interface MonthlyMapper {
-
-    List<ExpenseCategoryDTO> selectMonthlyExpenseCategories(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 
     UserSummaryDTO selectUserSummary(@Param("userId") Long userId);
 
