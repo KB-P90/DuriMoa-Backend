@@ -21,6 +21,7 @@
 
         <result column="partner_name" property="partnerName"/>
         <result column="partner_role" property="partnerRole"/>
+        <result column="partner_profile_image" property="partnerProfileImageUrl"/>
 
         <result column="couple_created_at" property="coupleCreatedAt"/>
         <result column="couple_status" property="coupleStatus"/>
@@ -68,6 +69,7 @@
 
                p.name          AS partner_name,
                p.role          AS partner_role,
+               p.profile_image AS partner_profile_image,
 
                c.created_at    AS couple_created_at,
                c.status        AS couple_status

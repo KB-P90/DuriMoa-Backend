@@ -67,6 +67,10 @@ class ProgressControllerTest {
 
         assertTrue(body.get("success").asBoolean());
         assertEquals(62, body.at("/data/overall/progressRate").asInt());
+        assertEquals("G", body.at("/data/personal/members/0/role").asText());
+        assertEquals("https://example.com/groom.jpg",
+                body.at("/data/personal/members/0/profileImage").asText());
+        assertTrue(body.at("/data/personal/members/1/profileImage").isNull());
         assertFalse(body.at("/data/personal/members/1/assetShared").asBoolean());
         assertTrue(body.at("/data/monthlyProgress").isMissingNode());
     }
@@ -127,8 +131,11 @@ class ProgressControllerTest {
                         .build())
                 .personal(PersonalProgressDTO.builder()
                         .members(List.of(
-                                MemberProgressDTO.builder().userId(10L).assetShared(true).build(),
-                                MemberProgressDTO.builder().userId(20L).assetShared(false).build()))
+                                MemberProgressDTO.builder().userId(10L).role("G")
+                                        .profileImage("https://example.com/groom.jpg")
+                                        .assetShared(true).build(),
+                                MemberProgressDTO.builder().userId(20L).role("B")
+                                        .profileImage(null).assetShared(false).build()))
                         .build())
                 .build();
     }

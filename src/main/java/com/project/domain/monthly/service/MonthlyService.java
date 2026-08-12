@@ -1,6 +1,8 @@
 package com.project.domain.monthly.service;
 
 import com.project.common.response.ApiResponse;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateRequestDTO;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
@@ -18,6 +20,9 @@ public interface MonthlyService {
      * @return MonthlyExpenseResponseDTO
      */
     MonthlyExpenseResponseDTO getMonthlyCategoryExpenses(Long userId, Integer year, Integer month);
+
+    ExpenseFeedbackCreateResponseDTO createOrUpdateExpenseFeedback(
+            Long userId, ExpenseFeedbackCreateRequestDTO requestDTO);
 
     /**
      * 월별 절약 미션 목록을 조회합니다.

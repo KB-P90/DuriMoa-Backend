@@ -20,7 +20,7 @@ public class SavingMissionDTO {
     @ApiModelProperty(value = "절약 미션 ID", example = "101")
     private Long missionId;
 
-    @ApiModelProperty(value = "카테고리 코드", example = "CAFE")
+    @ApiModelProperty(value = "카테고리 코드", example = "FOOD")
     private String categoryCode;
 
     @ApiModelProperty(value = "미션 제목", example = "주 3회에서 주 1회로 줄이기")

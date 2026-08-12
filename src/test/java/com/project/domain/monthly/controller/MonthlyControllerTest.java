@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
 import com.project.common.response.ApiResponse;
+import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
@@ -66,8 +67,9 @@ class MonthlyControllerTest {
         MonthlyExpenseResponseDTO responseDTO = MonthlyExpenseResponseDTO.builder()
                 .year(2026)
                 .month(7)
-                .totalAmount(3200000L)
-                .expenseCategories(Collections.emptyList())
+                .me(null)
+                .partner(null)
+                .feedbacks(Collections.emptyList())
                 .build();
 
         Mockito.when(monthlyService.getMonthlyCategoryExpenses(eq(userId), eq(2026), eq(7)))
@@ -85,7 +87,7 @@ class MonthlyControllerTest {
 
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
-        Assertions.assertEquals("월별 카테고리별 지출 목록을 조회했습니다.", response.get("message").asText());
+        Assertions.assertEquals("월별 카테고리별 지출 및 피드백을 조회했습니다.", response.get("message").asText());
         Mockito.verify(monthlyService).getMonthlyCategoryExpenses(eq(userId), eq(2026), eq(7));
     }
 
@@ -187,6 +189,42 @@ class MonthlyControllerTest {
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
         Assertions.assertEquals("절약 추천 미션이 생성되었습니다.", response.get("message").asText());
+    }
+
+    @Test
+    @DisplayName("인증 사용자가 월별 피드백을 등록한다.")
+    void createExpenseFeedback_Success_WithAuth() throws Exception {
+        Long userId = 1L;
+        ExpenseFeedbackCreateResponseDTO responseDTO =
+                ExpenseFeedbackCreateResponseDTO.builder()
+                        .feedbackId(3L)
+                        .writerUserId(userId)
+                        .writerName("나")
+                        .receiverUserId(2L)
+                        .receiverName("상대방")
+                        .year(2026)
+                        .month(7)
+                        .content("우리 다음달에는 좀 더 아껴보자!!")
+                        .build();
+
+        Mockito.when(monthlyService.createOrUpdateExpenseFeedback(eq(userId), any()))
+                .thenReturn(responseDTO);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        MvcResult result = mockMvc.perform(post("/api/expense/feedback")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"year\":2026,\"month\":7,"
+                                + "\"content\":\"우리 다음달에는 좀 더 아껴보자!!\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode response = readResponse(result);
+        Assertions.assertTrue(response.get("success").asBoolean());
+        Assertions.assertEquals("피드백을 등록했습니다.", response.get("message").asText());
+        Assertions.assertEquals(3L, response.path("data").path("feedbackId").asLong());
+        Assertions.assertEquals(2L, response.path("data").path("receiverUserId").asLong());
     }
 
     private JsonNode readResponse(MvcResult result) throws Exception {
