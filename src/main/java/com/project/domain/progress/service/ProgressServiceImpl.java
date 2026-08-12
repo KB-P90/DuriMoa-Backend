@@ -203,9 +203,10 @@ public class ProgressServiceImpl implements ProgressService {
                 ));
 
         List<MemberProgressDTO> responseMembers = new ArrayList<>();
-        addIfNotNull(responseMembers, buildMember(memberById.get(userId), couple, activeGoal));
+        addIfNotNull(responseMembers, buildMember(memberById.get(userId), userId, couple, activeGoal));
         addIfNotNull(responseMembers, buildMember(
                 memberById.get(findPartnerId(userId, couple)),
+                userId,
                 couple,
                 activeGoal
         ));
@@ -217,6 +218,7 @@ public class ProgressServiceImpl implements ProgressService {
 
     private MemberProgressDTO buildMember(
             MemberSourceDTO member,
+            Long authenticatedUserId,
             CoupleDTO couple,
             ActiveGoalDTO activeGoal
     ) {
@@ -225,20 +227,22 @@ public class ProgressServiceImpl implements ProgressService {
         }
 
         boolean assetShared = Boolean.TRUE.equals(member.getAssetShared());
+        boolean isOwner = member.getUserId().equals(authenticatedUserId);
+        boolean canViewAssetAmount = assetShared || isOwner;
         Long targetAmount = calculateMemberTargetAmount(member.getUserId(), couple, activeGoal);
         Long currentAmount = defaultAmount(member.getAsset());
         Double progressRate = calculateDecimalRate(currentAmount, targetAmount);
 
-        // 자산 비공개 사용자는 금액만 숨기고, 목표 금액과 달성률은 그대로 제공한다.
+        // 비공개 자산은 상대방에게만 금액을 숨기고, 본인에게는 정상 제공한다.
         return MemberProgressDTO.builder()
                 .userId(member.getUserId())
                 .name(member.getName())
                 .role(member.getRole())
                 .profileImage(member.getProfileImage())
                 .assetShared(assetShared)
-                .assetAmount(assetShared ? currentAmount : null)
+                .assetAmount(canViewAssetAmount ? currentAmount : null)
                 .targetAmount(targetAmount)
-                .currentAmount(assetShared ? currentAmount : null)
+                .currentAmount(canViewAssetAmount ? currentAmount : null)
                 .progressRate(progressRate)
                 .build();
     }
