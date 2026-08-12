@@ -36,7 +36,7 @@
                 WHEN c.bride_id = #{userId} THEN c.groom_id
             END
            AND partner.is_deleted = FALSE
-        WHERE c.status = 'CONNECTED'
+        WHERE c.status = #{connectedStatus}
           AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
           AND c.groom_id IS NOT NULL
           AND c.bride_id IS NOT NULL
@@ -74,7 +74,7 @@
                     SELECT 1
                     FROM goal g
                     WHERE g.couple_id = #{coupleId}
-                      AND g.status IN ('NORMAL', 'PENDING', 'CONFIRMED')
+                      AND g.status IN (#{normalStatus}, #{pendingStatus}, #{confirmedStatus})
                 ) THEN TRUE
                 ELSE FALSE
             END AS wedding_goal_created,
@@ -95,7 +95,7 @@
                 FROM goal g
                 WHERE g.couple_id = #{coupleId}
                   AND g.is_main = TRUE
-                  AND g.status = 'CONFIRMED'
+                  AND g.status = #{confirmedStatus}
                 ORDER BY
                     g.id DESC
                 LIMIT 1
@@ -214,7 +214,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status IN ('도전중', '도전하기')
+                  AND sm.status IN (#{inProgressStatus}, #{challengeStatus})
             ), 0) AS total_expected_saving_amount,
             (
                 SELECT COUNT(sm.id)
@@ -222,7 +222,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '도전중'
+                  AND sm.status = #{inProgressStatus}
             ) AS in_progress_mission_count,
             (
                 SELECT COUNT(sm.id)
@@ -230,7 +230,7 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status = '완료'
+                  AND sm.status = #{completedStatus}
             ) AS completed_mission_count,
             representative.id AS mission_id,
             representative.category AS category_code,
@@ -247,11 +247,11 @@
                 WHERE sm.user_id = #{userId}
                   AND YEAR(sm.created_at) = #{year}
                   AND MONTH(sm.created_at) = #{month}
-                  AND sm.status IN ('도전중', '도전하기')
+                  AND sm.status IN (#{inProgressStatus}, #{challengeStatus})
                 ORDER BY
                     CASE
-                        WHEN sm.status = '도전중' THEN 1
-                        WHEN sm.status = '도전하기' THEN 2
+                        WHEN sm.status = #{inProgressStatus} THEN 1
+                        WHEN sm.status = #{challengeStatus} THEN 2
                         ELSE 9
                     END,
                     sm.created_at DESC,

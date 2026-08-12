@@ -18,7 +18,10 @@ public interface HomeMapper {
     HomeUserRecord selectHomeUser(@Param("userId") Long userId);
 
     // 인증 사용자가 속한 활성 커플 정보를 조회합니다.
-    HomeCoupleRecord selectActiveCouple(@Param("userId") Long userId);
+    HomeCoupleRecord selectActiveCouple(
+            @Param("userId") Long userId,
+            @Param("connectedStatus") String connectedStatus
+    );
 
     // 인증 사용자에게 연결 계좌 또는 카드가 있는지 조회합니다.
     Boolean selectAccountLinked(@Param("userId") Long userId);
@@ -28,7 +31,10 @@ public interface HomeMapper {
             @Param("userId") Long userId,
             @Param("coupleId") Long coupleId,
             @Param("groomId") Long groomId,
-            @Param("brideId") Long brideId
+            @Param("brideId") Long brideId,
+            @Param("normalStatus") String normalStatus,
+            @Param("pendingStatus") String pendingStatus,
+            @Param("confirmedStatus") String confirmedStatus
     );
 
     // 메인 홈의 예산 달성률과 자산 요약에 필요한 금액을 조회합니다.
@@ -64,6 +70,9 @@ public interface HomeMapper {
     HomeSavingMissionSummaryRecord selectSavingMissionSummary(
             @Param("userId") Long userId,
             @Param("year") Integer year,
-            @Param("month") Integer month
+            @Param("month") Integer month,
+            @Param("challengeStatus") String challengeStatus,
+            @Param("inProgressStatus") String inProgressStatus,
+            @Param("completedStatus") String completedStatus
     );
 }

@@ -1,9 +1,13 @@
 package com.project.domain.home.service;
 
+import com.project.common.enums.CoupleStatus;
 import com.project.common.enums.ExpenseCategory;
+import com.project.common.enums.MissionStatus;
+import com.project.common.enums.RecordType;
 import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
+import com.project.domain.goal.domain.GoalStatus;
 import com.project.domain.home.dto.AssetSummaryResponseDTO;
 import com.project.domain.home.dto.CoupleResponseDTO;
 import com.project.domain.home.dto.ExpectedBudgetPreviewResponseDTO;
@@ -53,12 +57,14 @@ public class HomeServiceImpl implements HomeService {
     private static final String MONTHLY_EXPENSE_NAVIGATION_MESSAGE = "월별지출관리 페이지로 이동";
     private static final String EXPECTED_BUDGET_TYPE = "균형형";
     private static final String EXPECTED_BUDGET_AMOUNT_BASIS = "MID_50";
-    private static final String RECORD_TYPE_EXPENSE = "EXPENSE";
-    private static final String RECORD_TYPE_SAVING = "SAVING";
     private static final String SOURCE_SERVICE = "SERVICE";
-    private static final String LEGACY_WEDDING_CATEGORY = "결혼비용";
-    private static final List<String> EXPECTED_BUDGET_CATEGORIES =
-            Collections.unmodifiableList(Arrays.asList("예식장", "스튜디오", "드레스", "메이크업"));
+    private static final List<ExpenseCategory> EXPECTED_BUDGET_CATEGORIES =
+            Collections.unmodifiableList(Arrays.asList(
+                    ExpenseCategory.WEDDINGHALL,
+                    ExpenseCategory.STUDIO,
+                    ExpenseCategory.DRESS,
+                    ExpenseCategory.MAKEUP
+            ));
     private static final List<String> EXPECTED_BUDGET_REGIONS =
             Collections.unmodifiableList(Arrays.asList(
                     "서울(강남)", "경기도", "인천", "부산", "대구", "광주", "대전"));
@@ -80,7 +86,10 @@ public class HomeServiceImpl implements HomeService {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        HomeCoupleRecord couple = homeMapper.selectActiveCouple(authenticatedUserId);
+        HomeCoupleRecord couple = homeMapper.selectActiveCouple(
+                authenticatedUserId,
+                CoupleStatus.CONNECTED.getStatus()
+        );
         Boolean accountLinked = Boolean.TRUE.equals(homeMapper.selectAccountLinked(authenticatedUserId));
         HomeChecklistEvidenceRecord evidenceRecord = selectEvidence(authenticatedUserId, couple);
         HomeSetupChecklistEvidence evidence = buildChecklistEvidence(accountLinked, couple, evidenceRecord);
@@ -131,7 +140,10 @@ public class HomeServiceImpl implements HomeService {
                 authenticatedUserId,
                 couple.getCoupleId(),
                 couple.getGroomId(),
-                couple.getBrideId()
+                couple.getBrideId(),
+                GoalStatus.NORMAL.name(),
+                GoalStatus.PENDING.name(),
+                GoalStatus.CONFIRMED.name()
         );
     }
 
@@ -274,7 +286,10 @@ public class HomeServiceImpl implements HomeService {
         return homeMapper.selectSavingMissionSummary(
                 authenticatedUserId,
                 currentYearMonth.getYear(),
-                currentYearMonth.getMonthValue()
+                currentYearMonth.getMonthValue(),
+                MissionStatus.CHALLENGE.getStatus(),
+                MissionStatus.IN_PROGRESS.getStatus(),
+                MissionStatus.COMPLETED.getStatus()
         );
     }
 
@@ -392,14 +407,14 @@ public class HomeServiceImpl implements HomeService {
     // 거래가 결혼 저축 금액으로 집계되어야 하는지 판단합니다.
     private Boolean isWeddingSavingRecord(HomeAssetRecord assetRecord) {
         return assetRecord != null
-                && RECORD_TYPE_SAVING.equalsIgnoreCase(assetRecord.getRecordType())
+                && RecordType.SAVING.name().equalsIgnoreCase(assetRecord.getRecordType())
                 && isWeddingSavingCategory(assetRecord.getCategory());
     }
 
     // 거래가 결혼 준비 지출로 집계되어야 하는지 판단합니다.
     private Boolean isWeddingExpenseRecord(HomeAssetRecord assetRecord) {
         return assetRecord != null
-                && RECORD_TYPE_EXPENSE.equalsIgnoreCase(assetRecord.getRecordType())
+                && RecordType.EXPENSE.name().equalsIgnoreCase(assetRecord.getRecordType())
                 && isWeddingExpenseCategory(assetRecord.getCategory());
     }
 
@@ -408,9 +423,6 @@ public class HomeServiceImpl implements HomeService {
         String trimmedCategory = trim(category);
         if (trimmedCategory == null) {
             return false;
-        }
-        if (LEGACY_WEDDING_CATEGORY.equals(trimmedCategory)) {
-            return true;
         }
         for (SavingCategory savingCategory : SavingCategory.values()) {
             if (savingCategory.isWedding()
@@ -426,9 +438,6 @@ public class HomeServiceImpl implements HomeService {
         String trimmedCategory = trim(category);
         if (trimmedCategory == null) {
             return false;
-        }
-        if (LEGACY_WEDDING_CATEGORY.equals(trimmedCategory)) {
-            return true;
         }
         for (ExpenseCategory expenseCategory : ExpenseCategory.values()) {
             if (expenseCategory.isWedding()
@@ -499,9 +508,16 @@ public class HomeServiceImpl implements HomeService {
         return ExpectedBudgetPreviewResponseDTO.builder()
                 .budgetType(EXPECTED_BUDGET_TYPE)
                 .amountBasis(EXPECTED_BUDGET_AMOUNT_BASIS)
-                .categories(EXPECTED_BUDGET_CATEGORIES)
+                .categories(buildExpectedBudgetCategories())
                 .regions(regions)
                 .build();
+    }
+
+    // 공통 enum에 정의된 결혼 예상 예산 카테고리 표시명을 응답에 사용합니다.
+    private List<String> buildExpectedBudgetCategories() {
+        return EXPECTED_BUDGET_CATEGORIES.stream()
+                .map(ExpenseCategory::getCategoryName)
+                .collect(Collectors.toList());
     }
 
     // 지역별 예상 예산 합계를 서비스 로직에서 계산합니다.
@@ -510,7 +526,7 @@ public class HomeServiceImpl implements HomeService {
             List<HomeBudgetPreviewRecord> previewRecords
     ) {
         Long totalAmount = 0L;
-        for (String category : EXPECTED_BUDGET_CATEGORIES) {
+        for (ExpenseCategory category : EXPECTED_BUDGET_CATEGORIES) {
             Long categoryAmount = calculateExpectedBudgetCategoryAmount(region, category, previewRecords);
             if (categoryAmount == null) {
                 return null;
@@ -523,14 +539,16 @@ public class HomeServiceImpl implements HomeService {
     // 지역·카테고리 단위 예상 예산 금액을 합산합니다.
     private Long calculateExpectedBudgetCategoryAmount(
             String region,
-            String category,
+            ExpenseCategory category,
             List<HomeBudgetPreviewRecord> previewRecords
     ) {
         Long categoryAmount = 0L;
         Boolean categoryFound = false;
         for (HomeBudgetPreviewRecord record : previewRecords) {
+            String recordCategory = trim(record.getCategory());
             if (region.equals(trim(record.getRegion()))
-                    && category.equals(trim(record.getCategory()))) {
+                    && recordCategory != null
+                    && matchesCategory(recordCategory, category.name(), category.getCategoryName())) {
                 categoryAmount += nullToZero(record.getBalancedAmount());
                 categoryFound = true;
             }

@@ -1,7 +1,13 @@
 package com.project.domain.home.service;
 
+import com.project.common.enums.CoupleStatus;
+import com.project.common.enums.ExpenseCategory;
+import com.project.common.enums.MissionStatus;
+import com.project.common.enums.RecordType;
+import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
+import com.project.domain.goal.domain.GoalStatus;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.mapper.HomeMapper;
 import com.project.domain.home.model.HomeRecord.HomeAssetRecord;
@@ -29,7 +35,7 @@ class HomeServiceImplTest {
         HomeServiceImpl service = new HomeServiceImpl(mapper, new HomeSetupChecklistCalculator());
 
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
-        Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
+        Mockito.when(mapper.selectActiveCouple(1L, CoupleStatus.CONNECTED.getStatus())).thenReturn(null);
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(false);
         Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(budgetPreviewRegions());
 
@@ -54,12 +60,18 @@ class HomeServiceImplTest {
                 Mockito.anyLong(),
                 Mockito.anyLong(),
                 Mockito.anyLong(),
-                Mockito.anyLong()
+                Mockito.anyLong(),
+                Mockito.anyString(),
+                Mockito.anyString(),
+                Mockito.anyString()
         );
         Mockito.verify(mapper, Mockito.never()).selectSavingMissionSummary(
                 Mockito.anyLong(),
                 Mockito.anyInt(),
-                Mockito.anyInt()
+                Mockito.anyInt(),
+                Mockito.anyString(),
+                Mockito.anyString(),
+                Mockito.anyString()
         );
     }
 
@@ -70,7 +82,7 @@ class HomeServiceImplTest {
         HomeServiceImpl service = new HomeServiceImpl(mapper, new HomeSetupChecklistCalculator());
 
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
-        Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
+        Mockito.when(mapper.selectActiveCouple(1L, CoupleStatus.CONNECTED.getStatus())).thenReturn(null);
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
         Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(budgetPreviewRegions());
 
@@ -90,20 +102,34 @@ class HomeServiceImplTest {
         HomeServiceImpl service = new HomeServiceImpl(mapper, new HomeSetupChecklistCalculator());
 
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
-        Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(couple());
+        Mockito.when(mapper.selectActiveCouple(1L, CoupleStatus.CONNECTED.getStatus())).thenReturn(couple());
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
-        Mockito.when(mapper.selectChecklistEvidence(1L, 100L, 1L, 2L)).thenReturn(fullEvidence());
+        Mockito.when(mapper.selectChecklistEvidence(
+                1L,
+                100L,
+                1L,
+                2L,
+                GoalStatus.NORMAL.name(),
+                GoalStatus.PENDING.name(),
+                GoalStatus.CONFIRMED.name()
+        )).thenReturn(fullEvidence());
         Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
         Mockito.when(mapper.selectAssetRecords(1L, 2L)).thenReturn(List.of(
-                assetRecord(1L, "SAVING", "WEDDINGSAVING", 11_900_000L, "ACCOUNT"),
-                assetRecord(2L, "SAVING", "결혼 저축", 19_290_000L, "CARD"),
-                assetRecord(1L, "EXPENSE", "WEDDINGHALL", 1_000_000L, "SERVICE")
+                assetRecord(1L, RecordType.SAVING.name(),
+                        SavingCategory.WEDDINGSAVING.name(), 11_900_000L, "ACCOUNT"),
+                assetRecord(2L, RecordType.SAVING.name(),
+                        SavingCategory.WEDDINGSAVING.getCategoryName(), 19_290_000L, "CARD"),
+                assetRecord(1L, RecordType.EXPENSE.name(),
+                        ExpenseCategory.WEDDINGHALL.name(), 1_000_000L, "SERVICE")
         ));
         Mockito.when(mapper.countUnreadNotifications(1L)).thenReturn(2);
         Mockito.when(mapper.selectSavingMissionSummary(
                 Mockito.eq(1L),
                 Mockito.anyInt(),
-                Mockito.anyInt()
+                Mockito.anyInt(),
+                Mockito.eq(MissionStatus.CHALLENGE.getStatus()),
+                Mockito.eq(MissionStatus.IN_PROGRESS.getStatus()),
+                Mockito.eq(MissionStatus.COMPLETED.getStatus())
         )).thenReturn(savingMissionSummary());
 
         HomeResponseDTO response = service.getHome(1L);
@@ -131,7 +157,8 @@ class HomeServiceImplTest {
         Assertions.assertEquals(1, response.getSavingMissionSummary().getCompletedMissionCount());
         Assertions.assertEquals(10L, response.getSavingMissionSummary().getMission().getMissionId());
         Assertions.assertEquals("카페 지출 줄이기", response.getSavingMissionSummary().getMission().getTitle());
-        Assertions.assertEquals("도전중", response.getSavingMissionSummary().getMission().getStatus());
+        Assertions.assertEquals(MissionStatus.IN_PROGRESS.getStatus(),
+                response.getSavingMissionSummary().getMission().getStatus());
     }
 
     // 인증 사용자 ID에 해당하는 사용자가 없으면 홈 조회를 거부합니다.
@@ -170,7 +197,7 @@ class HomeServiceImplTest {
         couple.setPartnerUserId(2L);
         couple.setPartnerName("김두리");
         couple.setPartnerRole("B");
-        couple.setCoupleStatus("CONNECTED");
+        couple.setCoupleStatus(CoupleStatus.CONNECTED.getStatus());
         return couple;
     }
 
@@ -180,7 +207,7 @@ class HomeServiceImplTest {
         evidence.setWeddingGoalCreated(true);
         evidence.setMainPlanSelected(true);
         evidence.setMainGoalId(30L);
-        evidence.setMainGoalStatus("CONFIRMED");
+        evidence.setMainGoalStatus(GoalStatus.CONFIRMED.name());
         evidence.setWeddingDate("2026-12-20");
         evidence.setRegion("서울");
         return evidence;
@@ -189,10 +216,11 @@ class HomeServiceImplTest {
     // 미완료 홈의 예상 예산 미리보기 원본 통계 데이터를 만듭니다.
     private List<HomeBudgetPreviewRecord> budgetPreviewRegions() {
         return List.of(
-                budgetPreviewRegion("예식장", 5_000_000L),
-                budgetPreviewRegion("스튜디오", 3_000_000L),
-                budgetPreviewRegion("드레스", 2_000_000L),
-                budgetPreviewRegion("메이크업", 1_790_000L)
+                budgetPreviewRegion(
+                        ExpenseCategory.WEDDINGHALL.getCategoryName(), 5_000_000L),
+                budgetPreviewRegion(ExpenseCategory.STUDIO.getCategoryName(), 3_000_000L),
+                budgetPreviewRegion(ExpenseCategory.DRESS.getCategoryName(), 2_000_000L),
+                budgetPreviewRegion(ExpenseCategory.MAKEUP.getCategoryName(), 1_790_000L)
         );
     }
 
@@ -240,7 +268,7 @@ class HomeServiceImplTest {
         summary.setMissionId(10L);
         summary.setCategoryCode("CAFE");
         summary.setTitle("카페 지출 줄이기");
-        summary.setStatus("도전중");
+        summary.setStatus(MissionStatus.IN_PROGRESS.getStatus());
         summary.setExpectedSavingAmount(30000L);
         return summary;
     }
