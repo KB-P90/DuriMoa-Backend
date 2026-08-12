@@ -35,6 +35,13 @@ public interface MonthlyMapper {
 
     int updateSavingMissionStatusToInProgress(@Param("userId") Long userId, @Param("missionId") Long missionId);
 
+    List<Long> selectActiveUserIds();
+
+    boolean existsSavingMissionByUserAndMonth(
+            @Param("userId") Long userId,
+            @Param("year") Integer year,
+            @Param("month") Integer month);
+
     List<CategoryExpenseAnalysisDTO> selectCategoryExpenseAnalysis(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     int insertSavingMission(SavingMissionEntityDTO mission);
