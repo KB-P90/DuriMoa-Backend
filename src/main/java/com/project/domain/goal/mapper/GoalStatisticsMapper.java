@@ -16,5 +16,10 @@ public interface GoalStatisticsMapper {
             @Param("categories") List<String> categories
     );
 
+    List<GoalStatisticsVO> selectGoalStatisticsForAllRegionsEstimate(
+            @Param("regions") List<String> regions,
+            @Param("categories") List<String> categories
+    );
+
     Integer upsertGoalStatistics(@Param("statistics") List<GoalStatisticsVO> statistics);
 }
