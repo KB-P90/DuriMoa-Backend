@@ -110,15 +110,52 @@ public final class HomeRecord {
 
     @Getter
     @Setter
+    public static class HomeMemberAssetRecord {
+
+        // 활성 커플 구성원 사용자 ID입니다.
+        private Long userId;
+
+        // 사용자 프로필에 저장된 현재 자산 금액입니다.
+        private Long asset;
+
+        // 상대방에게 자산 금액을 공유하는지 나타냅니다.
+        private Boolean assetShared;
+    }
+
+    @Getter
+    @Setter
+    public static class HomeAssetRecord {
+
+        // 거래 소유 사용자 ID입니다.
+        private Long userId;
+
+        // 거래 구분입니다. EXPENSE 또는 SAVING 값을 사용합니다.
+        private String recordType;
+
+        // 거래 카테고리 원본 값입니다.
+        private String category;
+
+        // 같은 소스·사용자·구분·카테고리로 묶은 거래 금액입니다.
+        private Long amount;
+
+        // 거래 원천입니다. service_record, account_record, card_record를 구분합니다.
+        private String source;
+    }
+
+    @Getter
+    @Setter
     public static class HomeBudgetPreviewRecord {
 
         // DB에 저장된 원본 지역명입니다.
         private String region;
 
+        // DB에 저장된 원본 결혼 통계 카테고리입니다.
+        private String category;
+
         // 홈 차트에서 짧게 표시할 지역명입니다.
         private String displayRegion;
 
-        // 지역별 결혼 통계 균형형 예상 금액입니다.
+        // 결혼 통계 균형형 예상 금액 또는 지역별 합산 금액입니다.
         private Long balancedAmount;
     }
 

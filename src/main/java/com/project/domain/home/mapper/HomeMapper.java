@@ -1,9 +1,11 @@
 package com.project.domain.home.mapper;
 
 import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
+import com.project.domain.home.model.HomeRecord.HomeAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
+import com.project.domain.home.model.HomeRecord.HomeMemberAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingAlertRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
@@ -35,6 +37,18 @@ public interface HomeMapper {
             @Param("groomId") Long groomId,
             @Param("brideId") Long brideId,
             @Param("goalId") Long goalId
+    );
+
+    // 홈 자산 요약 계산에 사용할 활성 커플 구성원의 자산 공개 정보를 조회합니다.
+    List<HomeMemberAssetRecord> selectHomeMemberAssets(
+            @Param("groomId") Long groomId,
+            @Param("brideId") Long brideId
+    );
+
+    // 홈 자산 요약 계산에 사용할 거래 금액 원본을 조회합니다.
+    List<HomeAssetRecord> selectAssetRecords(
+            @Param("groomId") Long groomId,
+            @Param("brideId") Long brideId
     );
 
     // 체크리스트 미완료 홈의 지역별 예상 예산 미리보기 목록을 조회합니다.

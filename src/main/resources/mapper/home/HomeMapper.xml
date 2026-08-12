@@ -105,22 +105,6 @@
     <select id="selectAssetSummary" resultType="com.project.domain.home.model.HomeRecord$HomeAssetSummaryRecord">
         SELECT
             g.total_budget AS total_budget_amount,
-            CASE
-                WHEN service_summary.total_saved_amount > 0 THEN service_summary.total_saved_amount
-                WHEN COALESCE(account_summary.total_saved_amount, 0)
-                    + COALESCE(card_summary.total_saved_amount, 0) > 0
-                    THEN COALESCE(account_summary.total_saved_amount, 0)
-                        + COALESCE(card_summary.total_saved_amount, 0)
-                ELSE COALESCE(asset_summary.total_saved_amount, 0)
-            END AS total_saved_amount,
-            CASE
-                WHEN service_summary.personal_saved_amount > 0 THEN service_summary.personal_saved_amount
-                WHEN COALESCE(account_summary.personal_saved_amount, 0)
-                    + COALESCE(card_summary.personal_saved_amount, 0) > 0
-                    THEN COALESCE(account_summary.personal_saved_amount, 0)
-                        + COALESCE(card_summary.personal_saved_amount, 0)
-                ELSE COALESCE(asset_summary.personal_saved_amount, 0)
-            END AS personal_saved_amount,
             CAST(FLOOR(
                 g.total_budget
                 * CASE
@@ -129,164 +113,75 @@
                   END
                 / 100
             ) AS SIGNED) AS personal_target_amount,
-            COALESCE(service_summary.wedding_expense_amount, 0)
-                + COALESCE(account_summary.wedding_expense_amount, 0)
-                + COALESCE(card_summary.wedding_expense_amount, 0) AS wedding_expense_amount,
             DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS base_date
         FROM goal g
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(
-                    CASE
-                        WHEN sr.type = 'SAVING'
-                         AND COALESCE(sr.changed_category, sr.category)
-                            IN ('WEDDINGSAVING', '결혼 저축', '결혼비용')
-                            THEN sr.amount
-                        ELSE 0
-                    END
-                ), 0) AS total_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN sr.user_id = #{userId}
-                         AND sr.type = 'SAVING'
-                         AND COALESCE(sr.changed_category, sr.category)
-                            IN ('WEDDINGSAVING', '결혼 저축', '결혼비용')
-                            THEN sr.amount
-                        ELSE 0
-                    END
-                ), 0) AS personal_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN sr.type = 'EXPENSE'
-                         AND COALESCE(sr.changed_category, sr.category) IN (
-                            'WEDDINGHALL', 'STUDIO', 'MAKEUP', 'DRESS', 'JEWELRY', 'EMERGENCY',
-                            '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비', '결혼비용'
-                         )
-                            THEN sr.amount
-                        ELSE 0
-                    END
-                ), 0) AS wedding_expense_amount
-            FROM service_record sr
-            WHERE sr.user_id IN (#{groomId}, #{brideId})
-        ) service_summary
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(
-                    CASE
-                        WHEN u.id = #{userId} OR u.is_shared = TRUE THEN u.asset
-                        ELSE 0
-                    END
-                ), 0) AS total_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN u.id = #{userId} THEN u.asset
-                        ELSE 0
-                    END
-                ), 0) AS personal_saved_amount
-            FROM `user` u
-            WHERE u.id IN (#{groomId}, #{brideId})
-              AND u.is_deleted = FALSE
-        ) asset_summary
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(
-                    CASE
-                        WHEN ar.type = 'SAVING'
-                         AND ar.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
-                            THEN ar.amount
-                        ELSE 0
-                    END
-                ), 0) AS total_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN a.user_id = #{userId}
-                         AND ar.type = 'SAVING'
-                         AND ar.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
-                            THEN ar.amount
-                        ELSE 0
-                    END
-                ), 0) AS personal_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN ar.type = 'EXPENSE'
-                         AND ar.category IN ('결혼비용', '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비')
-                            THEN ar.amount
-                        ELSE 0
-                    END
-                ), 0) AS wedding_expense_amount
-            FROM account a
-            INNER JOIN account_record ar
-                ON ar.account_id = a.id
-            WHERE a.user_id IN (#{groomId}, #{brideId})
-        ) account_summary
-            ON 1 = 1
-        LEFT JOIN (
-            SELECT
-                COALESCE(SUM(
-                    CASE
-                        WHEN cr.type = 'SAVING'
-                         AND cr.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
-                            THEN cr.amount
-                        ELSE 0
-                    END
-                ), 0) AS total_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN cd.user_id = #{userId}
-                         AND cr.type = 'SAVING'
-                         AND cr.category IN ('결혼비용', '결혼 저축', 'WEDDINGSAVING')
-                            THEN cr.amount
-                        ELSE 0
-                    END
-                ), 0) AS personal_saved_amount,
-                COALESCE(SUM(
-                    CASE
-                        WHEN cr.type = 'EXPENSE'
-                         AND cr.category IN ('결혼비용', '예식장', '스튜디오', '메이크업', '드레스', '예물', '예비비')
-                            THEN cr.amount
-                        ELSE 0
-                    END
-                ), 0) AS wedding_expense_amount
-            FROM card cd
-            INNER JOIN card_record cr
-                ON cr.card_id = cd.id
-            WHERE cd.user_id IN (#{groomId}, #{brideId})
-        ) card_summary
-            ON 1 = 1
         WHERE g.id = #{goalId}
+    </select>
+
+    <select id="selectHomeMemberAssets" resultType="com.project.domain.home.model.HomeRecord$HomeMemberAssetRecord">
+        SELECT
+            u.id AS user_id,
+            u.asset AS asset,
+            u.is_shared AS asset_shared
+        FROM `user` u
+        WHERE u.id IN (#{groomId}, #{brideId})
+          AND u.is_deleted = FALSE
+    </select>
+
+    <select id="selectAssetRecords" resultType="com.project.domain.home.model.HomeRecord$HomeAssetRecord">
+        SELECT
+            sr.user_id AS user_id,
+            sr.type AS record_type,
+            COALESCE(sr.changed_category, sr.category) AS category,
+            SUM(sr.amount) AS amount,
+            'SERVICE' AS source
+        FROM service_record sr
+        WHERE sr.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            sr.user_id,
+            sr.type,
+            COALESCE(sr.changed_category, sr.category)
+        UNION ALL
+        SELECT
+            a.user_id AS user_id,
+            ar.type AS record_type,
+            ar.category AS category,
+            SUM(ar.amount) AS amount,
+            'ACCOUNT' AS source
+        FROM account a
+        INNER JOIN account_record ar
+            ON ar.account_id = a.id
+        WHERE a.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            a.user_id,
+            ar.type,
+            ar.category
+        UNION ALL
+        SELECT
+            cd.user_id AS user_id,
+            cr.type AS record_type,
+            cr.category AS category,
+            SUM(cr.amount) AS amount,
+            'CARD' AS source
+        FROM card cd
+        INNER JOIN card_record cr
+            ON cr.card_id = cd.id
+        WHERE cd.user_id IN (#{groomId}, #{brideId})
+        GROUP BY
+            cd.user_id,
+            cr.type,
+            cr.category
     </select>
 
     <select id="selectExpectedBudgetPreviewRegions" resultType="com.project.domain.home.model.HomeRecord$HomeBudgetPreviewRecord">
         SELECT
             ws.region AS region,
-            CASE ws.region
-                WHEN '서울(강남)' THEN '서울'
-                WHEN '서울(강남외)' THEN '서울'
-                WHEN '경기도' THEN '경기'
-                ELSE ws.region
-            END AS display_region,
-            SUM(ws.mid_50) AS balanced_amount
+            ws.category AS category,
+            ws.mid_50 AS balanced_amount
         FROM wedding_statistics ws
-        WHERE ws.category IN ('예식장', '스튜디오', '드레스', '메이크업')
-          AND ws.region IN ('서울(강남)', '경기도', '인천', '부산', '대구', '광주', '대전')
-        GROUP BY ws.region
-        HAVING COUNT(DISTINCT ws.category) = 4
         ORDER BY
-            CASE
-                WHEN ws.region = '서울(강남)' THEN 1
-                WHEN ws.region = '경기도' THEN 2
-                WHEN ws.region = '인천' THEN 3
-                WHEN ws.region = '부산' THEN 4
-                WHEN ws.region = '대구' THEN 5
-                WHEN ws.region = '광주' THEN 6
-                WHEN ws.region = '대전' THEN 7
-                ELSE 99
-            END,
-            SUM(ws.mid_50) DESC,
-            ws.region ASC
-        LIMIT 7
+            ws.region ASC,
+            ws.category ASC
     </select>
 
     <select id="selectLatestSavingAlert" resultType="com.project.domain.home.model.HomeRecord$HomeSavingAlertRecord">

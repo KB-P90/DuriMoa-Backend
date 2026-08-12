@@ -1,5 +1,7 @@
 package com.project.domain.home.service;
 
+import com.project.common.enums.ExpenseCategory;
+import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.AssetSummaryResponseDTO;
@@ -16,10 +18,12 @@ import com.project.domain.home.dto.SavingMissionSummaryResponseDTO;
 import com.project.domain.home.dto.SetupChecklistResponseDTO;
 import com.project.domain.home.dto.SetupChecklistStepResponseDTO;
 import com.project.domain.home.mapper.HomeMapper;
+import com.project.domain.home.model.HomeRecord.HomeAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
+import com.project.domain.home.model.HomeRecord.HomeMemberAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingAlertRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
@@ -49,8 +53,15 @@ public class HomeServiceImpl implements HomeService {
     private static final String MONTHLY_EXPENSE_NAVIGATION_MESSAGE = "월별지출관리 페이지로 이동";
     private static final String EXPECTED_BUDGET_TYPE = "균형형";
     private static final String EXPECTED_BUDGET_AMOUNT_BASIS = "MID_50";
+    private static final String RECORD_TYPE_EXPENSE = "EXPENSE";
+    private static final String RECORD_TYPE_SAVING = "SAVING";
+    private static final String SOURCE_SERVICE = "SERVICE";
+    private static final String LEGACY_WEDDING_CATEGORY = "결혼비용";
     private static final List<String> EXPECTED_BUDGET_CATEGORIES =
             Collections.unmodifiableList(Arrays.asList("예식장", "스튜디오", "드레스", "메이크업"));
+    private static final List<String> EXPECTED_BUDGET_REGIONS =
+            Collections.unmodifiableList(Arrays.asList(
+                    "서울(강남)", "경기도", "인천", "부산", "대구", "광주", "대전"));
 
     // 홈 조회에 필요한 최소 DB 조회를 담당하는 Mapper입니다.
     private final HomeMapper homeMapper;
@@ -191,12 +202,26 @@ public class HomeServiceImpl implements HomeService {
         if (couple == null || evidenceRecord == null || evidenceRecord.getMainGoalId() == null) {
             return null;
         }
-        return homeMapper.selectAssetSummary(
+        HomeAssetSummaryRecord summaryRecord = homeMapper.selectAssetSummary(
                 authenticatedUserId,
                 couple.getGroomId(),
                 couple.getBrideId(),
                 evidenceRecord.getMainGoalId()
         );
+        if (summaryRecord == null) {
+            return null;
+        }
+
+        List<HomeAssetRecord> assetRecords = homeMapper.selectAssetRecords(
+                couple.getGroomId(),
+                couple.getBrideId()
+        );
+        List<HomeMemberAssetRecord> memberAssets = homeMapper.selectHomeMemberAssets(
+                couple.getGroomId(),
+                couple.getBrideId()
+        );
+        applyAssetAmounts(authenticatedUserId, summaryRecord, assetRecords, memberAssets);
+        return summaryRecord;
     }
 
     // 체크리스트 미완료 홈에서 표시할 지역별 예상 예산 미리보기 데이터를 조회합니다.
@@ -290,6 +315,135 @@ public class HomeServiceImpl implements HomeService {
                 .build();
     }
 
+    // 거래 원본과 자산 공개 정보를 홈 자산 요약 금액으로 합산합니다.
+    private void applyAssetAmounts(
+            Long authenticatedUserId,
+            HomeAssetSummaryRecord summaryRecord,
+            List<HomeAssetRecord> assetRecords,
+            List<HomeMemberAssetRecord> memberAssets
+    ) {
+        AssetAmounts serviceAmounts = new AssetAmounts();
+        AssetAmounts linkedAssetAmounts = new AssetAmounts();
+        for (HomeAssetRecord assetRecord : nullToEmpty(assetRecords)) {
+            AssetAmounts targetAmounts = SOURCE_SERVICE.equals(assetRecord.getSource())
+                    ? serviceAmounts
+                    : linkedAssetAmounts;
+            Long amount = nullToZero(assetRecord.getAmount());
+            if (isWeddingSavingRecord(assetRecord)) {
+                targetAmounts.totalSavedAmount += amount;
+                if (authenticatedUserId.equals(assetRecord.getUserId())) {
+                    targetAmounts.personalSavedAmount += amount;
+                }
+            }
+            if (isWeddingExpenseRecord(assetRecord)) {
+                targetAmounts.weddingExpenseAmount += amount;
+            }
+        }
+
+        AssetAmounts memberAssetAmounts = calculateMemberAssetAmounts(authenticatedUserId, memberAssets);
+        summaryRecord.setTotalSavedAmount(resolveSavedAmount(
+                serviceAmounts.totalSavedAmount,
+                linkedAssetAmounts.totalSavedAmount,
+                memberAssetAmounts.totalSavedAmount
+        ));
+        summaryRecord.setPersonalSavedAmount(resolveSavedAmount(
+                serviceAmounts.personalSavedAmount,
+                linkedAssetAmounts.personalSavedAmount,
+                memberAssetAmounts.personalSavedAmount
+        ));
+        summaryRecord.setWeddingExpenseAmount(
+                serviceAmounts.weddingExpenseAmount + linkedAssetAmounts.weddingExpenseAmount
+        );
+    }
+
+    // 사용자 프로필의 자산 금액을 서비스·계좌 거래가 없을 때 사용할 fallback 금액으로 계산합니다.
+    private AssetAmounts calculateMemberAssetAmounts(
+            Long authenticatedUserId,
+            List<HomeMemberAssetRecord> memberAssets
+    ) {
+        AssetAmounts amounts = new AssetAmounts();
+        for (HomeMemberAssetRecord memberAsset : nullToEmpty(memberAssets)) {
+            Long asset = nullToZero(memberAsset.getAsset());
+            if (authenticatedUserId.equals(memberAsset.getUserId())) {
+                amounts.totalSavedAmount += asset;
+                amounts.personalSavedAmount += asset;
+            } else if (Boolean.TRUE.equals(memberAsset.getAssetShared())) {
+                amounts.totalSavedAmount += asset;
+            }
+        }
+        return amounts;
+    }
+
+    // service_record 값을 우선 사용하고, 없으면 계좌·카드, 없으면 사용자 자산을 사용합니다.
+    private Long resolveSavedAmount(
+            Long serviceAmount,
+            Long linkedAssetAmount,
+            Long memberAssetAmount
+    ) {
+        if (serviceAmount != null && serviceAmount > 0) {
+            return serviceAmount;
+        }
+        if (linkedAssetAmount != null && linkedAssetAmount > 0) {
+            return linkedAssetAmount;
+        }
+        return nullToZero(memberAssetAmount);
+    }
+
+    // 거래가 결혼 저축 금액으로 집계되어야 하는지 판단합니다.
+    private Boolean isWeddingSavingRecord(HomeAssetRecord assetRecord) {
+        return assetRecord != null
+                && RECORD_TYPE_SAVING.equalsIgnoreCase(assetRecord.getRecordType())
+                && isWeddingSavingCategory(assetRecord.getCategory());
+    }
+
+    // 거래가 결혼 준비 지출로 집계되어야 하는지 판단합니다.
+    private Boolean isWeddingExpenseRecord(HomeAssetRecord assetRecord) {
+        return assetRecord != null
+                && RECORD_TYPE_EXPENSE.equalsIgnoreCase(assetRecord.getRecordType())
+                && isWeddingExpenseCategory(assetRecord.getCategory());
+    }
+
+    // 저축 카테고리가 결혼 저축인지 공통 enum 기준으로 판단합니다.
+    private Boolean isWeddingSavingCategory(String category) {
+        String trimmedCategory = trim(category);
+        if (trimmedCategory == null) {
+            return false;
+        }
+        if (LEGACY_WEDDING_CATEGORY.equals(trimmedCategory)) {
+            return true;
+        }
+        for (SavingCategory savingCategory : SavingCategory.values()) {
+            if (savingCategory.isWedding()
+                    && matchesCategory(trimmedCategory, savingCategory.name(), savingCategory.getCategoryName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 지출 카테고리가 결혼 준비 지출인지 공통 enum 기준으로 판단합니다.
+    private Boolean isWeddingExpenseCategory(String category) {
+        String trimmedCategory = trim(category);
+        if (trimmedCategory == null) {
+            return false;
+        }
+        if (LEGACY_WEDDING_CATEGORY.equals(trimmedCategory)) {
+            return true;
+        }
+        for (ExpenseCategory expenseCategory : ExpenseCategory.values()) {
+            if (expenseCategory.isWedding()
+                    && matchesCategory(trimmedCategory, expenseCategory.name(), expenseCategory.getCategoryName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 카테고리 코드와 표시명을 모두 허용합니다.
+    private Boolean matchesCategory(String category, String categoryCode, String categoryName) {
+        return category.equalsIgnoreCase(categoryCode) || category.equals(categoryName);
+    }
+
     // 목표 요약과 예산 달성률을 홈 응답으로 변환합니다.
     private GoalSummaryResponseDTO buildGoalSummary(
             HomeChecklistEvidenceRecord evidenceRecord,
@@ -329,13 +483,16 @@ public class HomeServiceImpl implements HomeService {
         List<HomeBudgetPreviewRecord> safePreviewRecords =
                 previewRecords == null ? Collections.emptyList() : previewRecords;
         List<ExpectedBudgetRegionResponseDTO> regions = new ArrayList<>();
-        for (int index = 0; index < safePreviewRecords.size(); index++) {
-            HomeBudgetPreviewRecord record = safePreviewRecords.get(index);
+        for (String region : EXPECTED_BUDGET_REGIONS) {
+            Long balancedAmount = calculateExpectedBudgetRegionAmount(region, safePreviewRecords);
+            if (balancedAmount == null) {
+                continue;
+            }
             regions.add(ExpectedBudgetRegionResponseDTO.builder()
-                    .region(record.getRegion())
-                    .displayRegion(record.getDisplayRegion())
-                    .balancedAmount(nullToZero(record.getBalancedAmount()))
-                    .rank(index + 1)
+                    .region(region)
+                    .displayRegion(resolveDisplayRegion(region))
+                    .balancedAmount(balancedAmount)
+                    .rank(regions.size() + 1)
                     .build());
         }
 
@@ -345,6 +502,51 @@ public class HomeServiceImpl implements HomeService {
                 .categories(EXPECTED_BUDGET_CATEGORIES)
                 .regions(regions)
                 .build();
+    }
+
+    // 지역별 예상 예산 합계를 서비스 로직에서 계산합니다.
+    private Long calculateExpectedBudgetRegionAmount(
+            String region,
+            List<HomeBudgetPreviewRecord> previewRecords
+    ) {
+        Long totalAmount = 0L;
+        for (String category : EXPECTED_BUDGET_CATEGORIES) {
+            Long categoryAmount = calculateExpectedBudgetCategoryAmount(region, category, previewRecords);
+            if (categoryAmount == null) {
+                return null;
+            }
+            totalAmount += categoryAmount;
+        }
+        return totalAmount;
+    }
+
+    // 지역·카테고리 단위 예상 예산 금액을 합산합니다.
+    private Long calculateExpectedBudgetCategoryAmount(
+            String region,
+            String category,
+            List<HomeBudgetPreviewRecord> previewRecords
+    ) {
+        Long categoryAmount = 0L;
+        Boolean categoryFound = false;
+        for (HomeBudgetPreviewRecord record : previewRecords) {
+            if (region.equals(trim(record.getRegion()))
+                    && category.equals(trim(record.getCategory()))) {
+                categoryAmount += nullToZero(record.getBalancedAmount());
+                categoryFound = true;
+            }
+        }
+        return Boolean.TRUE.equals(categoryFound) ? categoryAmount : null;
+    }
+
+    // 홈 차트에 표시할 짧은 지역명을 계산합니다.
+    private String resolveDisplayRegion(String region) {
+        if ("서울(강남)".equals(region) || "서울(강남외)".equals(region)) {
+            return "서울";
+        }
+        if ("경기도".equals(region)) {
+            return "경기";
+        }
+        return region;
     }
 
     // 계산 결과를 API 응답 DTO로 변환합니다.
@@ -421,5 +623,23 @@ public class HomeServiceImpl implements HomeService {
     // 비어 있는 금액 값을 0으로 변환합니다.
     private Long nullToZero(Long amount) {
         return amount == null ? 0L : amount;
+    }
+
+    private String trim(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private <T> List<T> nullToEmpty(List<T> values) {
+        return values == null ? Collections.emptyList() : values;
+    }
+
+    private static class AssetAmounts {
+
+        private Long totalSavedAmount = 0L;
+        private Long personalSavedAmount = 0L;
+        private Long weddingExpenseAmount = 0L;
     }
 }

@@ -4,6 +4,7 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.home.dto.HomeResponseDTO;
 import com.project.domain.home.mapper.HomeMapper;
+import com.project.domain.home.model.HomeRecord.HomeAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
@@ -30,7 +31,7 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
         Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(false);
-        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(List.of(budgetPreviewRegion()));
+        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(budgetPreviewRegions());
 
         HomeResponseDTO response = service.getHome(1L);
 
@@ -71,7 +72,7 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectHomeUser(1L)).thenReturn(user(1L));
         Mockito.when(mapper.selectActiveCouple(1L)).thenReturn(null);
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
-        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(List.of(budgetPreviewRegion()));
+        Mockito.when(mapper.selectExpectedBudgetPreviewRegions()).thenReturn(budgetPreviewRegions());
 
         HomeResponseDTO response = service.getHome(1L);
 
@@ -93,6 +94,11 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectAccountLinked(1L)).thenReturn(true);
         Mockito.when(mapper.selectChecklistEvidence(1L, 100L, 1L, 2L)).thenReturn(fullEvidence());
         Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
+        Mockito.when(mapper.selectAssetRecords(1L, 2L)).thenReturn(List.of(
+                assetRecord(1L, "SAVING", "WEDDINGSAVING", 11_900_000L, "ACCOUNT"),
+                assetRecord(2L, "SAVING", "결혼 저축", 19_290_000L, "CARD"),
+                assetRecord(1L, "EXPENSE", "WEDDINGHALL", 1_000_000L, "SERVICE")
+        ));
         Mockito.when(mapper.countUnreadNotifications(1L)).thenReturn(2);
         Mockito.when(mapper.selectSavingMissionSummary(
                 Mockito.eq(1L),
@@ -180,12 +186,22 @@ class HomeServiceImplTest {
         return evidence;
     }
 
-    // 미완료 홈의 예상 예산 미리보기 테스트 데이터를 만듭니다.
-    private HomeBudgetPreviewRecord budgetPreviewRegion() {
+    // 미완료 홈의 예상 예산 미리보기 원본 통계 데이터를 만듭니다.
+    private List<HomeBudgetPreviewRecord> budgetPreviewRegions() {
+        return List.of(
+                budgetPreviewRegion("예식장", 5_000_000L),
+                budgetPreviewRegion("스튜디오", 3_000_000L),
+                budgetPreviewRegion("드레스", 2_000_000L),
+                budgetPreviewRegion("메이크업", 1_790_000L)
+        );
+    }
+
+    // 미완료 홈의 예상 예산 미리보기 원본 통계 단건을 만듭니다.
+    private HomeBudgetPreviewRecord budgetPreviewRegion(String category, Long balancedAmount) {
         HomeBudgetPreviewRecord record = new HomeBudgetPreviewRecord();
         record.setRegion("서울(강남)");
-        record.setDisplayRegion("서울");
-        record.setBalancedAmount(11_790_000L);
+        record.setCategory(category);
+        record.setBalancedAmount(balancedAmount);
         return record;
     }
 
@@ -193,12 +209,26 @@ class HomeServiceImplTest {
     private HomeAssetSummaryRecord assetSummary() {
         HomeAssetSummaryRecord summary = new HomeAssetSummaryRecord();
         summary.setTotalBudgetAmount(50_000_000L);
-        summary.setTotalSavedAmount(31_190_000L);
-        summary.setPersonalSavedAmount(11_900_000L);
         summary.setPersonalTargetAmount(30_000_000L);
-        summary.setWeddingExpenseAmount(1_000_000L);
         summary.setBaseDate("2026-08-03");
         return summary;
+    }
+
+    // 홈 자산 요약 테스트용 거래 원본 데이터를 만듭니다.
+    private HomeAssetRecord assetRecord(
+            Long userId,
+            String recordType,
+            String category,
+            Long amount,
+            String source
+    ) {
+        HomeAssetRecord record = new HomeAssetRecord();
+        record.setUserId(userId);
+        record.setRecordType(recordType);
+        record.setCategory(category);
+        record.setAmount(amount);
+        record.setSource(source);
+        return record;
     }
 
     // 홈 도전중 절약미션 표시와 완료 미션 수 요약 테스트 데이터를 만듭니다.
