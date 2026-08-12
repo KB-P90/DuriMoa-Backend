@@ -3,6 +3,7 @@ package com.project.domain.home.service;
 import com.project.common.enums.CoupleStatus;
 import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.MissionStatus;
+import com.project.common.enums.RawRecordCategory;
 import com.project.common.enums.RecordType;
 import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
@@ -116,11 +117,13 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
         Mockito.when(mapper.selectAssetRecords(1L, 2L)).thenReturn(List.of(
                 assetRecord(1L, RecordType.SAVING.name(),
-                        SavingCategory.WEDDINGSAVING.name(), 11_900_000L, "ACCOUNT"),
+                        RawRecordCategory.WEDDING.getCategoryName(), 11_900_000L, "ACCOUNT"),
                 assetRecord(2L, RecordType.SAVING.name(),
                         SavingCategory.WEDDINGSAVING.getCategoryName(), 19_290_000L, "CARD"),
                 assetRecord(1L, RecordType.EXPENSE.name(),
-                        ExpenseCategory.WEDDINGHALL.name(), 1_000_000L, "SERVICE")
+                        RawRecordCategory.WEDDING.getCategoryName(), 800_000L, "ACCOUNT"),
+                assetRecord(1L, RecordType.EXPENSE.name(),
+                        RawRecordCategory.WEDDING.getCategoryName(), 300_000L, "CARD")
         ));
         Mockito.when(mapper.countUnreadNotifications(1L)).thenReturn(2);
         Mockito.when(mapper.selectSavingMissionSummary(
@@ -144,6 +147,7 @@ class HomeServiceImplTest {
         Assertions.assertFalse(response.getGoalSummary().getJointGoal().getSetupRequired());
         Assertions.assertEquals(50_000_000L, response.getAssetSummary().getTotalBudgetAmount());
         Assertions.assertEquals(31_190_000L, response.getAssetSummary().getTotalSavedAmount());
+        Assertions.assertEquals(1_100_000L, response.getAssetSummary().getWeddingExpenseAmount());
         Assertions.assertEquals(18_810_000L, response.getAssetSummary().getRemainingWeddingFundAmount());
         Assertions.assertEquals(31_190_000L, response.getGoalSummary().getJointGoal().getCurrentAmount());
         Assertions.assertEquals(62, response.getGoalSummary().getJointGoal().getAchievementRate());

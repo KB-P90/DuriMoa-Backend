@@ -3,6 +3,7 @@ package com.project.domain.home.service;
 import com.project.common.enums.CoupleStatus;
 import com.project.common.enums.ExpenseCategory;
 import com.project.common.enums.MissionStatus;
+import com.project.common.enums.RawRecordCategory;
 import com.project.common.enums.RecordType;
 import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
@@ -58,13 +59,6 @@ public class HomeServiceImpl implements HomeService {
     private static final String EXPECTED_BUDGET_TYPE = "균형형";
     private static final String EXPECTED_BUDGET_AMOUNT_BASIS = "MID_50";
     private static final String SOURCE_SERVICE = "SERVICE";
-    private static final List<ExpenseCategory> EXPECTED_BUDGET_CATEGORIES =
-            Collections.unmodifiableList(Arrays.asList(
-                    ExpenseCategory.WEDDINGHALL,
-                    ExpenseCategory.STUDIO,
-                    ExpenseCategory.DRESS,
-                    ExpenseCategory.MAKEUP
-            ));
     private static final List<String> EXPECTED_BUDGET_REGIONS =
             Collections.unmodifiableList(Arrays.asList(
                     "서울(강남)", "경기도", "인천", "부산", "대구", "광주", "대전"));
@@ -424,13 +418,13 @@ public class HomeServiceImpl implements HomeService {
         if (trimmedCategory == null) {
             return false;
         }
-        for (SavingCategory savingCategory : SavingCategory.values()) {
-            if (savingCategory.isWedding()
-                    && matchesCategory(trimmedCategory, savingCategory.name(), savingCategory.getCategoryName())) {
+        for (String weddingCode : SavingCategory.getWeddingCodes()) {
+            SavingCategory savingCategory = SavingCategory.valueOf(weddingCode);
+            if (matchesCategory(trimmedCategory, weddingCode, savingCategory.getCategoryName())) {
                 return true;
             }
         }
-        return false;
+        return RawRecordCategory.WEDDING.matches(trimmedCategory);
     }
 
     // 지출 카테고리가 결혼 준비 지출인지 공통 enum 기준으로 판단합니다.
@@ -439,13 +433,13 @@ public class HomeServiceImpl implements HomeService {
         if (trimmedCategory == null) {
             return false;
         }
-        for (ExpenseCategory expenseCategory : ExpenseCategory.values()) {
-            if (expenseCategory.isWedding()
-                    && matchesCategory(trimmedCategory, expenseCategory.name(), expenseCategory.getCategoryName())) {
+        for (String weddingCode : ExpenseCategory.getWeddingCodes()) {
+            ExpenseCategory expenseCategory = ExpenseCategory.valueOf(weddingCode);
+            if (matchesCategory(trimmedCategory, weddingCode, expenseCategory.getCategoryName())) {
                 return true;
             }
         }
-        return false;
+        return RawRecordCategory.WEDDING.matches(trimmedCategory);
     }
 
     // 카테고리 코드와 표시명을 모두 허용합니다.
@@ -491,9 +485,14 @@ public class HomeServiceImpl implements HomeService {
     ) {
         List<HomeBudgetPreviewRecord> safePreviewRecords =
                 previewRecords == null ? Collections.emptyList() : previewRecords;
+        List<ExpenseCategory> expectedBudgetCategories = resolveExpectedBudgetCategories(safePreviewRecords);
         List<ExpectedBudgetRegionResponseDTO> regions = new ArrayList<>();
         for (String region : EXPECTED_BUDGET_REGIONS) {
-            Long balancedAmount = calculateExpectedBudgetRegionAmount(region, safePreviewRecords);
+            Long balancedAmount = calculateExpectedBudgetRegionAmount(
+                    region,
+                    expectedBudgetCategories,
+                    safePreviewRecords
+            );
             if (balancedAmount == null) {
                 continue;
             }
@@ -508,25 +507,55 @@ public class HomeServiceImpl implements HomeService {
         return ExpectedBudgetPreviewResponseDTO.builder()
                 .budgetType(EXPECTED_BUDGET_TYPE)
                 .amountBasis(EXPECTED_BUDGET_AMOUNT_BASIS)
-                .categories(buildExpectedBudgetCategories())
+                .categories(buildExpectedBudgetCategories(expectedBudgetCategories))
                 .regions(regions)
                 .build();
     }
 
     // 공통 enum에 정의된 결혼 예상 예산 카테고리 표시명을 응답에 사용합니다.
-    private List<String> buildExpectedBudgetCategories() {
-        return EXPECTED_BUDGET_CATEGORIES.stream()
+    private List<String> buildExpectedBudgetCategories(
+            List<ExpenseCategory> expectedBudgetCategories
+    ) {
+        return expectedBudgetCategories.stream()
                 .map(ExpenseCategory::getCategoryName)
                 .collect(Collectors.toList());
+    }
+
+    // 통계 테이블에 실제 데이터가 있는 결혼 카테고리만 공통 enum 코드 목록에서 선택합니다.
+    private List<ExpenseCategory> resolveExpectedBudgetCategories(
+            List<HomeBudgetPreviewRecord> previewRecords
+    ) {
+        return ExpenseCategory.getWeddingCodes().stream()
+                .map(ExpenseCategory::valueOf)
+                .filter(category -> existsBudgetPreviewCategory(category, previewRecords))
+                .collect(Collectors.toList());
+    }
+
+    private Boolean existsBudgetPreviewCategory(
+            ExpenseCategory category,
+            List<HomeBudgetPreviewRecord> previewRecords
+    ) {
+        for (HomeBudgetPreviewRecord record : previewRecords) {
+            String recordCategory = trim(record.getCategory());
+            if (recordCategory != null
+                    && matchesCategory(recordCategory, category.name(), category.getCategoryName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // 지역별 예상 예산 합계를 서비스 로직에서 계산합니다.
     private Long calculateExpectedBudgetRegionAmount(
             String region,
+            List<ExpenseCategory> expectedBudgetCategories,
             List<HomeBudgetPreviewRecord> previewRecords
     ) {
+        if (expectedBudgetCategories.isEmpty()) {
+            return null;
+        }
         Long totalAmount = 0L;
-        for (ExpenseCategory category : EXPECTED_BUDGET_CATEGORIES) {
+        for (ExpenseCategory category : expectedBudgetCategories) {
             Long categoryAmount = calculateExpectedBudgetCategoryAmount(region, category, previewRecords);
             if (categoryAmount == null) {
                 return null;
