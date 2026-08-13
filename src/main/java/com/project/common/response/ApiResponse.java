@@ -38,10 +38,6 @@ public class ApiResponse<T> {
         return success("성공적으로 처리되었습니다.", null);
     }
 
-    public static <T> ApiResponse<T> error(String message) {
-        return error(null, message);
-    }
-
     public static <T> ApiResponse<T> error(String errorCode, String message) {
         return ApiResponse.<T>builder()
                 .success(false)

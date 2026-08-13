@@ -17,14 +17,4 @@ class ApiResponseTest {
         assertEquals("잘못된 입력값입니다.", response.getMessage());
         assertNull(response.getData());
     }
-
-    @Test
-    void errorCanReturnOnlySuccessStatusAndMessage() {
-        ApiResponse<Void> response = ApiResponse.error("오류가 발생했습니다.");
-
-        assertFalse(response.getSuccess());
-        assertNull(response.getErrorCode());
-        assertEquals("오류가 발생했습니다.", response.getMessage());
-        assertNull(response.getData());
-    }
 }
