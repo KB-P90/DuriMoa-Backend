@@ -363,12 +363,22 @@ CREATE TABLE `service_record`
 (
     `id`               BIGINT      NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
     `user_id`          BIGINT      NOT NULL COMMENT '사용자 ID',
+
+    `card_record_id`   BIGINT      NULL COMMENT '원본 카드 거래 내역 ID',
+    `account_record_id` BIGINT     NULL COMMENT '원본 계좌 거래 내역 ID',
+
+    `record_date`      DATE        NOT NULL COMMENT '거래 일자',
+
     `type`             VARCHAR(10) NOT NULL COMMENT '내역 구분',
+    `amount`           BIGINT      NOT NULL COMMENT '금액',
+
     `category`         VARCHAR(20) NOT NULL COMMENT '결혼비용, 개인소비 등',
     `changed_category` VARCHAR(20) NULL COMMENT '변경된 카테고리',
-    `amount`           BIGINT      NOT NULL COMMENT '금액',
-    `record_date`      DATE        NOT NULL COMMENT '거래 일자',
+
+    `status`           VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / CANCELLED',
+
     `memo`             TEXT        NULL COMMENT '메모',
+
     `created_at`       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
     `updated_at`       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정 일시',
 
@@ -377,6 +387,10 @@ CREATE TABLE `service_record`
     CONSTRAINT `fk_service_record_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT `fk_service_record_card`
+        FOREIGN KEY (card_record_id) REFERENCES card_record (id),
+    CONSTRAINT `fk_service_record_account`
+        FOREIGN KEY (account_record_id) REFERENCES account_record (id),
     CONSTRAINT `chk_service_record_amount`
         CHECK (`amount` >= 0)
 );
