@@ -96,7 +96,7 @@ class HomeServiceImplTest {
         Assertions.assertEquals("COUPLE_CONNECTED", response.getSetupChecklist().getSteps().get(1).getCode());
     }
 
-    // 실제 수행 근거가 모두 있으면 다섯 단계가 모두 완료됩니다.
+    // 계좌, 커플, 결혼 목표 근거가 모두 있으면 체크리스트가 완료됩니다.
     @Test
     void getHomeReturnsCompletedChecklistWhenAllEvidenceExists() {
         HomeMapper mapper = Mockito.mock(HomeMapper.class);
@@ -137,7 +137,7 @@ class HomeServiceImplTest {
 
         HomeResponseDTO response = service.getHome(1L);
 
-        Assertions.assertEquals(5, response.getSetupChecklist().getCompletedCount());
+        Assertions.assertEquals(3, response.getSetupChecklist().getCompletedCount());
         Assertions.assertNull(response.getSetupChecklist().getCurrentStep());
         Assertions.assertTrue(response.getSetupCompleted());
         Assertions.assertNull(response.getExpectedBudgetPreview());
@@ -209,7 +209,6 @@ class HomeServiceImplTest {
     private HomeChecklistEvidenceRecord fullEvidence() {
         HomeChecklistEvidenceRecord evidence = new HomeChecklistEvidenceRecord();
         evidence.setWeddingGoalCreated(true);
-        evidence.setMainPlanSelected(true);
         evidence.setMainGoalId(30L);
         evidence.setMainGoalStatus(GoalStatus.CONFIRMED.name());
         evidence.setWeddingDate("2026-12-20");

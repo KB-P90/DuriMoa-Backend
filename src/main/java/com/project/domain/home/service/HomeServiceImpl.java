@@ -152,20 +152,14 @@ public class HomeServiceImpl implements HomeService {
                     .accountLinked(Boolean.TRUE.equals(accountLinked))
                     .coupleConnected(false)
                     .weddingGoalCreated(false)
-                    .mainPlanSelected(false)
-                    .firstStepStarted(false)
                     .build();
         }
 
-        Boolean mainPlanSelected = evidenceRecord != null
-                && Boolean.TRUE.equals(evidenceRecord.getMainPlanSelected());
         return HomeSetupChecklistEvidence.builder()
                 .accountLinked(Boolean.TRUE.equals(accountLinked))
                 .coupleConnected(true)
                 .weddingGoalCreated(evidenceRecord != null
                         && Boolean.TRUE.equals(evidenceRecord.getWeddingGoalCreated()))
-                .mainPlanSelected(mainPlanSelected)
-                .firstStepStarted(mainPlanSelected)
                 .build();
     }
 

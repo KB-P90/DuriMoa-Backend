@@ -66,9 +66,6 @@ public final class HomeRecord {
         // 활성 커플에 결혼 목표 시안이 하나 이상 있는지 나타내는 DB 조회 결과입니다.
         private Boolean weddingGoalCreated;
 
-        // 활성 커플에 확정된 메인 시안이 있는지 나타내는 DB 조회 결과입니다.
-        private Boolean mainPlanSelected;
-
         // 대표 결혼 목표 식별자입니다.
         private Long mainGoalId;
 

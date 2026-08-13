@@ -78,10 +78,6 @@
                 ) THEN TRUE
                 ELSE FALSE
             END AS wedding_goal_created,
-            CASE
-                WHEN main_goal.id IS NOT NULL THEN TRUE
-                ELSE FALSE
-            END AS main_plan_selected,
             main_goal.id AS main_goal_id,
             main_goal.status AS main_goal_status,
             DATE_FORMAT(main_goal.wedding_date, '%Y-%m-%d') AS wedding_date,
