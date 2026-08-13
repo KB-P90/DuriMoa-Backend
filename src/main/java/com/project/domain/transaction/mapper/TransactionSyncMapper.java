@@ -27,4 +27,8 @@ public interface TransactionSyncMapper {
     int insertAccountRecord(AccountTransactionRecordDTO recordDTO);
 
     int insertCardRecord(CardTransactionRecordDTO recordDTO);
+
+    List<CardTransactionRecordDTO> findNewCardRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
+
+    List<AccountTransactionRecordDTO> findNewAccountRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
 }

@@ -55,43 +55,48 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     public TransactionSyncResponseDTO syncUserTransactions(Long userId) {
         String connectedId = getConnectedId(userId);
 
+        // 사용자의 모든 계좌, 카드 리스트
         List<TransactionSyncTargetDTO> accounts = transactionSyncMapper.findAccountsByUserId(userId);
         List<TransactionSyncTargetDTO> cards = transactionSyncMapper.findCardsByUserId(userId);
 
         LocalDate today = LocalDate.now();
-        LocalDateTime lastSyncAt = transactionSyncMapper.findLastSyncAtByUserId(userId);
+        LocalDateTime previousLastSyncAt = transactionSyncMapper.findLastSyncAtByUserId(userId);
+        LocalDateTime currentSyncAt = LocalDateTime.now();
 
         int fetchedCount = 0;
         int savedCount = 0;
         int duplicateCount = 0;
 
+        // 모든 계좌의 입출금 내역 받아와서 저장
         for (TransactionSyncTargetDTO account : accounts) {
-            TransactionSyncResponseDTO response = syncAccountTransactions(connectedId, account, lastSyncAt, today);
+            TransactionSyncResponseDTO response = syncAccountTransactions(connectedId, account, previousLastSyncAt, today);
 
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
             duplicateCount += response.getDuplicateCount();
         }
 
+        // 모든 카드의 승인 내역 받아와서 저장
         for (TransactionSyncTargetDTO card : cards) {
-            TransactionSyncResponseDTO response = syncCardTransactions(connectedId, card, lastSyncAt, today);
+            TransactionSyncResponseDTO response = syncCardTransactions(connectedId, card, previousLastSyncAt, today);
 
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
             duplicateCount += response.getDuplicateCount();
         }
 
-        // 전체 원본 거래 동기화 성공 시 checkpoint 갱신
-        LocalDateTime now = LocalDateTime.now();
+        // 이번 sync에서 새로 생성된 데이터를 서비스 데이터로 변환
+        processNewServiceRecords(userId, previousLastSyncAt);
 
-        if (lastSyncAt == null) {
-            transactionSyncMapper.insertLastSync(userId, now);
+        // 전체 원본 거래 동기화 & 서비스 데이터 변환 모두 성공 시 checkpoint 갱신
+        if (previousLastSyncAt == null) {
+            transactionSyncMapper.insertLastSync(userId, currentSyncAt);
         } else {
-            transactionSyncMapper.updateLastSync(userId, now);
+            transactionSyncMapper.updateLastSync(userId, currentSyncAt);
         }
 
-        log.info("CODEF 사용자 전체 원본 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}, lastSyncAt: {}",
-                userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount, now);
+        log.info("사용자 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}, lastSyncAt: {}",
+                userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount, currentSyncAt);
 
         return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size());
     }
@@ -192,6 +197,33 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 card.getId(), startDateString, endDateString, items.size(), savedCount, duplicateCount);
 
         return buildResponse(items.size(), savedCount, duplicateCount, 0, 1);
+    }
+
+    private void processNewServiceRecords(Long userId, LocalDateTime lastSyncAt) {
+        List<CardTransactionRecordDTO> newCards =
+                transactionSyncMapper.findNewCardRecords(userId, lastSyncAt);
+
+        List<AccountTransactionRecordDTO> newAccounts =
+                transactionSyncMapper.findNewAccountRecords(userId, lastSyncAt);
+
+        log.info("신규 원본 거래 서비스 변환 시작 - userId: {}, cards: {}, accounts: {}",
+                userId, newCards.size(), newAccounts.size());
+
+        for (CardTransactionRecordDTO cardRecord : newCards) {
+            processCardRecord(userId, cardRecord);
+        }
+
+        for (AccountTransactionRecordDTO accountRecord : newAccounts) {
+            processAccountRecord(userId, accountRecord);
+        }
+    }
+
+    private void processCardRecord(Long userId, CardTransactionRecordDTO cardRecord) {
+
+    }
+
+    private void processAccountRecord(Long userId, AccountTransactionRecordDTO accountRecord) {
+
     }
 
     private CodefInstitution validateInstitution(String company, String expectedBusinessType) {
