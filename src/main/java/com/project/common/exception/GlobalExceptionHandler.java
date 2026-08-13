@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
         log.error("CustomException: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
         return ResponseEntity
                 .status(e.getErrorCode().getStatus())
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getErrorCode().getCode(), e.getMessage()));
     }
 
     /**
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
         log.error("Input Validation Error (400 BAD_REQUEST): {}", errorMessage);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(errorMessage));
+                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), errorMessage));
     }
 
     /**
@@ -69,7 +69,9 @@ public class GlobalExceptionHandler {
         log.error("File Upload Size Exceeded (400 BAD_REQUEST): {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("업로드 가능한 파일 용량을 초과했습니다."));
+                .body(ApiResponse.error(
+                        ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                        "업로드 가능한 파일 용량을 초과했습니다."));
     }
 
     /**
@@ -80,6 +82,8 @@ public class GlobalExceptionHandler {
         log.error("Unhandled System Exception (500 INTERNAL_SERVER_ERROR): ", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
+                .body(ApiResponse.error(
+                        ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                        ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
     }
 }

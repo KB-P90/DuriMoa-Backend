@@ -1,6 +1,7 @@
 package com.project.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -73,6 +74,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         new ObjectMapper().writeValue(
                 response.getWriter(),
-                ApiResponse.error("유효하지 않거나 만료된 Access Token입니다."));
+                ApiResponse.error(
+                        ErrorCode.UNAUTHORIZED.getCode(),
+                        "유효하지 않거나 만료된 Access Token입니다."));
     }
 }
