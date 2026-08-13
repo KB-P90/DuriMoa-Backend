@@ -13,7 +13,3 @@ jwt.refresh-token-expiration=1209600000
 # Redis Configuration
 redis.host=localhost
 redis.port=6379
-
-# Auth Cookie Configuration
-# 운영 HTTPS 환경에서는 true로 설정하세요.
-auth.refresh-token-cookie-secure=false
