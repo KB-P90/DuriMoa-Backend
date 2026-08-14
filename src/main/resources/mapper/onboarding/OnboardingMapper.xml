@@ -11,10 +11,31 @@
         LIMIT 1
     </select>
 
+    <select id="existsActiveUserById" resultType="java.lang.Boolean">
+        SELECT
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM `user`
+                    WHERE id = #{userId}
+                      AND is_deleted = FALSE
+                )
+                THEN TRUE
+                ELSE FALSE
+            END
+    </select>
+
     <update id="updateUserConnectedId">
         UPDATE `user`
         SET connected_id = #{connectedId}
         WHERE id = #{userId}
+    </update>
+
+    <update id="updateWeddingFund">
+        UPDATE `user`
+        SET wedding_fund = #{weddingFund}
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
     </update>
 
     <insert id="insertAccount" useGeneratedKeys="true" keyProperty="id">

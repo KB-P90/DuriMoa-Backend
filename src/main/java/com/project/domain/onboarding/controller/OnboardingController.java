@@ -9,6 +9,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingWeddingFundRequestDTO;
 import com.project.domain.onboarding.service.OnboardingService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -100,5 +101,21 @@ public class OnboardingController {
                 userId, requestDTO.getCompany(), requestDTO.getSelectedItems());
         OnboardingSelectResponseDTO response = onboardingService.selectAccountsOrCards(userId, requestDTO);
         return ResponseEntity.ok(ApiResponse.success("선택 계좌 거래 내역 저장 완료", response));
+    }
+
+    @ApiOperation(
+            value = "결혼 자금 입력 API",
+            notes = "온보딩에서 사용자가 결혼 자금으로 포함할 현재 보유 금액을 입력합니다. 입력된 금액은 홈 자산 요약과 온보딩 체크리스트 판단에 사용됩니다."
+    )
+    @PostMapping("/wedding-fund")
+    public ResponseEntity<ApiResponse<Void>> saveWeddingFund(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody OnboardingWeddingFundRequestDTO requestDTO) {
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        }
+        log.info("온보딩 결혼 자금 입력 요청 수신 - userId: {}", userId);
+        onboardingService.saveWeddingFund(userId, requestDTO);
+        return ResponseEntity.ok(ApiResponse.success("결혼 자금 입력이 완료되었습니다."));
     }
 }
