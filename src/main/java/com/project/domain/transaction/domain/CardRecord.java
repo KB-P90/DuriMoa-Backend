@@ -9,6 +9,8 @@ import java.time.LocalTime;
 @Getter
 @Builder
 public class CardRecord {
+    private Long id;
+
     private Long cardId;
     private String sourceKey;
 

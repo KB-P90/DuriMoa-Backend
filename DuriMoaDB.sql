@@ -273,11 +273,11 @@ CREATE TABLE `account_record`
     `source_key`                CHAR(64)     NOT NULL COMMENT 'CODEF 거래 식별용 해시',
 
     `transaction_date`          DATE         NOT NULL COMMENT '거래 일자',
-    `transaction_time`          TIME         NULL COMMENT '거래 시각',
+    `transaction_time`          TIME         NOT NULL COMMENT '거래 시각',
 
     `out_amount`                BIGINT       NOT NULL DEFAULT 0 COMMENT '출금 금액',
     `in_amount`                 BIGINT       NOT NULL DEFAULT 0 COMMENT '입금 금액',
-    `after_transaction_balance` BIGINT       NULL COMMENT '거래 후 잔액',
+    `after_transaction_balance` BIGINT       NOT NULL COMMENT '거래 후 잔액',
 
     `description1`              VARCHAR(255) NULL COMMENT '거래내역 비고1',
     `description2`              VARCHAR(255) NULL COMMENT '거래내역 비고2',
@@ -313,15 +313,15 @@ CREATE TABLE `card_record`
     `source_key`            CHAR(64)     NOT NULL COMMENT 'CODEF 거래 식별용 해시',
 
     `used_date`             DATE         NOT NULL COMMENT '사용 일자',
-    `used_time`             TIME         NULL COMMENT '사용 시각',
+    `used_time`             TIME         NOT NULL COMMENT '사용 시각',
 
-    `store_name`            VARCHAR(200) NULL COMMENT '가맹점명',
+    `store_name`            VARCHAR(200) NOT NULL COMMENT '가맹점명',
     `used_amount`           BIGINT       NOT NULL COMMENT '이용 금액',
 
-    `payment_type`          VARCHAR(10)  NULL COMMENT '결제 방법',
+    `payment_type`          VARCHAR(10)  NOT NULL COMMENT '결제 방법',
     `installment_month`     INT          NULL COMMENT '할부 개월',
 
-    `approval_no`           VARCHAR(50)  NULL COMMENT '승인 번호',
+    `approval_no`           VARCHAR(50)  NOT NULL COMMENT '승인 번호',
     `payment_due_date`      DATE         NULL COMMENT '결제 예정일',
 
     `domestic_foreign_type` VARCHAR(10)  NULL COMMENT '국내/해외 구분',

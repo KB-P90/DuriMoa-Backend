@@ -100,32 +100,40 @@
         )
     </insert>
 
-    <select id="findNewCardRecords"
-            resultType="com.project.domain.transaction.domain.CardRecord">
-        SELECT
-            cr.id,
-            cr.card_id,
-            cr.source_key,
-            cr.used_date,
-            cr.used_time,
-            cr.store_name,
-            cr.used_amount,
-            cr.payment_type,
-            cr.installment_month,
-            cr.approval_no,
-            cr.payment_due_date,
-            cr.domestic_foreign_type,
-            cr.store_corp_no,
-            cr.store_type,
-            cr.store_no,
-            cr.cancel_yn,
-            cr.cancel_amount,
-            cr.vat,
-            cr.cash_back,
-            cr.krw_amount,
-            cr.currency,
-            cr.raw_data,
-            cr.created_at
+    <insert id="insertServiceRecord">
+        INSERT INTO service_record (
+            user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, status, memo
+        ) VALUES (
+            #{userId}, #{cardRecordId}, #{accountRecordId},
+            #{recordDate}, #{type}, #{amount}, #{category}, #{status}, #{memo}
+        )
+    </insert>
+
+    <select id="findNewCardRecords" resultType="com.project.domain.transaction.domain.CardRecord">
+        SELECT cr.id,
+               cr.card_id,
+               cr.source_key,
+               cr.used_date,
+               cr.used_time,
+               cr.store_name,
+               cr.used_amount,
+               cr.payment_type,
+               cr.installment_month,
+               cr.approval_no,
+               cr.payment_due_date,
+               cr.domestic_foreign_type,
+               cr.store_corp_no,
+               cr.store_type,
+               cr.store_no,
+               cr.cancel_yn,
+               cr.cancel_amount,
+               cr.vat,
+               cr.cash_back,
+               cr.krw_amount,
+               cr.currency,
+               cr.raw_data,
+               cr.created_at
         FROM card_record cr
                  JOIN card c ON c.id = cr.card_id
         WHERE c.user_id = #{userId}
@@ -136,23 +144,21 @@
         ORDER BY cr.created_at, cr.id
     </select>
 
-    <select id="findNewAccountRecords"
-            resultType="com.project.domain.transaction.domain.AccountRecord">
-        SELECT
-            ar.id,
-            ar.account_id,
-            ar.source_key,
-            ar.transaction_date,
-            ar.transaction_time,
-            ar.out_amount,
-            ar.in_amount,
-            ar.after_transaction_balance,
-            ar.description1,
-            ar.description2,
-            ar.description3,
-            ar.description4,
-            ar.raw_data,
-            ar.created_at
+    <select id="findNewAccountRecords" resultType="com.project.domain.transaction.domain.AccountRecord">
+        SELECT ar.id,
+               ar.account_id,
+               ar.source_key,
+               ar.transaction_date,
+               ar.transaction_time,
+               ar.out_amount,
+               ar.in_amount,
+               ar.after_transaction_balance,
+               ar.description1,
+               ar.description2,
+               ar.description3,
+               ar.description4,
+               ar.raw_data,
+               ar.created_at
         FROM account_record ar
                  JOIN account a ON a.id = ar.account_id
         WHERE a.user_id = #{userId}
@@ -162,4 +168,96 @@
             )
         ORDER BY ar.created_at, ar.id
     </select>
+
+    <select id="findMatchingAccountRecord" resultType="com.project.domain.transaction.domain.AccountRecord">
+        SELECT ar.id,
+               ar.account_id,
+               ar.source_key,
+               ar.transaction_date,
+               ar.transaction_time,
+               ar.out_amount,
+               ar.in_amount,
+               ar.after_transaction_balance,
+               ar.description1,
+               ar.description2,
+               ar.description3,
+               ar.description4,
+               ar.raw_data,
+               ar.created_at
+        FROM account_record ar
+                 INNER JOIN account a
+                            ON a.id = ar.account_id
+        WHERE a.user_id = #{userId}
+          AND ar.transaction_date = #{record.usedDate}
+          AND ar.out_amount = #{record.usedAmount}
+          AND ABS(TIME_TO_SEC(TIMEDIFF(ar.transaction_time, #{record.usedTime}))) &lt;= 600
+        ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(ar.transaction_time, #{record.usedTime}))), ar.id LIMIT 1
+    </select>
+
+    <select id="findMatchingCardRecord" resultType="com.project.domain.transaction.domain.CardRecord">
+        SELECT cr.id,
+               cr.card_id,
+               cr.source_key,
+               cr.used_date,
+               cr.used_time,
+               cr.store_name,
+               cr.used_amount,
+               cr.payment_type,
+               cr.installment_month,
+               cr.approval_no,
+               cr.payment_due_date,
+               cr.domestic_foreign_type,
+               cr.store_corp_no,
+               cr.store_type,
+               cr.store_no,
+               cr.cancel_yn,
+               cr.cancel_amount,
+               cr.vat,
+               cr.cash_back,
+               cr.krw_amount,
+               cr.currency,
+               cr.raw_data,
+               cr.created_at
+        FROM card_record cr
+                 INNER JOIN card c
+                            ON c.id = cr.card_id
+        WHERE c.user_id = #{userId}
+          AND cr.used_date = #{record.transactionDate}
+          AND cr.used_amount = #{record.outAmount}
+          AND ABS(TIME_TO_SEC(TIMEDIFF(cr.used_time, #{record.transactionTime}))) &lt;= 600
+        ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(cr.used_time, #{record.transactionTime}))), cr.id LIMIT 1
+    </select>
+
+    <select id="findByAccountRecordId" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT
+            id, user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, changed_category,
+            status, memo, created_at, updated_at
+        FROM service_record
+        WHERE account_record_id = #{recordId}
+    </select>
+
+    <select id="findByCardRecordId" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT
+            id, user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, changed_category,
+            status, memo, created_at, updated_at
+        FROM service_record
+        WHERE card_record_id = #{recordId}
+    </select>
+
+    <update id="attachCardRecord">
+        UPDATE service_record
+        SET card_record_id = #{cardRecordId},
+            updated_at     = CURRENT_TIMESTAMP
+        WHERE id = #{serviceRecordId}
+    </update>
+
+    <update id="attachAccountRecord">
+        UPDATE service_record
+        SET account_record_id = #{accountRecordId},
+            updated_at        = CURRENT_TIMESTAMP
+        WHERE id = #{serviceRecordId}
+    </update>
+
 </mapper>
