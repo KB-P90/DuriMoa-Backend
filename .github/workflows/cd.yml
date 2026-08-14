@@ -39,6 +39,7 @@ jobs:
           printf '%s' "$DATABASE_PROPERTIES" > src/main/resources/database.properties
           printf '%s' "$CODEF_PROPERTIES" > src/main/resources/codef.properties
           printf '%s' "$AWS_PROPERTIES" > src/main/resources/aws.properties
+          printf '%s' "$KAKAO_PROPERTIES" > src/main/resources/kakao.properties
 
       - name: Build WAR
         run: ./gradlew clean build -x test --no-daemon

@@ -21,8 +21,10 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final String TARGET_TYPE_COUPLE = "COUPLE";
     private static final String COUPLE_REQUESTED = "COUPLE_REQUESTED";
+    private static final String COUPLE_ACCEPTED = "COUPLE_ACCEPTED";
     private static final String COUPLE_DISCONNECTED = "COUPLE_DISCONNECTED";
     private static final String COUPLE_REQUEST_TITLE = "커플 연결 요청";
+    private static final String COUPLE_ACCEPTED_TITLE = "커플 연결 수락";
     private static final String COUPLE_DISCONNECTED_TITLE = "커플 연결이 해제되었습니다.";
 
     private final CoupleInvitationMapper coupleInvitationMapper;
@@ -90,6 +92,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             coupleInvitationMapper.acceptOwnInvitation(currentUserId, partner.getUserId());
             coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
             coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partner.getUserId());
+            createCoupleAcceptedNotification(partner, currentUser);
             return new CoupleInvitationDTO(
                     partner.getUserId(),
                     partner.getName(),
@@ -133,6 +136,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         coupleInvitationMapper.acceptOwnInvitation(currentUserId, partnerUserId);
         coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
         coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partnerUserId);
+        createCoupleAcceptedNotification(couple, currentUser);
 
         return new CoupleInvitationDTO(
                 couple.getUserId(),
@@ -222,6 +226,19 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
                 COUPLE_DISCONNECTED_TITLE,
                 partner.getName() + "님과의 커플 연결이 해제되었습니다.",
                 partner.getUserId()
+        );
+    }
+
+    private void createCoupleAcceptedNotification(
+            CoupleInvitationDTO requester,
+            CoupleInvitationDTO acceptor
+    ) {
+        createNotification(
+                requester.getUserId(),
+                COUPLE_ACCEPTED,
+                COUPLE_ACCEPTED_TITLE,
+                acceptor.getName() + "님이 커플 연결 요청을 수락했습니다.",
+                acceptor.getUserId()
         );
     }
 

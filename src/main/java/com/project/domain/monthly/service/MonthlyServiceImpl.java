@@ -209,6 +209,11 @@ public class MonthlyServiceImpl implements MonthlyService {
             missions = Collections.emptyList();
         }
 
+        YearMonth requestedYearMonth = YearMonth.of(year, month);
+        if (!requestedYearMonth.equals(YearMonth.now())) {
+            missions.forEach(mission -> mission.setIsSelectable(false));
+        }
+
         long totalExpectedSavingAmount = missions.stream()
                 .mapToLong(m -> m.getExpectedSavingAmount() != null ? m.getExpectedSavingAmount() : 0L)
                 .sum();
@@ -227,8 +232,44 @@ public class MonthlyServiceImpl implements MonthlyService {
     public void startSavingMission(Long userId, Long missionId) {
         int updatedRows = monthlyMapper.updateSavingMissionStatusToInProgress(userId, missionId);
         if (updatedRows == 0) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "해당 절약 미션을 찾을 수 없거나 이미 도전 중인 미션입니다.");
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "현재 월의 도전하기 미션만 도전할 수 있습니다.");
         }
+    }
+
+    @Override
+    @Transactional
+    public int generateScheduledSavingMissions(YearMonth targetMonth) {
+        List<Long> userIds = monthlyMapper.selectActiveUserIds();
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+
+        int generatedUserCount = 0;
+        for (Long userId : userIds) {
+            boolean alreadyGenerated = monthlyMapper.existsSavingMissionByUserAndMonth(
+                    userId, targetMonth.getYear(), targetMonth.getMonthValue());
+            if (alreadyGenerated) {
+                continue;
+            }
+
+            SavingMissionRecommendationRequestDTO request =
+                    SavingMissionRecommendationRequestDTO.builder()
+                            .userId(userId)
+                            .targetYear(targetMonth.getYear())
+                            .targetMonth(targetMonth.getMonthValue())
+                            .build();
+            ResponseEntity<ApiResponse<SavingMissionRecommendationResponseDTO>> response =
+                    generateSavingMissionRecommendations(request);
+            SavingMissionRecommendationResponseDTO data = response.getBody() != null
+                    ? response.getBody().getData()
+                    : null;
+            if (data != null && data.getMissionCount() != null && data.getMissionCount() > 0) {
+                generatedUserCount++;
+            }
+        }
+        return generatedUserCount;
     }
 
     @Override
@@ -271,7 +312,7 @@ public class MonthlyServiceImpl implements MonthlyService {
                 .limit(4)
                 .toList();
 
-        LocalDateTime targetCreatedAt = targetYM.atDay(1).atTime(10, 0, 0);
+        LocalDateTime targetCreatedAt = targetYM.atDay(1).atStartOfDay();
 
         List<RecommendedMissionDTO> recommendedMissions = new ArrayList<>();
 

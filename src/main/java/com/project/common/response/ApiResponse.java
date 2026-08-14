@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class ApiResponse<T> {
 
     private Boolean success;
+    private String errorCode;
     private String message;
     private T data;
 
@@ -37,9 +38,10 @@ public class ApiResponse<T> {
         return success("성공적으로 처리되었습니다.", null);
     }
 
-    public static <T> ApiResponse<T> error(String message) {
+    public static <T> ApiResponse<T> error(String errorCode, String message) {
         return ApiResponse.<T>builder()
                 .success(false)
+                .errorCode(errorCode)
                 .message(message)
                 .data(null)
                 .build();

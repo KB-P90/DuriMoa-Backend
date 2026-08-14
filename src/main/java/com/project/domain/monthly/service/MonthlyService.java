@@ -9,6 +9,8 @@ import com.project.domain.monthly.dto.SavingMissionRecommendationResponseDTO;
 import com.project.domain.monthly.dto.SavingMissionResponseDTO;
 import org.springframework.http.ResponseEntity;
 
+import java.time.YearMonth;
+
 public interface MonthlyService {
 
     /**
@@ -41,6 +43,8 @@ public interface MonthlyService {
      * @param missionId 미션 ID
      */
     void startSavingMission(Long userId, Long missionId);
+
+    int generateScheduledSavingMissions(YearMonth targetMonth);
 
     /**
      * 직전 월 소비 패턴을 분석하여 절약 추천 미션을 생성합니다.
