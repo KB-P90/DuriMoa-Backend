@@ -49,9 +49,11 @@ class MonthlySavingMissionRecommendationTest {
 
         Assertions.assertEquals("FOOD", missions.get(0).getCategoryCode());
         Assertions.assertEquals("월 20회에서 15회로 줄이면", missions.get(0).getTitle());
+        Assertions.assertEquals(600000L, missions.get(0).getBaselineAmount());
         Assertions.assertEquals(150000L, missions.get(0).getExpectedSavingAmount());
         Assertions.assertEquals("CULTURE", missions.get(1).getCategoryCode());
         Assertions.assertEquals("월 8회에서 4회로 줄이면", missions.get(1).getTitle());
+        Assertions.assertEquals(200000L, missions.get(1).getBaselineAmount());
         Assertions.assertEquals(80000L, missions.get(1).getExpectedSavingAmount());
     }
 

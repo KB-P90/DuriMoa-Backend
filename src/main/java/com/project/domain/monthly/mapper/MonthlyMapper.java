@@ -49,5 +49,18 @@ public interface MonthlyMapper {
             @Param("analysisYear") Integer analysisYear);
 
     int insertSavingMission(SavingMissionEntityDTO mission);
+
+    int updateInProgressSavingMissionResults(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("successStatus") String successStatus,
+            @Param("failureStatus") String failureStatus,
+            @Param("inProgressStatus") String inProgressStatus);
+
+    int expireUnstartedSavingMissions(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("challengeStatus") String challengeStatus,
+            @Param("expiredStatus") String expiredStatus);
 }
 

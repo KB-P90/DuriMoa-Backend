@@ -242,6 +242,7 @@
             user_id,
             category,
             title,
+            baseline_amount,
             expected_saving,
             status,
             created_at
@@ -249,10 +250,45 @@
             #{userId},
             #{categoryCode},
             #{title},
+            #{baselineAmount},
             #{expectedSavingAmount},
             #{status},
             #{createdAt}
         )
     </insert>
+
+    <update id="updateInProgressSavingMissionResults">
+        UPDATE saving_missions sm
+        LEFT JOIN (
+            SELECT
+                user_id,
+                COALESCE(changed_category, category) AS category_code,
+                SUM(amount) AS total_amount
+            FROM service_record
+            WHERE type = 'EXPENSE'
+              AND record_date &gt;= #{startDate}
+              AND record_date &lt; #{endDate}
+            GROUP BY user_id, COALESCE(changed_category, category)
+        ) expense
+            ON expense.user_id = sm.user_id
+           AND expense.category_code = sm.category
+        SET sm.status = CASE
+            WHEN COALESCE(expense.total_amount, 0)
+                    &lt;= GREATEST(sm.baseline_amount - sm.expected_saving, 0)
+                THEN #{successStatus}
+            ELSE #{failureStatus}
+        END
+        WHERE sm.created_at &gt;= #{startDate}
+          AND sm.created_at &lt; #{endDate}
+          AND sm.status = #{inProgressStatus}
+    </update>
+
+    <update id="expireUnstartedSavingMissions">
+        UPDATE saving_missions
+        SET status = #{expiredStatus}
+        WHERE created_at &gt;= #{startDate}
+          AND created_at &lt; #{endDate}
+          AND status = #{challengeStatus}
+    </update>
 
 </mapper>

@@ -279,6 +279,26 @@ public class MonthlyServiceImpl implements MonthlyService {
 
     @Override
     @Transactional
+    public int finalizeSavingMissions(YearMonth missionMonth) {
+        LocalDate startDate = missionMonth.atDay(1);
+        LocalDate endDate = missionMonth.plusMonths(1).atDay(1);
+
+        int evaluatedCount = monthlyMapper.updateInProgressSavingMissionResults(
+                startDate,
+                endDate,
+                MissionStatus.SUCCESS.getStatus(),
+                MissionStatus.FAILURE.getStatus(),
+                MissionStatus.IN_PROGRESS.getStatus());
+        int expiredCount = monthlyMapper.expireUnstartedSavingMissions(
+                startDate,
+                endDate,
+                MissionStatus.CHALLENGE.getStatus(),
+                MissionStatus.EXPIRED.getStatus());
+        return evaluatedCount + expiredCount;
+    }
+
+    @Override
+    @Transactional
     public ResponseEntity<ApiResponse<SavingMissionRecommendationResponseDTO>> generateSavingMissionRecommendations(SavingMissionRecommendationRequestDTO requestDTO) {
         Long userId = requestDTO.getUserId();
         Integer targetYear = requestDTO.getTargetYear();
@@ -351,6 +371,7 @@ public class MonthlyServiceImpl implements MonthlyService {
                     .userId(userId)
                     .categoryCode(categoryCode)
                     .title(missionInfo.getTitle())
+                    .baselineAmount(totalAmount)
                     .expectedSavingAmount(missionInfo.getExpectedSavingAmount())
                     .status(MissionStatus.CHALLENGE.getStatus())
                     .createdAt(targetCreatedAt)

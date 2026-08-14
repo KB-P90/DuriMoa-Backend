@@ -19,6 +19,7 @@ public class SavingMissionEntityDTO {
     private Long userId;
     private String categoryCode;
     private String title;
+    private Long baselineAmount;
     private Long expectedSavingAmount;
     private String status;
     private LocalDateTime createdAt;
