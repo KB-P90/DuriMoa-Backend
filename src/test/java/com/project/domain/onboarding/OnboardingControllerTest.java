@@ -10,6 +10,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
+import com.project.domain.onboarding.dto.OnboardingWeddingFundRequestDTO;
 import com.project.domain.onboarding.service.OnboardingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +35,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -152,5 +154,25 @@ class OnboardingControllerTest {
         String body = result.getResponse().getContentAsString();
         assertNotNull(body);
         assertTrue(body.contains("15"));
+    }
+
+    @Test
+    @DisplayName("4. 결혼 자금 입력 API 컨트롤러 테스트")
+    void saveWeddingFund_ControllerTest() throws Exception {
+        OnboardingWeddingFundRequestDTO request = OnboardingWeddingFundRequestDTO.builder()
+                .weddingFund("2000000")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/onboarding/wedding-fund")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertNotNull(body);
+        assertTrue(body.contains("\"success\":true"));
+        assertTrue(body.contains("결혼 자금 입력이 완료되었습니다."));
+        verify(onboardingService).saveWeddingFund(any(), any());
     }
 }

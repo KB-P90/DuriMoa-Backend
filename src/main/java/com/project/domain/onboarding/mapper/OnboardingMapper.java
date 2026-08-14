@@ -15,8 +15,14 @@ public interface OnboardingMapper {
     // user 테이블에서 사용자의 connected_id 조회
     String findConnectedIdByUserId(@Param("userId") Long userId);
 
+    // 활성 사용자 존재 여부 조회
+    Boolean existsActiveUserById(@Param("userId") Long userId);
+
     // user 테이블에 connected_id 업데이트
     int updateUserConnectedId(@Param("userId") Long userId, @Param("connectedId") String connectedId);
+
+    // user 테이블에 온보딩 결혼 자금 업데이트
+    int updateWeddingFund(@Param("userId") Long userId, @Param("weddingFund") Long weddingFund);
 
     // 계좌(account) 정보 등록
     int insertAccount(OnboardingAccountCreateRequestDTO requestDTO);

@@ -98,6 +98,10 @@
         FROM invitation
         WHERE inviter_id = #{no}
           AND invitee_id IS NULL
+          AND status = 'CREATED'
+          AND expired_at > NOW()
+        ORDER BY id DESC
+        LIMIT 1
 
     </select>
 
