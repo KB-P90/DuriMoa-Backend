@@ -23,7 +23,7 @@ public interface HomeMapper {
             @Param("connectedStatus") String connectedStatus
     );
 
-    // 인증 사용자에게 연결 계좌 또는 카드가 있는지 조회합니다.
+    // 인증 사용자가 계좌·카드 연결과 결혼자금 입력을 완료했는지 조회합니다.
     Boolean selectAccountLinked(@Param("userId") Long userId);
 
     // 홈 준비 체크리스트의 실제 수행 근거를 조회합니다.
@@ -45,7 +45,7 @@ public interface HomeMapper {
             @Param("goalId") Long goalId
     );
 
-    // 홈 자산 요약 계산에 사용할 활성 커플 구성원의 자산 공개 정보를 조회합니다.
+    // 홈 자산 요약 계산에 사용할 활성 커플 구성원의 결혼자금 입력값을 조회합니다.
     List<HomeMemberAssetRecord> selectHomeMemberAssets(
             @Param("groomId") Long groomId,
             @Param("brideId") Long brideId
@@ -75,4 +75,5 @@ public interface HomeMapper {
             @Param("inProgressStatus") String inProgressStatus,
             @Param("completedStatus") String completedStatus
     );
+
 }

@@ -52,17 +52,19 @@
                     FROM account a
                     WHERE a.user_id = #{userId}
                 )
-                OR EXISTS (
+                AND EXISTS (
                     SELECT 1
                     FROM card cd
                     WHERE cd.user_id = #{userId}
                 )
-                OR EXISTS (
+                AND EXISTS (
                     SELECT 1
                     FROM `user` u
                     WHERE u.id = #{userId}
-                      AND NULLIF(TRIM(u.connected_id), '') IS NOT NULL
-                ) THEN TRUE
+                      AND u.wedding_fund IS NOT NULL
+                      AND u.is_deleted = FALSE
+                )
+                THEN TRUE
                 ELSE FALSE
             END
     </select>
@@ -117,8 +119,7 @@
     <select id="selectHomeMemberAssets" resultType="com.project.domain.home.model.HomeRecord$HomeMemberAssetRecord">
         SELECT
             u.id AS user_id,
-            u.asset AS asset,
-            u.is_shared AS asset_shared
+            u.wedding_fund AS wedding_fund
         FROM `user` u
         WHERE u.id IN (#{groomId}, #{brideId})
           AND u.is_deleted = FALSE
@@ -137,36 +138,6 @@
             sr.user_id,
             sr.type,
             COALESCE(sr.changed_category, sr.category)
-        UNION ALL
-        SELECT
-            a.user_id AS user_id,
-            ar.type AS record_type,
-            ar.category AS category,
-            SUM(ar.amount) AS amount,
-            'ACCOUNT' AS source
-        FROM account a
-        INNER JOIN account_record ar
-            ON ar.account_id = a.id
-        WHERE a.user_id IN (#{groomId}, #{brideId})
-        GROUP BY
-            a.user_id,
-            ar.type,
-            ar.category
-        UNION ALL
-        SELECT
-            cd.user_id AS user_id,
-            cr.type AS record_type,
-            cr.category AS category,
-            SUM(cr.amount) AS amount,
-            'CARD' AS source
-        FROM card cd
-        INNER JOIN card_record cr
-            ON cr.card_id = cd.id
-        WHERE cd.user_id IN (#{groomId}, #{brideId})
-        GROUP BY
-            cd.user_id,
-            cr.type,
-            cr.category
     </select>
 
     <select id="selectExpectedBudgetPreviewRegions" resultType="com.project.domain.home.model.HomeRecord$HomeBudgetPreviewRecord">
@@ -255,4 +226,5 @@
                 LIMIT 1
             )
     </select>
+
 </mapper>

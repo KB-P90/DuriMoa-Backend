@@ -16,6 +16,7 @@ import com.project.domain.home.model.HomeRecord.HomeAssetSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeBudgetPreviewRecord;
 import com.project.domain.home.model.HomeRecord.HomeChecklistEvidenceRecord;
 import com.project.domain.home.model.HomeRecord.HomeCoupleRecord;
+import com.project.domain.home.model.HomeRecord.HomeMemberAssetRecord;
 import com.project.domain.home.model.HomeRecord.HomeSavingMissionSummaryRecord;
 import com.project.domain.home.model.HomeRecord.HomeUserRecord;
 import com.project.domain.home.model.HomeSetupChecklistCalculator;
@@ -117,13 +118,17 @@ class HomeServiceImplTest {
         Mockito.when(mapper.selectAssetSummary(1L, 1L, 2L, 30L)).thenReturn(assetSummary());
         Mockito.when(mapper.selectAssetRecords(1L, 2L)).thenReturn(List.of(
                 assetRecord(1L, RecordType.SAVING.name(),
-                        RawRecordCategory.WEDDING.getCategoryName(), 11_900_000L, "ACCOUNT"),
+                        RawRecordCategory.WEDDING.getCategoryName(), 11_900_000L, "SERVICE"),
                 assetRecord(2L, RecordType.SAVING.name(),
-                        SavingCategory.WEDDINGSAVING.getCategoryName(), 19_290_000L, "CARD"),
+                        SavingCategory.WEDDINGSAVING.getCategoryName(), 19_290_000L, "SERVICE"),
                 assetRecord(1L, RecordType.EXPENSE.name(),
-                        RawRecordCategory.WEDDING.getCategoryName(), 800_000L, "ACCOUNT"),
+                        RawRecordCategory.WEDDING.getCategoryName(), 800_000L, "SERVICE"),
                 assetRecord(1L, RecordType.EXPENSE.name(),
-                        RawRecordCategory.WEDDING.getCategoryName(), 300_000L, "CARD")
+                        RawRecordCategory.WEDDING.getCategoryName(), 300_000L, "SERVICE")
+        ));
+        Mockito.when(mapper.selectHomeMemberAssets(1L, 2L)).thenReturn(List.of(
+                memberWeddingFund(1L, 5_000_000L),
+                memberWeddingFund(2L, 6_000_000L)
         ));
         Mockito.when(mapper.countUnreadNotifications(1L)).thenReturn(2);
         Mockito.when(mapper.selectSavingMissionSummary(
@@ -146,16 +151,16 @@ class HomeServiceImplTest {
         Assertions.assertEquals(30L, response.getGoalSummary().getJointGoal().getGoalId());
         Assertions.assertFalse(response.getGoalSummary().getJointGoal().getSetupRequired());
         Assertions.assertEquals(50_000_000L, response.getAssetSummary().getTotalBudgetAmount());
-        Assertions.assertEquals(31_190_000L, response.getAssetSummary().getTotalSavedAmount());
+        Assertions.assertEquals(42_190_000L, response.getAssetSummary().getTotalSavedAmount());
         Assertions.assertEquals(1_100_000L, response.getAssetSummary().getWeddingExpenseAmount());
-        Assertions.assertEquals(18_810_000L, response.getAssetSummary().getRemainingWeddingFundAmount());
-        Assertions.assertEquals(31_190_000L, response.getGoalSummary().getJointGoal().getCurrentAmount());
-        Assertions.assertEquals(62, response.getGoalSummary().getJointGoal().getAchievementRate());
+        Assertions.assertEquals(7_810_000L, response.getAssetSummary().getRemainingWeddingFundAmount());
+        Assertions.assertEquals(42_190_000L, response.getGoalSummary().getJointGoal().getCurrentAmount());
+        Assertions.assertEquals(84, response.getGoalSummary().getJointGoal().getAchievementRate());
         Assertions.assertEquals(2, response.getNotificationSummary().getUnreadCount());
         Assertions.assertTrue(response.getNotificationSummary().getHasUnread());
         Assertions.assertEquals(30_000_000L, response.getGoalSummary().getPersonalGoal().getTargetAmount());
-        Assertions.assertEquals(11_900_000L, response.getGoalSummary().getPersonalGoal().getCurrentAmount());
-        Assertions.assertEquals(39, response.getGoalSummary().getPersonalGoal().getAchievementRate());
+        Assertions.assertEquals(16_900_000L, response.getGoalSummary().getPersonalGoal().getCurrentAmount());
+        Assertions.assertEquals(56, response.getGoalSummary().getPersonalGoal().getAchievementRate());
         Assertions.assertEquals(70000L, response.getSavingMissionSummary().getTotalExpectedSavingAmount());
         Assertions.assertEquals(1, response.getSavingMissionSummary().getInProgressMissionCount());
         Assertions.assertEquals(1, response.getSavingMissionSummary().getCompletedMissionCount());
@@ -259,6 +264,14 @@ class HomeServiceImplTest {
         record.setCategory(category);
         record.setAmount(amount);
         record.setSource(source);
+        return record;
+    }
+
+    // 홈 자산 요약 테스트용 온보딩 결혼자금 입력값을 만듭니다.
+    private HomeMemberAssetRecord memberWeddingFund(Long userId, Long weddingFund) {
+        HomeMemberAssetRecord record = new HomeMemberAssetRecord();
+        record.setUserId(userId);
+        record.setWeddingFund(weddingFund);
         return record;
     }
 
