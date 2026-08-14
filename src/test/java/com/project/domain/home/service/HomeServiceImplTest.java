@@ -137,7 +137,7 @@ class HomeServiceImplTest {
                 Mockito.anyInt(),
                 Mockito.eq(MissionStatus.CHALLENGE.getStatus()),
                 Mockito.eq(MissionStatus.IN_PROGRESS.getStatus()),
-                Mockito.eq(MissionStatus.COMPLETED.getStatus())
+                Mockito.eq(MissionStatus.SUCCESS.getStatus())
         )).thenReturn(savingMissionSummary());
 
         HomeResponseDTO response = service.getHome(1L);
