@@ -56,7 +56,7 @@ class GoalServiceImplTest {
         GoalCreateResponseDTO response = service.createGoal(1L, request);
 
         assertEquals(100L, response.getGoalId());
-        assertEquals("NORMAL", response.getStatus());
+        assertEquals("CONFIRMED", response.getStatus());
         assertEquals(35_000_000L, response.getTotalBudget());
         assertEquals(2, response.getItems().size());
         assertEquals(false, response.getItems().get(0).getCompleted());
@@ -64,6 +64,7 @@ class GoalServiceImplTest {
         verify(goalMapper).insertGoal(goalCaptor.capture());
         assertEquals(10L, goalCaptor.getValue().getCoupleId());
         assertEquals(35_000_000L, goalCaptor.getValue().getTotalBudget());
+        assertEquals("CONFIRMED", goalCaptor.getValue().getStatus());
         assertEquals(true, goalCaptor.getValue().getIsMain());
 
         @SuppressWarnings("unchecked")
@@ -95,6 +96,7 @@ class GoalServiceImplTest {
         ArgumentCaptor<GoalVO> goalCaptor = ArgumentCaptor.forClass(GoalVO.class);
         verify(goalMapper).selectCoupleIdForUpdate(10L);
         verify(goalMapper).insertGoal(goalCaptor.capture());
+        assertEquals("NORMAL", goalCaptor.getValue().getStatus());
         assertEquals(false, goalCaptor.getValue().getIsMain());
     }
 

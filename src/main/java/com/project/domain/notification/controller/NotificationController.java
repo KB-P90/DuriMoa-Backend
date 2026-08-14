@@ -11,10 +11,12 @@ import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import com.project.domain.notification.service.NotificationService;
+import com.project.domain.notification.sse.NotificationEmitterRegistry;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import springfox.documentation.annotations.ApiIgnore;
 
 @Api(tags = "Notification", description = "알림 API")
@@ -35,6 +38,17 @@ import springfox.documentation.annotations.ApiIgnore;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final NotificationEmitterRegistry notificationEmitterRegistry;
+
+    @ApiOperation(value = "실시간 알림 구독", notes = "SSE로 인증 사용자의 실시간 알림을 구독합니다.")
+    @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        return notificationEmitterRegistry.subscribe(authenticatedUserId);
+    }
 
     @ApiOperation(value = "알림 목록 조회", notes = "인증 사용자의 알림 목록을 최신순으로 조회합니다.")
     @GetMapping

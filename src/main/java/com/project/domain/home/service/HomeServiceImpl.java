@@ -58,7 +58,6 @@ public class HomeServiceImpl implements HomeService {
     private static final String MONTHLY_EXPENSE_NAVIGATION_MESSAGE = "월별지출관리 페이지로 이동";
     private static final String EXPECTED_BUDGET_TYPE = "균형형";
     private static final String EXPECTED_BUDGET_AMOUNT_BASIS = "MID_50";
-    private static final String SOURCE_SERVICE = "SERVICE";
     private static final List<String> EXPECTED_BUDGET_REGIONS =
             Collections.unmodifiableList(Arrays.asList(
                     "서울(강남)", "경기도", "인천", "부산", "대구", "광주", "대전"));
@@ -66,7 +65,7 @@ public class HomeServiceImpl implements HomeService {
     // 홈 조회에 필요한 최소 DB 조회를 담당하는 Mapper입니다.
     private final HomeMapper homeMapper;
 
-    // 실제 수행 근거를 5단계 체크리스트 상태로 변환하는 계산 객체입니다.
+    // 실제 수행 근거를 체크리스트 상태로 변환하는 계산 객체입니다.
     private final HomeSetupChecklistCalculator checklistCalculator;
 
     // 인증 사용자의 홈 화면 응답 뼈대와 체크리스트를 조회합니다.
@@ -152,20 +151,14 @@ public class HomeServiceImpl implements HomeService {
                     .accountLinked(Boolean.TRUE.equals(accountLinked))
                     .coupleConnected(false)
                     .weddingGoalCreated(false)
-                    .mainPlanSelected(false)
-                    .firstStepStarted(false)
                     .build();
         }
 
-        Boolean mainPlanSelected = evidenceRecord != null
-                && Boolean.TRUE.equals(evidenceRecord.getMainPlanSelected());
         return HomeSetupChecklistEvidence.builder()
                 .accountLinked(Boolean.TRUE.equals(accountLinked))
                 .coupleConnected(true)
                 .weddingGoalCreated(evidenceRecord != null
                         && Boolean.TRUE.equals(evidenceRecord.getWeddingGoalCreated()))
-                .mainPlanSelected(mainPlanSelected)
-                .firstStepStarted(mainPlanSelected)
                 .build();
     }
 
@@ -331,71 +324,39 @@ public class HomeServiceImpl implements HomeService {
             List<HomeAssetRecord> assetRecords,
             List<HomeMemberAssetRecord> memberAssets
     ) {
-        AssetAmounts serviceAmounts = new AssetAmounts();
-        AssetAmounts linkedAssetAmounts = new AssetAmounts();
+        AssetAmounts weddingFundAmounts = calculateWeddingFundAmounts(authenticatedUserId, memberAssets);
         for (HomeAssetRecord assetRecord : nullToEmpty(assetRecords)) {
-            AssetAmounts targetAmounts = SOURCE_SERVICE.equals(assetRecord.getSource())
-                    ? serviceAmounts
-                    : linkedAssetAmounts;
             Long amount = nullToZero(assetRecord.getAmount());
             if (isWeddingSavingRecord(assetRecord)) {
-                targetAmounts.totalSavedAmount += amount;
+                weddingFundAmounts.totalSavedAmount += amount;
                 if (authenticatedUserId.equals(assetRecord.getUserId())) {
-                    targetAmounts.personalSavedAmount += amount;
+                    weddingFundAmounts.personalSavedAmount += amount;
                 }
             }
             if (isWeddingExpenseRecord(assetRecord)) {
-                targetAmounts.weddingExpenseAmount += amount;
+                weddingFundAmounts.weddingExpenseAmount += amount;
             }
         }
 
-        AssetAmounts memberAssetAmounts = calculateMemberAssetAmounts(authenticatedUserId, memberAssets);
-        summaryRecord.setTotalSavedAmount(resolveSavedAmount(
-                serviceAmounts.totalSavedAmount,
-                linkedAssetAmounts.totalSavedAmount,
-                memberAssetAmounts.totalSavedAmount
-        ));
-        summaryRecord.setPersonalSavedAmount(resolveSavedAmount(
-                serviceAmounts.personalSavedAmount,
-                linkedAssetAmounts.personalSavedAmount,
-                memberAssetAmounts.personalSavedAmount
-        ));
-        summaryRecord.setWeddingExpenseAmount(
-                serviceAmounts.weddingExpenseAmount + linkedAssetAmounts.weddingExpenseAmount
-        );
+        summaryRecord.setTotalSavedAmount(weddingFundAmounts.totalSavedAmount);
+        summaryRecord.setPersonalSavedAmount(weddingFundAmounts.personalSavedAmount);
+        summaryRecord.setWeddingExpenseAmount(weddingFundAmounts.weddingExpenseAmount);
     }
 
-    // 사용자 프로필의 자산 금액을 서비스·계좌 거래가 없을 때 사용할 fallback 금액으로 계산합니다.
-    private AssetAmounts calculateMemberAssetAmounts(
+    // 사용자가 결혼자금으로 포함하겠다고 입력한 현재 보유 금액을 계산합니다.
+    private AssetAmounts calculateWeddingFundAmounts(
             Long authenticatedUserId,
             List<HomeMemberAssetRecord> memberAssets
     ) {
         AssetAmounts amounts = new AssetAmounts();
         for (HomeMemberAssetRecord memberAsset : nullToEmpty(memberAssets)) {
-            Long asset = nullToZero(memberAsset.getAsset());
+            Long weddingFund = nullToZero(memberAsset.getWeddingFund());
+            amounts.totalSavedAmount += weddingFund;
             if (authenticatedUserId.equals(memberAsset.getUserId())) {
-                amounts.totalSavedAmount += asset;
-                amounts.personalSavedAmount += asset;
-            } else if (Boolean.TRUE.equals(memberAsset.getAssetShared())) {
-                amounts.totalSavedAmount += asset;
+                amounts.personalSavedAmount += weddingFund;
             }
         }
         return amounts;
-    }
-
-    // service_record 값을 우선 사용하고, 없으면 계좌·카드, 없으면 사용자 자산을 사용합니다.
-    private Long resolveSavedAmount(
-            Long serviceAmount,
-            Long linkedAssetAmount,
-            Long memberAssetAmount
-    ) {
-        if (serviceAmount != null && serviceAmount > 0) {
-            return serviceAmount;
-        }
-        if (linkedAssetAmount != null && linkedAssetAmount > 0) {
-            return linkedAssetAmount;
-        }
-        return nullToZero(memberAssetAmount);
     }
 
     // 거래가 결혼 저축 금액으로 집계되어야 하는지 판단합니다.

@@ -44,11 +44,11 @@ CREATE TABLE `user`
     `provider_id`   VARCHAR(255) NULL COMMENT '소셜 로그인 제공자 사용자 ID',
     `income`        BIGINT       NOT NULL DEFAULT 0 COMMENT '연소득',
     `asset`         BIGINT       NOT NULL DEFAULT 0 COMMENT '총자산',
+    `wedding_fund` BIGINT NULL COMMENT '사용자가 결혼자금으로 포함하겠다고 입력한 현재 보유 금액',
     `connected_id`  VARCHAR(255) NULL COMMENT '커넥티드 ID',
     `is_shared`     BOOLEAN      NOT NULL DEFAULT FALSE COMMENT '상대방 공유 여부',
     `is_deleted`    BOOLEAN      NOT NULL DEFAULT FALSE COMMENT '회원 탈퇴 여부',
     `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
-
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_phone` (`phone`),
     UNIQUE KEY `uk_user_provider_id` (`provider`, `provider_id`),
@@ -58,12 +58,14 @@ CREATE TABLE `user`
                 AND `phone` IS NOT NULL
                 AND `password` IS NOT NULL
                 AND `provider_id` IS NULL)
-            OR
+                OR
             (`provider` <> 'LOCAL'
                 AND `password` IS NULL
                 AND `provider_id` IS NOT NULL)
-        )
-);
+        ),
+    CONSTRAINT `chk_user_wedding_fund`
+        CHECK (`wedding_fund` IS NULL OR `wedding_fund` >= 0)
+            );
 
 -- 약관 동의
 CREATE TABLE `terms_agreement`
@@ -97,6 +99,19 @@ CREATE TABLE `notification_setting`
     CONSTRAINT `fk_notification_setting_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- 푸시 기기 (FCM)
+CREATE TABLE IF NOT EXISTS `push_device`
+(
+    `id`           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id`      BIGINT       NOT NULL,
+    `token`        VARCHAR(255) NOT NULL,
+    `platform`     VARCHAR(20)  NOT NULL,
+    `push_enabled` TINYINT(1)   NOT NULL DEFAULT 1,
+    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uq_push_device_token` (`token`),
+    KEY `idx_push_device_user` (`user_id`)
 );
 
 -- 알림

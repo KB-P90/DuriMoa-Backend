@@ -13,7 +13,7 @@ class HomeSetupChecklistCalculatorTest {
 
         HomeSetupChecklistResult result = calculator.calculate(HomeSetupChecklistEvidence.empty());
 
-        Assertions.assertEquals(5, result.getTotalCount());
+        Assertions.assertEquals(3, result.getTotalCount());
         Assertions.assertEquals(0, result.getCompletedCount());
         Assertions.assertEquals(1, result.getCurrentStep());
         Assertions.assertEquals(Status.CURRENT, result.getSteps().get(0).getStatus());
@@ -29,8 +29,6 @@ class HomeSetupChecklistCalculatorTest {
                 .accountLinked(true)
                 .coupleConnected(false)
                 .weddingGoalCreated(false)
-                .mainPlanSelected(false)
-                .firstStepStarted(false)
                 .build());
 
         Assertions.assertEquals(1, result.getCompletedCount());
@@ -48,18 +46,15 @@ class HomeSetupChecklistCalculatorTest {
                 .accountLinked(false)
                 .coupleConnected(true)
                 .weddingGoalCreated(true)
-                .mainPlanSelected(true)
-                .firstStepStarted(true)
                 .build());
 
         Assertions.assertEquals(0, result.getCompletedCount());
         Assertions.assertEquals(1, result.getCurrentStep());
         Assertions.assertFalse(result.getSteps().get(2).getCompleted());
         Assertions.assertEquals(Status.LOCKED, result.getSteps().get(2).getStatus());
-        Assertions.assertEquals(Status.LOCKED, result.getSteps().get(4).getStatus());
     }
 
-    // 다섯 단계가 모두 완료되면 현재 단계가 없습니다.
+    // 세 단계가 모두 완료되면 현재 단계가 없습니다.
     @Test
     void calculateReturnsNullCurrentStepWhenAllStepsCompleted() {
         HomeSetupChecklistCalculator calculator = new HomeSetupChecklistCalculator();
@@ -68,11 +63,9 @@ class HomeSetupChecklistCalculatorTest {
                 .accountLinked(true)
                 .coupleConnected(true)
                 .weddingGoalCreated(true)
-                .mainPlanSelected(true)
-                .firstStepStarted(true)
                 .build());
 
-        Assertions.assertEquals(5, result.getCompletedCount());
+        Assertions.assertEquals(3, result.getCompletedCount());
         Assertions.assertNull(result.getCurrentStep());
         Assertions.assertTrue(result.getSteps().stream().allMatch(stepResult -> stepResult.getCompleted()));
         Assertions.assertTrue(result.getSteps().stream()

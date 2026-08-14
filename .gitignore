@@ -23,3 +23,6 @@ database.properties
 codef.properties
 aws.properties
 kakao.properties
+
+# Firebase service account credentials
+google-application.json

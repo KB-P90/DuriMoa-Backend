@@ -70,6 +70,8 @@ public class SecurityConfig {
                     .authenticated()
                 .antMatchers("/api/mypage/**")
                     .authenticated()
+                .antMatchers("/api/push-devices", "/api/push-devices/**")
+                    .authenticated()
                 // 로그인해야 볼 수 있는 API는 아래처럼 이 위치에 추가하세요.
                 // 예: .antMatchers("/api/members/**").authenticated()
                 // 로그인 없이 볼 수 있는 API는 위의 permitAll() 목록에 추가하세요.
