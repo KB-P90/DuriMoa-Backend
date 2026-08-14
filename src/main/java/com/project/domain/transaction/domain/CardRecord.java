@@ -1,4 +1,4 @@
-package com.project.domain.transaction.dto;
+package com.project.domain.transaction.domain;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -8,7 +8,7 @@ import java.time.LocalTime;
 
 @Getter
 @Builder
-public class CardTransactionRecordDTO {
+public class CardRecord {
     private Long cardId;
     private String sourceKey;
 

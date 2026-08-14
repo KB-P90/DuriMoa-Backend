@@ -1,7 +1,7 @@
 package com.project.domain.transaction.mapper;
 
-import com.project.domain.transaction.dto.AccountTransactionRecordDTO;
-import com.project.domain.transaction.dto.CardTransactionRecordDTO;
+import com.project.domain.transaction.domain.AccountRecord;
+import com.project.domain.transaction.domain.CardRecord;
 import com.project.domain.transaction.dto.TransactionSyncTargetDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -24,11 +24,11 @@ public interface TransactionSyncMapper {
 
     int updateLastSync(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
 
-    int insertAccountRecord(AccountTransactionRecordDTO recordDTO);
+    int insertAccountRecord(AccountRecord recordDTO);
 
-    int insertCardRecord(CardTransactionRecordDTO recordDTO);
+    int insertCardRecord(CardRecord recordDTO);
 
-    List<CardTransactionRecordDTO> findNewCardRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
+    List<CardRecord> findNewCardRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
 
-    List<AccountTransactionRecordDTO> findNewAccountRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
+    List<AccountRecord> findNewAccountRecords(@Param("userId") Long userId, @Param("lastSyncAt") LocalDateTime lastSyncAt);
 }

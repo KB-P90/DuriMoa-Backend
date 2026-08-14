@@ -101,7 +101,7 @@
     </insert>
 
     <select id="findNewCardRecords"
-            resultType="com.project.domain.transaction.dto.CardTransactionRecordDTO">
+            resultType="com.project.domain.transaction.domain.CardRecord">
         SELECT
             cr.id,
             cr.card_id,
@@ -137,7 +137,7 @@
     </select>
 
     <select id="findNewAccountRecords"
-            resultType="com.project.domain.transaction.dto.AccountTransactionRecordDTO">
+            resultType="com.project.domain.transaction.domain.AccountRecord">
         SELECT
             ar.id,
             ar.account_id,

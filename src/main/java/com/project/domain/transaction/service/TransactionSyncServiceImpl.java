@@ -13,8 +13,8 @@ import com.project.domain.codef.dto.CodefCardApprovalItemDTO;
 import com.project.domain.codef.dto.CodefCardApprovalListRequestDTO;
 import com.project.domain.codef.dto.CodefCardApprovalResponseDTO;
 import com.project.domain.codef.service.CodefService;
-import com.project.domain.transaction.dto.AccountTransactionRecordDTO;
-import com.project.domain.transaction.dto.CardTransactionRecordDTO;
+import com.project.domain.transaction.domain.AccountRecord;
+import com.project.domain.transaction.domain.CardRecord;
 import com.project.domain.transaction.dto.TransactionSyncResponseDTO;
 import com.project.domain.transaction.dto.TransactionSyncTargetDTO;
 import com.project.domain.transaction.mapper.TransactionSyncMapper;
@@ -101,6 +101,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size());
     }
 
+    // 계좌 입출금 내역 받아와서 저장
     private TransactionSyncResponseDTO syncAccountTransactions(
             String connectedId,
             TransactionSyncTargetDTO account,
@@ -135,7 +136,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         int duplicateCount = 0;
 
         for (CodefBankTransactionItemDTO item : items) {
-            AccountTransactionRecordDTO record = toAccountRecord(account.getId(), item);
+            AccountRecord record = toAccountRecord(account.getId(), item);
 
             if (transactionSyncMapper.insertAccountRecord(record) == 1) {
                 savedCount++;
@@ -150,6 +151,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         return buildResponse(items.size(), savedCount, duplicateCount, 1, 0);
     }
 
+    // 카드 승인 내역 받아와서 저장
     private TransactionSyncResponseDTO syncCardTransactions(
             String connectedId,
             TransactionSyncTargetDTO card,
@@ -184,7 +186,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         int duplicateCount = 0;
 
         for (CodefCardApprovalItemDTO item : items) {
-            CardTransactionRecordDTO record = toCardRecord(card.getId(), item);
+            CardRecord record = toCardRecord(card.getId(), item);
 
             if (transactionSyncMapper.insertCardRecord(record) == 1) {
                 savedCount++;
@@ -199,30 +201,31 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         return buildResponse(items.size(), savedCount, duplicateCount, 0, 1);
     }
 
+    // 카드/계좌 거래 내역을 서비스 레코드로 변환해서 저장
     private void processNewServiceRecords(Long userId, LocalDateTime lastSyncAt) {
-        List<CardTransactionRecordDTO> newCards =
+        List<CardRecord> newCards =
                 transactionSyncMapper.findNewCardRecords(userId, lastSyncAt);
 
-        List<AccountTransactionRecordDTO> newAccounts =
+        List<AccountRecord> newAccounts =
                 transactionSyncMapper.findNewAccountRecords(userId, lastSyncAt);
 
         log.info("신규 원본 거래 서비스 변환 시작 - userId: {}, cards: {}, accounts: {}",
                 userId, newCards.size(), newAccounts.size());
 
-        for (CardTransactionRecordDTO cardRecord : newCards) {
+        for (CardRecord cardRecord : newCards) {
             processCardRecord(userId, cardRecord);
         }
 
-        for (AccountTransactionRecordDTO accountRecord : newAccounts) {
+        for (AccountRecord accountRecord : newAccounts) {
             processAccountRecord(userId, accountRecord);
         }
     }
 
-    private void processCardRecord(Long userId, CardTransactionRecordDTO cardRecord) {
+    private void processCardRecord(Long userId, CardRecord cardRecord) {
 
     }
 
-    private void processAccountRecord(Long userId, AccountTransactionRecordDTO accountRecord) {
+    private void processAccountRecord(Long userId, AccountRecord accountRecord) {
 
     }
 
@@ -253,13 +256,13 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 "CODEF " + target + " 조회 실패 [" + code + "]: " + message);
     }
 
-    private AccountTransactionRecordDTO toAccountRecord(Long accountId, CodefBankTransactionItemDTO item) {
+    private AccountRecord toAccountRecord(Long accountId, CodefBankTransactionItemDTO item) {
         LocalDate transactionDate = parseDate(item.getTransactionDate(), "은행 거래일");
         LocalTime transactionTime = parseTime(item.getTransactionTime(), "은행 거래 시각");
         Long outAmount = amountOrZero(item.getOutAmount());
         Long inAmount = amountOrZero(item.getInAmount());
 
-        return AccountTransactionRecordDTO.builder()
+        return AccountRecord.builder()
                 .accountId(accountId)
                 .sourceKey(createSourceKey("ACCOUNT", accountId, item.getTransactionDate(), item.getTransactionTime(),
                         outAmount, inAmount, item.getAfterTranBalance(), item.getDescription1(), item.getDescription2(),
@@ -277,7 +280,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .build();
     }
 
-    private CardTransactionRecordDTO toCardRecord(Long cardId, CodefCardApprovalItemDTO item) {
+    private CardRecord toCardRecord(Long cardId, CodefCardApprovalItemDTO item) {
         LocalDate usedDate = parseDate(item.getUsedDate(), "카드 사용일");
         LocalTime usedTime = parseTime(item.getUsedTime(), "카드 사용 시각");
         LocalDate paymentDueDate = parseDateOrNull(item.getPaymentDueDate(), "카드 결제 예정일");
@@ -287,7 +290,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         boolean cancelled = isCancelled(item.getCancelYn());
         Long cancelAmount = item.getCancelAmount() == null ? null : Math.abs(item.getCancelAmount());
 
-        return CardTransactionRecordDTO.builder()
+        return CardRecord.builder()
                 .cardId(cardId)
                 .sourceKey(createSourceKey("CARD", cardId, item.getUsedDate(), item.getUsedTime(), item.getApprovalNo()))
                 .usedDate(usedDate)
