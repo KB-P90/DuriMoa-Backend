@@ -68,6 +68,8 @@ public class SecurityConfig {
                     .authenticated()
                 .antMatchers("/api/expense", "/api/expense/**")
                     .authenticated()
+                .antMatchers("/api/mypage/**")
+                    .authenticated()
                 .antMatchers("/api/push-devices", "/api/push-devices/**")
                     .authenticated()
                 // 로그인해야 볼 수 있는 API는 아래처럼 이 위치에 추가하세요.
