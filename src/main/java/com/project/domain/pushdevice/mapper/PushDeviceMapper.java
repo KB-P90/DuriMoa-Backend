@@ -16,5 +16,7 @@ public interface PushDeviceMapper {
 
     int deleteByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
+    int deleteByUserIdExceptToken(@Param("userId") Long userId, @Param("token") String token);
+
     List<String> selectTokensByUserId(Long userId);
 }

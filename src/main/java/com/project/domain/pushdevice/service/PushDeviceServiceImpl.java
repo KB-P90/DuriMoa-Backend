@@ -23,12 +23,17 @@ public class PushDeviceServiceImpl implements PushDeviceService {
     public PushDeviceRegisterResponseDTO register(Long userId, PushDeviceRegisterRequestDTO request) {
         validateUserId(userId);
         validateRegisterRequest(request);
+        String token = request.getToken().trim();
 
-        PushDeviceVO device = pushDeviceMapper.selectByToken(request.getToken().trim());
+        // 계정당 기기(토큰) 하나만 유지한다. 재로그인/토큰 재발급 등으로 새 토큰이
+        // 들어오면 이 유저가 갖고 있던 이전 토큰은 정리해서 중복 발송을 막는다.
+        pushDeviceMapper.deleteByUserIdExceptToken(userId, token);
+
+        PushDeviceVO device = pushDeviceMapper.selectByToken(token);
         if (device == null) {
             device = PushDeviceVO.builder()
                     .userId(userId)
-                    .token(request.getToken().trim())
+                    .token(token)
                     .platform(request.getPlatform().trim())
                     .pushEnabled(true)
                     .build();
