@@ -23,7 +23,7 @@ public interface HomeMapper {
             @Param("connectedStatus") String connectedStatus
     );
 
-    // 인증 사용자가 계좌·카드 연결과 결혼자금 입력을 완료했는지 조회합니다.
+    // 인증 사용자가 계좌 또는 카드 연결과 결혼자금 입력을 완료했는지 조회합니다.
     Boolean selectAccountLinked(@Param("userId") Long userId);
 
     // 홈 준비 체크리스트의 실제 수행 근거를 조회합니다.

@@ -65,7 +65,7 @@ public class HomeServiceImpl implements HomeService {
     // 홈 조회에 필요한 최소 DB 조회를 담당하는 Mapper입니다.
     private final HomeMapper homeMapper;
 
-    // 실제 수행 근거를 5단계 체크리스트 상태로 변환하는 계산 객체입니다.
+    // 실제 수행 근거를 체크리스트 상태로 변환하는 계산 객체입니다.
     private final HomeSetupChecklistCalculator checklistCalculator;
 
     // 인증 사용자의 홈 화면 응답 뼈대와 체크리스트를 조회합니다.

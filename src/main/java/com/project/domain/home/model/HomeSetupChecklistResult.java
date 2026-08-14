@@ -36,7 +36,7 @@ public class HomeSetupChecklistResult {
 
     public enum Step {
 
-        // 인증 사용자가 계좌·카드 연결과 결혼자금 입력을 완료했는지 확인하는 단계입니다.
+        // 인증 사용자가 계좌 또는 카드 연결과 결혼자금 입력을 완료했는지 확인하는 단계입니다.
         ACCOUNT_LINKED(1, "ACCOUNT_LINKED", "계좌/카드 연결"),
 
         // 실제 활성 커플 연결이 완료된 상태를 확인하는 단계입니다.

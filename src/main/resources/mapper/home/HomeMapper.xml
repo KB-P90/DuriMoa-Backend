@@ -49,20 +49,22 @@
             CASE
                 WHEN EXISTS (
                     SELECT 1
-                    FROM account a
-                    WHERE a.user_id = #{userId}
-                )
-                AND EXISTS (
-                    SELECT 1
-                    FROM card cd
-                    WHERE cd.user_id = #{userId}
-                )
-                AND EXISTS (
-                    SELECT 1
                     FROM `user` u
                     WHERE u.id = #{userId}
                       AND u.wedding_fund IS NOT NULL
                       AND u.is_deleted = FALSE
+                )
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM account a
+                        WHERE a.user_id = #{userId}
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM card cd
+                        WHERE cd.user_id = #{userId}
+                    )
                 )
                 THEN TRUE
                 ELSE FALSE

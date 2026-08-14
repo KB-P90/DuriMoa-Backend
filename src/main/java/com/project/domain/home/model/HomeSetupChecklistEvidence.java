@@ -7,7 +7,7 @@ import lombok.Getter;
 @Builder
 public class HomeSetupChecklistEvidence {
 
-    // 인증 사용자가 계좌·카드 연결과 결혼자금 입력을 완료했는지 나타내는 원시 완료 근거입니다.
+    // 인증 사용자가 계좌 또는 카드 연결과 결혼자금 입력을 완료했는지 나타내는 원시 완료 근거입니다.
     private final Boolean accountLinked;
 
     // 인증 사용자가 활성 커플에 속해 있는지 나타내는 원시 완료 근거입니다.
