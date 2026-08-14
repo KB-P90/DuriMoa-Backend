@@ -58,6 +58,7 @@
             total_budget,
             groom_ratio,
             bride_ratio,
+            status,
             is_main,
             created_at
         ) VALUES (
@@ -68,6 +69,7 @@
             #{totalBudget},
             #{groomRatio},
             #{brideRatio},
+            #{status},
             #{isMain},
             #{createdAt}
         )
