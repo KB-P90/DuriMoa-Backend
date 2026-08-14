@@ -126,7 +126,7 @@ public class GoalServiceImpl implements GoalService {
                 .totalBudget(goal.getTotalBudget())
                 .groomRatio(goal.getGroomRatio())
                 .brideRatio(goal.getBrideRatio())
-                .status(GoalStatus.NORMAL.name())
+                .status(goal.getStatus())
                 .createdAt(createdAt)
                 .items(request.getItems().stream()
                         .map(GoalCreateItemResponseDTO::from)
@@ -595,6 +595,9 @@ public class GoalServiceImpl implements GoalService {
                 .totalBudget(totalBudget)
                 .groomRatio(request.getGroomRatio())
                 .brideRatio(request.getBrideRatio())
+                .status(Boolean.TRUE.equals(isMain)
+                        ? GoalStatus.CONFIRMED.name()
+                        : GoalStatus.NORMAL.name())
                 .isMain(isMain)
                 .createdAt(createdAt)
                 .build();

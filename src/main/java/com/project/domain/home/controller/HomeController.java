@@ -26,7 +26,7 @@ public class HomeController {
     private final HomeService homeService;
 
     // 인증 사용자의 홈 화면 데이터와 준비 체크리스트를 조회합니다.
-    @ApiOperation(value = "홈 조회", notes = "인증 사용자 기준으로 홈 화면 뼈대와 5단계 준비 체크리스트를 조회합니다.")
+    @ApiOperation(value = "홈 조회", notes = "인증 사용자 기준으로 홈 화면 뼈대와 준비 체크리스트를 조회합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<HomeResponseDTO>> getHome(
             @ApiIgnore @AuthenticationPrincipal Long userId,

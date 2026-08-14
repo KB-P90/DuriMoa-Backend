@@ -66,9 +66,6 @@ public final class HomeRecord {
         // 활성 커플에 결혼 목표 시안이 하나 이상 있는지 나타내는 DB 조회 결과입니다.
         private Boolean weddingGoalCreated;
 
-        // 활성 커플에 확정된 메인 시안이 있는지 나타내는 DB 조회 결과입니다.
-        private Boolean mainPlanSelected;
-
         // 대표 결혼 목표 식별자입니다.
         private Long mainGoalId;
 
@@ -115,11 +112,8 @@ public final class HomeRecord {
         // 활성 커플 구성원 사용자 ID입니다.
         private Long userId;
 
-        // 사용자 프로필에 저장된 현재 자산 금액입니다.
-        private Long asset;
-
-        // 상대방에게 자산 금액을 공유하는지 나타냅니다.
-        private Boolean assetShared;
+        // 사용자가 온보딩에서 결혼자금으로 포함하겠다고 입력한 현재 보유 금액입니다.
+        private Long weddingFund;
     }
 
     @Getter
