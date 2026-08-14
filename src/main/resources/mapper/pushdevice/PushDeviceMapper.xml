@@ -54,6 +54,14 @@
 
     </delete>
 
+    <delete id="deleteByUserIdExceptToken">
+
+        DELETE FROM push_device
+        WHERE user_id = #{userId}
+          AND token != #{token}
+
+    </delete>
+
     <select id="selectTokensByUserId"
             parameterType="long"
             resultType="java.lang.String">
