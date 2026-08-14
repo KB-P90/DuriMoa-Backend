@@ -276,7 +276,7 @@ public class HomeServiceImpl implements HomeService {
                 currentYearMonth.getMonthValue(),
                 MissionStatus.CHALLENGE.getStatus(),
                 MissionStatus.IN_PROGRESS.getStatus(),
-                MissionStatus.COMPLETED.getStatus()
+                MissionStatus.SUCCESS.getStatus()
         );
     }
 

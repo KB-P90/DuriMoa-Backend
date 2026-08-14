@@ -30,9 +30,9 @@ public class SavingMissionDTO {
     private Long expectedSavingAmount;
 
     @JsonProperty("isSelectable")
-    @ApiModelProperty(value = "미션 선택/도전 가능 여부 (도전중, 완료: false, 도전하기: true)", example = "true")
+    @ApiModelProperty(value = "미션 선택/도전 가능 여부 (도전하기만 true)", example = "true")
     private Boolean isSelectable;
 
-    @ApiModelProperty(value = "미션 상태 (도전하기, 도전중, 완료)", example = "도전하기")
+    @ApiModelProperty(value = "미션 상태 (도전하기, 도전중, 성공, 실패, 만료)", example = "도전하기")
     private String status;
 }
