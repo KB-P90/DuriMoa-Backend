@@ -26,6 +26,7 @@ import java.util.Set;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String SSE_SUBSCRIBE_PATH = "/api/notifications/subscribe";
     private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
             "/api/auth/signup",
             "/api/auth/login",
@@ -45,13 +46,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = resolveToken(request, authorization);
 
-        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authorization.substring(BEARER_PREFIX.length());
         if (!jwtTokenProvider.validateAccessToken(token)) {
             writeUnauthorizedResponse(response);
             return;
@@ -66,6 +67,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
+    }
+
+    private String resolveToken(HttpServletRequest request, String authorization) {
+        if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
+            return authorization.substring(BEARER_PREFIX.length());
+        }
+        // EventSource(SSE)는 커스텀 헤더를 지정할 수 없어 쿼리 파라미터로 토큰을 받는다.
+        if (SSE_SUBSCRIBE_PATH.equals(request.getRequestURI())) {
+            String queryToken = request.getParameter("token");
+            if (queryToken != null && queryToken.startsWith(BEARER_PREFIX)) {
+                return queryToken.substring(BEARER_PREFIX.length());
+            }
+            return queryToken;
+        }
+        return null;
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response) throws IOException {

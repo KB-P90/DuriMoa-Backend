@@ -2,6 +2,7 @@ package com.project.domain.notification.service;
 
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
+import com.project.common.util.FcmSender;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
@@ -15,10 +16,14 @@ import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import com.project.domain.notification.mapper.NotificationMapper;
+import com.project.domain.notification.sse.NotificationEmitterRegistry;
+import com.project.domain.pushdevice.service.PushDeviceService;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +41,9 @@ public class NotificationServiceImpl implements NotificationService {
     private static final Integer MAX_SIZE = 100;
 
     private final NotificationMapper notificationMapper;
+    private final PushDeviceService pushDeviceService;
+    private final FcmSender fcmSender;
+    private final NotificationEmitterRegistry notificationEmitterRegistry;
 
     @Override
     @Transactional(readOnly = true)
@@ -220,6 +228,16 @@ public class NotificationServiceImpl implements NotificationService {
         if (insertedCount == null || insertedCount != 1 || notification.getId() == null) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "알림 저장에 실패했습니다.");
         }
+
+        Map<String, String> data = Map.of(
+                "type", type,
+                "message", notification.getContent(),
+                "occurredAt", LocalDateTime.now().toString()
+        );
+        List<String> fcmTokens = pushDeviceService.getTokens(request.getUserId());
+        fcmTokens.forEach(token -> fcmSender.send(token, notification.getTitle(), notification.getContent(), data));
+        notificationEmitterRegistry.sendToUser(request.getUserId(), "notification", data);
+
         return notification.getId();
     }
 
