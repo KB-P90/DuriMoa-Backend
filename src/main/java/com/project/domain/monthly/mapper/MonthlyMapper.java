@@ -1,6 +1,7 @@
 package com.project.domain.monthly.mapper;
 
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
+import com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO;
@@ -43,6 +44,9 @@ public interface MonthlyMapper {
             @Param("month") Integer month);
 
     List<CategoryExpenseAnalysisDTO> selectCategoryExpenseAnalysis(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    List<CategoryExpenseStatisticsDTO> selectCategoryExpenseStatistics(
+            @Param("analysisYear") Integer analysisYear);
 
     int insertSavingMission(SavingMissionEntityDTO mission);
 }

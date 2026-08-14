@@ -194,7 +194,7 @@
 
     <select id="selectCategoryExpenseAnalysis" resultMap="CategoryExpenseAnalysisResultMap">
         SELECT
-            category AS category_code,
+            COALESCE(changed_category, category) AS category_code,
             SUM(amount) AS total_amount,
             COUNT(id) AS tx_count
         FROM service_record
@@ -202,8 +202,39 @@
           AND type = 'EXPENSE'
           AND record_date &gt;= #{startDate}
           AND record_date &lt; #{endDate}
-        GROUP BY category
+        GROUP BY COALESCE(changed_category, category)
         ORDER BY total_amount DESC
+    </select>
+
+    <select id="selectCategoryExpenseStatistics"
+            resultType="com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO">
+        SELECT
+            CASE
+                WHEN category_name IN ('식료품·비주류음료', '음식·숙박') THEN 'FOOD'
+                WHEN category_name IN ('주거·수도·광열', '가정용품·가사서비스', '보건', '교통', '통신') THEN 'LIVING'
+                WHEN category_name = '의류·신발' THEN 'SHOPPING'
+                WHEN category_name = '오락·문화' THEN 'CULTURE'
+                WHEN category_name IN ('주류·담배', '교육', '기타상품·서비스') THEN 'ETC'
+            END AS categoryCode,
+            SUM(average_amount) AS averageAmount
+        FROM expense_statistics
+        WHERE age_group = 'ALL'
+          AND household_type = 'SINGLE'
+          AND year = (
+              SELECT MAX(year)
+              FROM expense_statistics
+              WHERE age_group = 'ALL'
+                AND household_type = 'SINGLE'
+                AND year &lt;= #{analysisYear}
+          )
+          AND category_name IN (
+              '식료품·비주류음료', '음식·숙박',
+              '주거·수도·광열', '가정용품·가사서비스', '보건', '교통', '통신',
+              '의류·신발', '오락·문화',
+              '주류·담배', '교육', '기타상품·서비스'
+          )
+        GROUP BY categoryCode
+        ORDER BY FIELD(categoryCode, 'FOOD', 'LIVING', 'SHOPPING', 'CULTURE', 'ETC')
     </select>
 
     <insert id="insertSavingMission" useGeneratedKeys="true" keyProperty="id">
