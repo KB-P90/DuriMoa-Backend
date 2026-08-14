@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.pushdevice.mapper.PushDeviceMapper">
+
+    <resultMap id="pushDeviceResultMap"
+               type="com.project.domain.pushdevice.domain.PushDeviceVO">
+
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="token" property="token"/>
+        <result column="platform" property="platform"/>
+        <result column="push_enabled" property="pushEnabled"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectByToken"
+            parameterType="string"
+            resultMap="pushDeviceResultMap">
+
+        SELECT id, user_id, token, platform, push_enabled, created_at
+        FROM push_device
+        WHERE token = #{token}
+
+    </select>
+
+    <insert id="insert"
+            parameterType="com.project.domain.pushdevice.domain.PushDeviceVO"
+            useGeneratedKeys="true"
+            keyProperty="id">
+
+        INSERT INTO push_device (user_id, token, platform, push_enabled)
+        VALUES (#{userId}, #{token}, #{platform}, #{pushEnabled})
+
+    </insert>
+
+    <update id="update"
+            parameterType="com.project.domain.pushdevice.domain.PushDeviceVO">
+
+        UPDATE push_device
+        SET user_id      = #{userId},
+            platform     = #{platform},
+            push_enabled = #{pushEnabled}
+        WHERE id = #{id}
+
+    </update>
+
+    <delete id="deleteByIdAndUserId">
+
+        DELETE FROM push_device
+        WHERE id = #{id}
+          AND user_id = #{userId}
+
+    </delete>
+
+    <select id="selectTokensByUserId"
+            parameterType="long"
+            resultType="java.lang.String">
+
+        SELECT token
+        FROM push_device
+        WHERE user_id = #{userId}
+          AND push_enabled = 1
+
+    </select>
+
+</mapper>

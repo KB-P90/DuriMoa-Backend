@@ -58,11 +58,11 @@ CREATE TABLE `user`
                 AND `phone` IS NOT NULL
                 AND `password` IS NOT NULL
                 AND `provider_id` IS NULL)
-            OR
+                OR
             (`provider` <> 'LOCAL'
                 AND `password` IS NULL
                 AND `provider_id` IS NOT NULL)
-        )
+            )
 );
 
 -- 약관 동의
@@ -97,6 +97,19 @@ CREATE TABLE `notification_setting`
     CONSTRAINT `fk_notification_setting_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- 푸시 기기 (FCM)
+CREATE TABLE IF NOT EXISTS `push_device`
+(
+    `id`           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id`      BIGINT       NOT NULL,
+    `token`        VARCHAR(255) NOT NULL,
+    `platform`     VARCHAR(20)  NOT NULL,
+    `push_enabled` TINYINT(1)   NOT NULL DEFAULT 1,
+    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uq_push_device_token` (`token`),
+    KEY `idx_push_device_user` (`user_id`)
 );
 
 -- 알림
