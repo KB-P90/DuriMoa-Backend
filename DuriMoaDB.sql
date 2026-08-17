@@ -329,7 +329,7 @@ CREATE TABLE `card_record`
     `store_type`            VARCHAR(50)  NULL COMMENT '가맹점 업종',
     `store_no`              VARCHAR(50)  NULL COMMENT '가맹점 번호',
 
-    `cancel_yn`             VARCHAR(10)  NOT NULL COMMENT '취소 여부',
+    `cancel_status`         VARCHAR(10)  NOT NULL COMMENT 'CODEF 취소 상태: 0 정상, 1 취소, 2 부분취소, 3 거절',
     `cancel_amount`         BIGINT       NULL COMMENT '취소 금액',
 
     `vat`                   BIGINT       NULL COMMENT '부가세',

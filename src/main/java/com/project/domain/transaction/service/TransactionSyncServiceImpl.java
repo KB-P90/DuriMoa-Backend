@@ -77,7 +77,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
         // 모든 계좌의 입출금 내역 받아와서 저장
         for (TransactionSyncTargetDTO account : accounts) {
-            TransactionSyncResponseDTO response = syncAccountTransactions(connectedId, account, previousLastSyncAt, today);
+            TransactionSyncResponseDTO response = syncAccountTransactions(userId, connectedId, account, previousLastSyncAt, today);
 
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
@@ -86,7 +86,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
         // 모든 카드의 승인 내역 받아와서 저장
         for (TransactionSyncTargetDTO card : cards) {
-            TransactionSyncResponseDTO response = syncCardTransactions(connectedId, card, previousLastSyncAt, today);
+            TransactionSyncResponseDTO response = syncCardTransactions(userId, connectedId, card, previousLastSyncAt, today);
 
             fetchedCount += response.getFetchedCount();
             savedCount += response.getSavedCount();
@@ -111,6 +111,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
     // 계좌 입출금 내역 받아와서 저장
     private TransactionSyncResponseDTO syncAccountTransactions(
+            Long userId,
             String connectedId,
             TransactionSyncTargetDTO account,
             LocalDateTime lastSyncAt,
@@ -143,7 +144,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         int duplicateCount = 0;
 
         for (CodefBankTransactionItemDTO item : items) {
-            AccountRecord record = toAccountRecord(account.getId(), item);
+            AccountRecord record = toAccountRecord(userId, account.getId(), item);
 
             if (transactionSyncMapper.insertAccountRecord(record) == 1) {
                 savedCount++;
@@ -160,6 +161,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
     // 카드 승인 내역 받아와서 저장
     private TransactionSyncResponseDTO syncCardTransactions(
+            Long userId,
             String connectedId,
             TransactionSyncTargetDTO card,
             LocalDateTime lastSyncAt,
@@ -192,7 +194,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         int duplicateCount = 0;
 
         for (CodefCardApprovalItemDTO item : items) {
-            CardRecord record = toCardRecord(card.getId(), item);
+            CardRecord record = toCardRecord(userId, card.getId(), item);
 
             if (transactionSyncMapper.insertCardRecord(record) == 1) {
                 savedCount++;
@@ -226,6 +228,9 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     }
 
     private void processCardRecord(Long userId, CardRecord cardRecord) {
+        // 전체 취소(1), 거절(3)인 경우 service_record 생성 안 함
+        if ("1".equals(cardRecord.getCancelStatus()) || "3".equals(cardRecord.getCancelStatus())) return;
+
         AccountRecord matchedAccountRecord = transactionSyncMapper.findMatchingAccountRecord(userId, cardRecord);
 
         log.info(
@@ -319,7 +324,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 "CODEF " + target + " 조회 실패 [" + code + "]: " + message);
     }
 
-    private AccountRecord toAccountRecord(Long accountId, CodefBankTransactionItemDTO item) {
+    private AccountRecord toAccountRecord(Long userId, Long accountId, CodefBankTransactionItemDTO item) {
         LocalDate transactionDate = parseDate(item.getTransactionDate(), "은행 거래일");
         LocalTime transactionTime = parseTime(item.getTransactionTime(), "은행 거래 시각");
         Long outAmount = amountOrZero(item.getOutAmount());
@@ -327,7 +332,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
         return AccountRecord.builder()
                 .accountId(accountId)
-                .sourceKey(createSourceKey("ACCOUNT", accountId, item.getTransactionDate(), item.getTransactionTime(),
+                .sourceKey(createSourceKey("ACCOUNT", userId, item.getTransactionDate(), item.getTransactionTime(),
                         outAmount, inAmount, item.getAfterTranBalance(), item.getDescription1(), item.getDescription2(),
                         item.getDescription3(), item.getDescription4()))
                 .transactionDate(transactionDate)
@@ -343,19 +348,17 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .build();
     }
 
-    private CardRecord toCardRecord(Long cardId, CodefCardApprovalItemDTO item) {
+    private CardRecord toCardRecord(Long userId, Long cardId, CodefCardApprovalItemDTO item) {
         LocalDate usedDate = parseDate(item.getUsedDate(), "카드 사용일");
         LocalTime usedTime = parseTime(item.getUsedTime(), "카드 사용 시각");
         LocalDate paymentDueDate = parseDateOrNull(item.getPaymentDueDate(), "카드 결제 예정일");
 
         long usedAmount = item.getUsedAmount() == null ? 0L : Math.abs(item.getUsedAmount());
-
-        boolean cancelled = isCancelled(item.getCancelYn());
         Long cancelAmount = item.getCancelAmount() == null ? null : Math.abs(item.getCancelAmount());
 
         return CardRecord.builder()
                 .cardId(cardId)
-                .sourceKey(createSourceKey("CARD", cardId, item.getUsedDate(), item.getUsedTime(), item.getApprovalNo()))
+                .sourceKey(createSourceKey("CARD", userId, item.getUsedDate(), item.getUsedTime(), item.getApprovalNo()))
                 .usedDate(usedDate)
                 .usedTime(usedTime)
 
@@ -373,8 +376,8 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .storeType(item.getStoreType())
                 .storeNo(item.getStoreNo())
 
-                .cancelYn(cancelled ? "Y" : "N")
-                .cancelAmount(cancelled ? cancelAmount : null)
+                .cancelStatus(item.getCancelYn())
+                .cancelAmount(cancelAmount)
 
                 .vat(item.getVat())
                 .cashBack(item.getCashBack())
@@ -432,10 +435,6 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .status("ACTIVE")
                 .memo(account.getDescription1() + account.getDescription2() + account.getDescription3() + account.getDescription4())
                 .build();
-    }
-
-    private boolean isCancelled(String cancelYn) {
-        return "1".equals(cancelYn) || "2".equals(cancelYn);
     }
 
     private boolean isIncome(AccountRecord accountRecord) {

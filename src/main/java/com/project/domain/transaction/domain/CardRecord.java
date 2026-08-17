@@ -31,7 +31,7 @@ public class CardRecord {
     private String storeType;
     private String storeNo;
 
-    private String cancelYn;
+    private String cancelStatus;
     private Long cancelAmount;
 
     private Long vat;
