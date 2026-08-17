@@ -31,7 +31,8 @@ import javax.sql.DataSource;
         "com.project.domain.codef.service",
         "com.project.domain.calendar.service",
         "com.project.domain.onboarding.service",
-        "com.project.domain.transaction.service"
+        "com.project.domain.transaction.service",
+        "com.project.domain.transaction.importer",
 })
 @EnableTransactionManagement
 public class RootConfig {

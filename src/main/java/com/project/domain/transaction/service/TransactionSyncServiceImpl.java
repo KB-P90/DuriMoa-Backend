@@ -3,18 +3,11 @@ package com.project.domain.transaction.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.enums.CodefInstitution;
-import com.project.common.enums.IncomeCategory;
 import com.project.common.enums.RecordType;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.calendar.domain.ServiceRecord;
-import com.project.domain.codef.dto.CodefApiResponseDTO;
-import com.project.domain.codef.dto.CodefBankTransactionItemDTO;
-import com.project.domain.codef.dto.CodefBankTransactionListRequestDTO;
-import com.project.domain.codef.dto.CodefBankTransactionResponseDTO;
-import com.project.domain.codef.dto.CodefCardApprovalItemDTO;
-import com.project.domain.codef.dto.CodefCardApprovalListRequestDTO;
-import com.project.domain.codef.dto.CodefCardApprovalResponseDTO;
+import com.project.domain.codef.dto.*;
 import com.project.domain.codef.service.CodefService;
 import com.project.domain.transaction.domain.AccountRecord;
 import com.project.domain.transaction.domain.CardRecord;
@@ -52,6 +45,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private final CodefService codefService;
     private final TransactionSyncMapper transactionSyncMapper;
     private final ObjectMapper objectMapper;
+    private final TransactionCategoryClassifier categoryClassifier;
 
     @Override
     @Transactional
@@ -389,7 +383,9 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .recordDate(card.getUsedDate())
                 .type(RecordType.EXPENSE)
                 .amount(card.getUsedAmount())
-                .category("ETC")
+                .category(categoryClassifier
+                        .classifyExpense(card)
+                        .name())
                 .status("ACTIVE")
                 .memo(card.getStoreName())
                 .build();
@@ -402,9 +398,15 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .recordDate(account.getTransactionDate())
                 .type(RecordType.INCOME)
                 .amount(account.getInAmount())
-                .category("ETC")
+                .category(categoryClassifier
+                        .classifyExpense(account)
+                        .name())
                 .status("ACTIVE")
-                .memo(account.getDescription1() + account.getDescription2() + account.getDescription3() + account.getDescription4())
+                .memo(String.join(" ",
+                        account.getDescription1(),
+                        account.getDescription2(),
+                        account.getDescription3(),
+                        account.getDescription4()))
                 .build();
     }
 
