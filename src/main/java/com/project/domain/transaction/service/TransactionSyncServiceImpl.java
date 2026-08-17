@@ -37,7 +37,9 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
     // 카드, 계좌 연결 후 첫 동기화 시 받아올 기간 (3개월)
     private static final int INITIAL_LOOKBACK_MONTHS = 3;
-    private static final int SYNC_OVERLAP_DAYS = 1;
+
+    // 거래 내역 재동기화 간격 (5분)
+    private static final int SYNC_INTERVAL_MINUTES = 5;
 
     private static final DateTimeFormatter CODEF_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final DateTimeFormatter CODEF_TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmmss");
@@ -46,6 +48,15 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private final TransactionSyncMapper transactionSyncMapper;
     private final ObjectMapper objectMapper;
     private final TransactionCategoryClassifier categoryClassifier;
+
+    @Override
+    public boolean needSync(Long userId) {
+        LocalDateTime lastSyncAt = transactionSyncMapper.findLastSyncAtByUserId(userId);
+
+        if (lastSyncAt == null) return true;
+
+        return lastSyncAt.isBefore(LocalDateTime.now().minusMinutes(SYNC_INTERVAL_MINUTES));
+    }
 
     @Override
     @Transactional
@@ -440,7 +451,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         if (!hasRecords) return today.minusMonths(INITIAL_LOOKBACK_MONTHS);
 
         // 기존 카드/계좌
-        if (lastSyncAt != null) return lastSyncAt.toLocalDate().minusDays(SYNC_OVERLAP_DAYS);
+        if (lastSyncAt != null) return lastSyncAt.toLocalDate();
 
         return today.minusMonths(INITIAL_LOOKBACK_MONTHS);
     }

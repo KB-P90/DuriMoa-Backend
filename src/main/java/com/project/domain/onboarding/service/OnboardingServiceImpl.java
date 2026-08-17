@@ -30,6 +30,7 @@ import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
 import com.project.domain.onboarding.mapper.OnboardingMapper;
 import com.project.common.enums.CodefInstitution;
+import com.project.domain.transaction.service.TransactionSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final CodefService codefService;
     private final OnboardingMapper onboardingMapper;
     private final CodefConfig codefConfig;
+    private final TransactionSyncService transactionSyncService;
 
     @Override
     @Transactional
@@ -329,6 +331,9 @@ public class OnboardingServiceImpl implements OnboardingService {
                             userId, companyName, numberStr, targetAccountName, accountId);
                 }
 
+                // 은행 계좌 연결 시 거래 내역 조회 및 저장/변환
+                transactionSyncService.syncUserTransactions(userId);
+
 //                // CODEF 은행 계좌 거래내역 조회
 //                CodefBankTransactionListRequestDTO bankReq = CodefBankTransactionListRequestDTO.builder()
 //                        .connectedId(connectedId)
@@ -371,6 +376,9 @@ public class OnboardingServiceImpl implements OnboardingService {
                     log.info("사용자 [{}] 선택 카드 card DB 신규 생성 완료 - company: {}, number: {}, name: {}, generatedId: {}",
                             userId, companyName, numberStr, targetCardName, cardId);
                 }
+
+                // 카드 연결 시 거래 내역 조회 및 저장/변환
+                transactionSyncService.syncUserTransactions(userId);
 
 //                // CODEF 카드 승인 내역 조회
 //                CodefCardApprovalListRequestDTO cardReq = CodefCardApprovalListRequestDTO.builder()
