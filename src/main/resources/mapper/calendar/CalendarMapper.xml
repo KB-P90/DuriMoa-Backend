@@ -213,7 +213,16 @@
     </insert>
 
     <select id="findById" resultType="com.project.domain.calendar.domain.ServiceRecord">
-        SELECT id, user_id AS userId, type, category, changed_category AS changedCategory, amount, record_date AS recordDate, memo
+        SELECT id,
+               user_id,
+               card_record_id,
+               account_record_id,
+               record_date,
+               type,
+               amount,
+               category,
+               changed_category,
+               memo
         FROM service_record
         WHERE id = #{recordId}
     </select>

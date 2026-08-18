@@ -179,8 +179,18 @@ public class CalendarServiceImpl implements CalendarService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
+        // 사용자가 직접 추가한 거래 내역인지, CODEF 연동 거래 내역인지 확인
+        boolean isUserCreated = existingRecord.getAccountRecordId() == null && existingRecord.getCardRecordId() == null;
+
         ServiceRecord record = recordDTO.toVO(userId);
         record.setId(recordId);
+
+        // CODEF 연동 거래는 금액 수정 불가능: 기존 금액 그대로 적용
+        // type도 수정 안 되게 기존 타입 그대로 적용
+        if (!isUserCreated) {
+            record.setAmount(existingRecord.getAmount());
+            record.setType(existingRecord.getType());
+        }
 
         mapper.update(record);
 
