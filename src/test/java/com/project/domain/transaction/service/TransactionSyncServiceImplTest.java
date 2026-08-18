@@ -22,8 +22,7 @@ class TransactionSyncServiceImplTest {
 
     @Test
     void syncUserTransactions() {
-        TransactionSyncResponseDTO response =
-                transactionSyncService.syncUserTransactions(TEST_USER_ID);
+        TransactionSyncResponseDTO response = transactionSyncService.syncUserTransactions(TEST_USER_ID);
 
         assertNotNull(response);
 

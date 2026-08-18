@@ -342,6 +342,7 @@ CREATE TABLE `card_record`
     `raw_data`              JSON         NULL COMMENT 'CODEF 원본 응답 데이터',
 
     `created_at`            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    `updated_at`            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (`id`),
 
@@ -361,26 +362,26 @@ CREATE TABLE `card_record`
 -- 서비스 거래 내역
 CREATE TABLE `service_record`
 (
-    `id`               BIGINT      NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
-    `user_id`          BIGINT      NOT NULL COMMENT '사용자 ID',
+    `id`                BIGINT      NOT NULL AUTO_INCREMENT COMMENT '기록 ID',
+    `user_id`           BIGINT      NOT NULL COMMENT '사용자 ID',
 
-    `card_record_id`   BIGINT      NULL COMMENT '원본 카드 거래 내역 ID',
-    `account_record_id` BIGINT     NULL COMMENT '원본 계좌 거래 내역 ID',
+    `card_record_id`    BIGINT      NULL COMMENT '원본 카드 거래 내역 ID',
+    `account_record_id` BIGINT      NULL COMMENT '원본 계좌 거래 내역 ID',
 
-    `record_date`      DATE        NOT NULL COMMENT '거래 일자',
+    `record_date`       DATE        NOT NULL COMMENT '거래 일자',
 
-    `type`             VARCHAR(10) NOT NULL COMMENT '내역 구분',
-    `amount`           BIGINT      NOT NULL COMMENT '금액',
+    `type`              VARCHAR(10) NOT NULL COMMENT '내역 구분',
+    `amount`            BIGINT      NOT NULL COMMENT '금액',
 
-    `category`         VARCHAR(20) NOT NULL COMMENT '결혼비용, 개인소비 등',
-    `changed_category` VARCHAR(20) NULL COMMENT '변경된 카테고리',
+    `category`          VARCHAR(20) NOT NULL COMMENT '결혼비용, 개인소비 등',
+    `changed_category`  VARCHAR(20) NULL COMMENT '변경된 카테고리',
 
-    `status`           VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / CANCELLED',
+    `status`            VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / CANCELLED',
 
-    `memo`             TEXT        NULL COMMENT '메모',
+    `memo`              TEXT        NULL COMMENT '메모',
 
-    `created_at`       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
-    `updated_at`       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정 일시',
+    `created_at`        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    `updated_at`        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
     PRIMARY KEY (`id`),
     KEY `idx_account_user_id` (`user_id`),

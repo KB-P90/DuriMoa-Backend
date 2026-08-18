@@ -88,14 +88,14 @@
             store_name, used_amount, payment_type, installment_month,
             approval_no, payment_due_date,
             domestic_foreign_type, store_corp_no, store_type, store_no,
-            cancel_yn, cancel_amount, vat, cash_back,
+            cancel_status, cancel_amount, vat, cash_back,
             krw_amount, currency, raw_data
         ) VALUES (
             #{cardId}, #{sourceKey}, #{usedDate}, #{usedTime},
             #{storeName}, #{usedAmount}, #{paymentType}, #{installmentMonth},
             #{approvalNo}, #{paymentDueDate},
             #{domesticForeignType}, #{storeCorpNo}, #{storeType}, #{storeNo},
-            #{cancelYn}, #{cancelAmount}, #{vat}, #{cashBack},
+            #{cancelStatus}, #{cancelAmount}, #{vat}, #{cashBack},
             #{krwAmount}, #{currency}, #{rawData}
         )
     </insert>
@@ -126,7 +126,7 @@
                cr.store_corp_no,
                cr.store_type,
                cr.store_no,
-               cr.cancel_yn,
+               cr.cancel_status,
                cr.cancel_amount,
                cr.vat,
                cr.cash_back,
@@ -210,7 +210,7 @@
                cr.store_corp_no,
                cr.store_type,
                cr.store_no,
-               cr.cancel_yn,
+               cr.cancel_status,
                cr.cancel_amount,
                cr.vat,
                cr.cash_back,

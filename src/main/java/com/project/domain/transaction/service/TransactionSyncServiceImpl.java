@@ -29,6 +29,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 
 @Log4j2
 @Service
@@ -228,7 +229,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     }
 
     private void processCardRecord(Long userId, CardRecord cardRecord) {
-        // 전체 취소(1), 거절(3)인 경우 service_record 생성 안 함
+        // 전체 취소(1), 거절(3)인 경우 서비스 레코드 생성 안 함
         if ("1".equals(cardRecord.getCancelStatus()) || "3".equals(cardRecord.getCancelStatus())) return;
 
         AccountRecord matchedAccountRecord = transactionSyncMapper.findMatchingAccountRecord(userId, cardRecord);
@@ -266,6 +267,14 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private void processAccountRecord(Long userId, AccountRecord accountRecord) {
         // 입금은 우선 그대로 서비스 레코드로 변환
         if (isIncome(accountRecord)) {
+            String descriptionType = normalize(accountRecord.getDescription2());
+
+            // 이자는 변환하지 않음
+            if (descriptionType.contains("이자")) return;
+
+            // 체크카드 관련 입금은 취소/환불 가능성이 있어 우선 변환하지 않음
+            if (descriptionType.contains("체크카드")) return;
+
             if (transactionSyncMapper.findByAccountRecordId(accountRecord.getId()) == null) {
                 transactionSyncMapper.insertServiceRecord(toIncomeServiceRecord(userId, accountRecord));
             }
@@ -284,6 +293,9 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         );
 
         if (matchedCardRecord != null) {
+            // 이미 취소된 카드 거래에 대응하는 계좌 출금 내역이라면 서비스 레코드 생성 안 함
+            if ("1".equals(matchedCardRecord.getCancelStatus()) || "3".equals(matchedCardRecord.getCancelStatus())) return;
+
             ServiceRecord existing = transactionSyncMapper.findByCardRecordId(matchedCardRecord.getId());
 
             if (existing != null) {
@@ -413,12 +425,10 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .type(RecordType.INCOME)
                 .amount(account.getInAmount())
                 .category(categoryClassifier
-                        .classifyExpense(account)
+                        .classifyIncome(account)
                         .name())
                 .status("ACTIVE")
                 .memo(String.join(" ",
-                        account.getDescription1(),
-                        account.getDescription2(),
                         account.getDescription3(),
                         account.getDescription4()))
                 .build();
@@ -431,10 +441,25 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
                 .recordDate(account.getTransactionDate())
                 .type(RecordType.EXPENSE)
                 .amount(account.getOutAmount())
-                .category("ETC")
+                .category(categoryClassifier
+                        .classifyExpense(account)
+                        .name())
                 .status("ACTIVE")
-                .memo(account.getDescription1() + account.getDescription2() + account.getDescription3() + account.getDescription4())
+                .memo(String.join(" ",
+                        account.getDescription3(),
+                        account.getDescription4()))
                 .build();
+    }
+
+    private String normalize(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+
+        return value
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replaceAll("[^가-힣a-z0-9]", "");
     }
 
     private boolean isIncome(AccountRecord accountRecord) {

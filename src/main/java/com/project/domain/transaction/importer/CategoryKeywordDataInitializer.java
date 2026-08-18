@@ -128,9 +128,7 @@ public class CategoryKeywordDataInitializer implements InitializingBean {
         );
     }
 
-    private List<String> normalizeKeywords(
-            List<String> keywords
-    ) {
+    private List<String> normalizeKeywords(List<String> keywords) {
         if (keywords == null) {
             return List.of();
         }
