@@ -17,4 +17,5 @@ public class UserProfileVO {
     private String role;
     private String profileImage;
     private Integer isShared;
+    private Boolean removeProfileImage;
 }
