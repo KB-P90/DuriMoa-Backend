@@ -31,6 +31,9 @@ tasks.withType(JavaCompile) {
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 
+    // OpenAI
+    implementation 'com.openai:openai-java:4.0.0'
+
 
     // firebase
     implementation 'com.google.firebase:firebase-admin:9.10.0'
