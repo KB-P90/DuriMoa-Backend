@@ -26,6 +26,8 @@ import com.project.domain.goal.dto.GoalUpdateRequestDTO;
 import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.dto.GoalDeleteResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
+import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.service.NotificationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -98,6 +100,32 @@ class GoalServiceImplTest {
         verify(goalMapper).insertGoal(goalCaptor.capture());
         assertEquals("NORMAL", goalCaptor.getValue().getStatus());
         assertEquals(false, goalCaptor.getValue().getIsMain());
+    }
+
+    @Test
+    void createGoalDoesNotFailWhenNotificationCreationFails() {
+        GoalMapper goalMapper = mock(GoalMapper.class);
+        CoupleService coupleService = mock(CoupleService.class);
+        NotificationService notificationService = mock(NotificationService.class);
+        GoalService service = new GoalServiceImpl(goalMapper, coupleService, notificationService);
+
+        when(coupleService.getConnectedCoupleByUserId(1L))
+                .thenReturn(new CoupleDTO(10L, 1L, 2L, "CONNECTED"));
+        when(goalMapper.selectCoupleIdForUpdate(10L)).thenReturn(10L);
+        when(goalMapper.existsGoalByCoupleId(10L)).thenReturn(true);
+        when(goalMapper.insertGoal(any(GoalVO.class))).thenAnswer(invocation -> {
+            GoalVO goal = invocation.getArgument(0);
+            goal.setId(102L);
+            return 1;
+        });
+        when(goalMapper.insertGoalItems(eq(102L), anyList())).thenReturn(2);
+        when(notificationService.createNotification(any(NotificationCreateRequestDTO.class)))
+                .thenThrow(new RuntimeException("push device table missing"));
+
+        GoalCreateResponseDTO response = service.createGoal(1L, validRequest());
+
+        assertEquals(102L, response.getGoalId());
+        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
     }
 
     @Test

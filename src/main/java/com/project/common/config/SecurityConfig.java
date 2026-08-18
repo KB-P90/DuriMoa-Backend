@@ -68,6 +68,8 @@ public class SecurityConfig {
                     .authenticated()
                 .antMatchers("/api/expense", "/api/expense/**")
                     .authenticated()
+                .antMatchers("/api/mypage/**")
+                    .authenticated()
                 .antMatchers("/api/push-devices", "/api/push-devices/**")
                     .authenticated()
                 .antMatchers("/api/ai", "/api/ai/**")

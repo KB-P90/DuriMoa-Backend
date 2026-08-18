@@ -1,6 +1,7 @@
 package com.project.domain.monthly.service;
 
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
+import com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO;
 import com.project.domain.monthly.dto.SavingMissionEntityDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
 import org.junit.jupiter.api.Assertions;
@@ -35,8 +36,13 @@ class MonthlyScheduledSavingMissionTest {
                         Mockito.eq(2L), Mockito.any(), Mockito.any()))
                 .thenReturn(List.of(CategoryExpenseAnalysisDTO.builder()
                         .categoryCode("FOOD")
-                        .totalAmount(100000L)
+                        .totalAmount(600000L)
                         .txCount(4)
+                        .build()));
+        Mockito.when(monthlyMapper.selectCategoryExpenseStatistics(2026))
+                .thenReturn(List.of(CategoryExpenseStatisticsDTO.builder()
+                        .categoryCode("FOOD")
+                        .averageAmount(500000L)
                         .build()));
 
         int generatedUserCount = monthlyService.generateScheduledSavingMissions(targetMonth);

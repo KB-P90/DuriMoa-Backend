@@ -1,5 +1,7 @@
 package com.project.domain.couple.controller;
 
+import com.project.common.exception.CustomException;
+import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
 import com.project.domain.couple.dto.AcceptInvitationRequestDTO;
 import com.project.domain.couple.dto.CoupleInvitationDTO;
@@ -8,6 +10,7 @@ import com.project.domain.couple.service.CoupleInvitationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +32,7 @@ public class CoupleController {
     public ResponseEntity<ApiResponse<List<CoupleInvitationDTO>>> status(
             @ApiIgnore @AuthenticationPrincipal Long userId
     ) {
+        validateAuthenticatedUser(userId);
         List<CoupleInvitationDTO> statuses = coupleInvitationService.getStatuses(userId);
         return ResponseEntity.ok(ApiResponse.success(statuses));
     }
@@ -47,6 +51,7 @@ public class CoupleController {
     public ResponseEntity<ApiResponse<CoupleInvitationDTO>> accept(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AcceptInvitationRequestDTO request) {
+        validateAuthenticatedUser(userId);
         CoupleInvitationDTO result = coupleInvitationService.accept(userId, request.getPartnerUserId());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -56,7 +61,14 @@ public class CoupleController {
     public ResponseEntity<ApiResponse<CoupleInvitationDTO>> disconnect(
             @ApiIgnore @AuthenticationPrincipal Long userId
     ) {
+        validateAuthenticatedUser(userId);
         CoupleInvitationDTO result = coupleInvitationService.disconnect(userId);
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    private void validateAuthenticatedUser(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        }
     }
 }

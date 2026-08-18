@@ -6,6 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.time.YearMonth;
+import java.time.ZoneId;
 
 class MonthlySavingMissionSchedulerTest {
 
@@ -17,8 +18,13 @@ class MonthlySavingMissionSchedulerTest {
 
         scheduler.generateMonthlySavingMissions();
 
-        ArgumentCaptor<YearMonth> captor = ArgumentCaptor.forClass(YearMonth.class);
-        Mockito.verify(monthlyService).generateScheduledSavingMissions(captor.capture());
-        org.junit.jupiter.api.Assertions.assertEquals(YearMonth.now(), captor.getValue());
+        ArgumentCaptor<YearMonth> finalizeCaptor = ArgumentCaptor.forClass(YearMonth.class);
+        ArgumentCaptor<YearMonth> generateCaptor = ArgumentCaptor.forClass(YearMonth.class);
+        Mockito.verify(monthlyService).finalizeSavingMissions(finalizeCaptor.capture());
+        Mockito.verify(monthlyService).generateScheduledSavingMissions(generateCaptor.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                YearMonth.now(ZoneId.of("Asia/Seoul")).minusMonths(1), finalizeCaptor.getValue());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                YearMonth.now(ZoneId.of("Asia/Seoul")), generateCaptor.getValue());
     }
 }

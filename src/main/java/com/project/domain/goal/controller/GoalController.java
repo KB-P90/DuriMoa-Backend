@@ -14,9 +14,12 @@ import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.service.GoalService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+
 import java.util.List;
 import javax.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,9 +49,11 @@ public class GoalController {
             @ApiIgnore Authentication authentication,
             @Valid @RequestBody GoalCreateRequestDTO request
     ) {
-        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
-        GoalCreateResponseDTO response = goalService.createGoal(authenticatedUserId, request);
-        return ResponseEntity.ok(ApiResponse.success("결혼 목표가 저장되었습니다.", response));
+
+            Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+            GoalCreateResponseDTO response = goalService.createGoal(authenticatedUserId, request);
+            return ResponseEntity.ok(ApiResponse.success("결혼 목표가 저장되었습니다.", response));
+
     }
 
     @ApiOperation(value = "결혼 시안 목록 조회", notes = "인증 사용자의 연결된 커플에 저장된 모든 결혼 시안을 조회합니다.")

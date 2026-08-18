@@ -46,6 +46,8 @@ public interface MonthlyService {
 
     int generateScheduledSavingMissions(YearMonth targetMonth);
 
+    int finalizeSavingMissions(YearMonth missionMonth);
+
     /**
      * 직전 월 소비 패턴을 분석하여 절약 추천 미션을 생성합니다.
      *

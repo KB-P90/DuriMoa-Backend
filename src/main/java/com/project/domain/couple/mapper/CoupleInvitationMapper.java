@@ -26,6 +26,9 @@ public interface CoupleInvitationMapper {
     // 신랑/신부 조합으로 기존 커플 상태 조회 (없으면 null)
     public String findCoupleStatus(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
 
+    // inviter가 발급한 초대코드를 invitee가 입력해 대기 중인 요청이 있는지 조회
+    public boolean existsRequestedInvitation(@Param("inviterId") Long inviterId, @Param("inviteeId") Long inviteeId);
+
     // 커플 WAIT 상태로 최초 생성
     public void insertCouple(@Param("groomId") Long groomId, @Param("brideId") Long brideId);
 

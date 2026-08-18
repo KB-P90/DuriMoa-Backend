@@ -383,6 +383,7 @@ CREATE TABLE `saving_missions`
     `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID',
     `category`        VARCHAR(50)  NOT NULL COMMENT '지출 카테고리',
     `title`           VARCHAR(100) NOT NULL COMMENT '미션 제목',
+    `baseline_amount` BIGINT       NOT NULL DEFAULT 0 COMMENT '미션 생성 기준 월의 카테고리 지출액',
     `expected_saving` BIGINT       NOT NULL DEFAULT 0 COMMENT '예상 절감액',
     `status`          VARCHAR(10)  NOT NULL COMMENT '미션 상태',
     `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -394,7 +395,9 @@ CREATE TABLE `saving_missions`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT `chk_saving_missions_expected_saving`
-        CHECK (`expected_saving` >= 0)
+        CHECK (`expected_saving` >= 0),
+    CONSTRAINT `chk_saving_missions_baseline_amount`
+        CHECK (`baseline_amount` >= 0)
 );
 
 -- 결혼 통계
@@ -428,13 +431,13 @@ CREATE TABLE `codef_access_token`
 -- 지출 피드백
 CREATE TABLE `expense_feedback`
 (
-    `id`          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '지출 피드백 ID',
-    `writer_id`   BIGINT      NOT NULL COMMENT '피드백 작성자 ID',
-    `receiver_id` BIGINT      NOT NULL COMMENT '피드백 대상 사용자 ID',
-    `year`        INT         NOT NULL COMMENT '피드백 대상 연도',
-    `month`       INT         NOT NULL COMMENT '피드백 대상 월',
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '지출 피드백 ID',
+    `writer_id`   BIGINT       NOT NULL COMMENT '피드백 작성자 ID',
+    `receiver_id` BIGINT       NOT NULL COMMENT '피드백 대상 사용자 ID',
+    `year`        INT          NOT NULL COMMENT '피드백 대상 연도',
+    `month`       INT          NOT NULL COMMENT '피드백 대상 월',
     `content`     VARCHAR(100) NOT NULL COMMENT '지출 피드백 내용',
-    `created_at`  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
 
@@ -449,6 +452,34 @@ CREATE TABLE `expense_feedback`
         FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE
             ON DELETE CASCADE
+);
+
+CREATE TABLE expense_statistics
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+
+    age_group       VARCHAR(20)  NOT NULL COMMENT '연령 그룹, 예: ALL_SINGLE, UNDER_40',
+    household_type  VARCHAR(20)  NOT NULL COMMENT '가구 유형, 예: SINGLE',
+    year            INT          NOT NULL COMMENT '통계 기준 연도',
+
+    category_code   VARCHAR(50)  NOT NULL COMMENT 'KOSIS 원본 카테고리 코드',
+    category_name   VARCHAR(100) NOT NULL COMMENT 'KOSIS 원본 카테고리명',
+
+    average_amount  BIGINT       NOT NULL COMMENT '월평균 지출 금액',
+
+    source          VARCHAR(100) NOT NULL DEFAULT 'KOSIS',
+    source_table_id VARCHAR(50)  NULL COMMENT 'KOSIS 통계표 ID',
+
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_expense_statistics (
+                                      age_group,
+                                      household_type,
+                                      year,
+                                      category_code
+        )
 );
 
 /*

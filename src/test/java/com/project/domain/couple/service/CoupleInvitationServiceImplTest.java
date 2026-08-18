@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -152,6 +153,24 @@ class CoupleInvitationServiceImplTest {
     }
 
     @Test
+    void inviteKeepsWaitingWhenNotificationFails() {
+        when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.findPartnerByInviteCode("XYZ789"))
+                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
+        when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn(null);
+        doThrow(new RuntimeException("notification failed"))
+                .when(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
+
+        CoupleInvitationDTO result = coupleInvitationService.invite(1L, "XYZ789");
+
+        verify(coupleInvitationMapper).insertCouple(1L, 2L);
+        verify(coupleInvitationMapper).requestInvitation("XYZ789", 1L);
+        assertEquals("WAIT", result.getStatus());
+    }
+
+    @Test
     void inviteConnectsExistingWaitCoupleWhenBothEnterCodes() {
         when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
         when(coupleInvitationMapper.findPartnerByInviteCode("ABC123"))
@@ -159,6 +178,7 @@ class CoupleInvitationServiceImplTest {
         when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
         when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
         when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn("WAIT");
+        when(coupleInvitationMapper.existsRequestedInvitation(2L, 1L)).thenReturn(true);
 
         CoupleInvitationDTO result = coupleInvitationService.invite(2L, "ABC123");
 
@@ -170,6 +190,25 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper, never()).insertCouple(any(), any());
         verify(notificationService, times(2)).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("CONNECTED", result.getStatus());
+    }
+
+    @Test
+    void inviteKeepsWaitingWhenRequesterEntersSamePartnerCodeAgain() {
+        when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
+        when(coupleInvitationMapper.findPartnerByInviteCode("ABC123"))
+                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
+        when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn("WAIT");
+        when(coupleInvitationMapper.existsRequestedInvitation(2L, 1L)).thenReturn(false);
+
+        CoupleInvitationDTO result = coupleInvitationService.invite(2L, "ABC123");
+
+        verify(coupleInvitationMapper, never()).connectCouple(any(), any());
+        verify(coupleInvitationMapper, never()).acceptInvitation(anyString(), any());
+        verify(coupleInvitationMapper, never()).acceptOwnInvitation(any(), any());
+        verify(notificationService, never()).createNotification(any(NotificationCreateRequestDTO.class));
+        assertEquals("WAIT", result.getStatus());
     }
 
     @Test

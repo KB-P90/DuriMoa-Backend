@@ -7,7 +7,9 @@ public enum MissionStatus {
 
     CHALLENGE("도전하기"),
     IN_PROGRESS("도전중"),
-    COMPLETED("완료");
+    SUCCESS("성공"),
+    FAILURE("실패"),
+    EXPIRED("만료");
 
     private final String status;
 
