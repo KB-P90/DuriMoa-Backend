@@ -30,13 +30,13 @@ public class TransactionCategoryClassifier {
     }
 
     public ExpenseCategory classifyExpense(AccountRecord record) {
-        String text = normalize(Stream.of(record.getDescription1(), record.getDescription2(), record.getDescription3(), record.getDescription4()).filter(StringUtils::hasText).collect(Collectors.joining(" ")));
+        String text = normalize(record.getDescription3());
 
         return findCategory(text, dataInitializer.getExpenseRules(), ExpenseCategory.ETC);
     }
 
     public IncomeCategory classifyIncome(AccountRecord record) {
-        String text = normalize(Stream.of(record.getDescription1(), record.getDescription2(), record.getDescription3(), record.getDescription4()).filter(StringUtils::hasText).collect(Collectors.joining(" ")));
+        String text = normalize(record.getDescription3());
 
         return findCategory(text, dataInitializer.getIncomeRules(), IncomeCategory.ETC);
     }
