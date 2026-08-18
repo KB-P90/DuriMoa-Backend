@@ -98,6 +98,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         feedbacks.add(ExpenseFeedbackDTO.builder()
                 .writerUserId(writer.getUserId())
                 .writerName(writer.getName())
+                .writerProfileImageUrl(writer.getProfileImageUrl())
                 .receiverId(writer.getUserId())
                 .content("")
                 .build());
@@ -152,6 +153,7 @@ public class MonthlyServiceImpl implements MonthlyService {
         return UserExpenseDetailDTO.builder()
                 .userId(userSummary.getUserId())
                 .name(userSummary.getName())
+                .profileImageUrl(userSummary.getProfileImageUrl())
                 .expenseCategories(expenseCategories)
                 .build();
     }
