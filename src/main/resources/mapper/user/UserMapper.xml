@@ -36,7 +36,8 @@
             <if test="role != null">role = #{role},</if>
             <if test="phone != null">phone = #{phone},</if>
             <if test="password != null">password = #{password},</if>
-            <if test="profileImage != null">profile_image = #{profileImage},</if>
+            <if test="removeProfileImage != null and removeProfileImage">profile_image = NULL,</if>
+            <if test="(removeProfileImage == null or !removeProfileImage) and profileImage != null">profile_image = #{profileImage},</if>
             <if test="isShared != null">is_shared = #{isShared},</if>
         </set>
         WHERE id = #{id}
@@ -102,6 +103,27 @@
           AND expired_at > NOW()
         ORDER BY id DESC
         LIMIT 1
+
+    </select>
+
+    <select id="getPasswordHash"
+            resultType="java.lang.String">
+
+        SELECT password
+        FROM user
+        WHERE id = #{id}
+
+    </select>
+
+    <select id="existsPhoneForOtherUser"
+            resultType="boolean">
+
+        SELECT EXISTS (
+            SELECT 1
+            FROM user
+            WHERE phone = #{phone}
+              AND id &lt;&gt; #{userId}
+        )
 
     </select>
 
