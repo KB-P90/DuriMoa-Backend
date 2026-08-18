@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.domain.ai.mapper.AiRecommendationMapper">
+
+    <select id="selectAnalysisMembers"
+            resultType="com.project.domain.ai.model.AiAnalysisMemberRecord">
+        SELECT
+            u.id AS user_id,
+            u.wedding_fund AS wedding_fund
+        FROM `user` u
+        WHERE u.is_deleted = FALSE
+          AND u.id IN (
+              SELECT #{userId}
+              UNION
+              SELECT
+                  CASE
+                      WHEN c.groom_id = #{userId} THEN c.bride_id
+                      ELSE c.groom_id
+                  END
+              FROM couple c
+              WHERE c.status = 'CONNECTED'
+                AND (c.groom_id = #{userId} OR c.bride_id = #{userId})
+          )
+        ORDER BY CASE WHEN u.id = #{userId} THEN 0 ELSE 1 END
+    </select>
+
+    <select id="selectMonthlyFinances"
+            resultType="com.project.domain.ai.model.AiMonthlyFinanceRecord">
+        SELECT
+            DATE_FORMAT(sr.record_date, '%Y-%m') AS record_month,
+            COALESCE(SUM(CASE WHEN sr.type = 'INCOME' THEN sr.amount ELSE 0 END), 0) AS income,
+            COALESCE(SUM(CASE WHEN sr.type = 'EXPENSE' THEN sr.amount ELSE 0 END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN sr.type = 'SAVING' THEN sr.amount ELSE 0 END), 0) AS saving
+        FROM service_record sr
+        WHERE sr.user_id IN
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+          AND sr.record_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY DATE_FORMAT(sr.record_date, '%Y-%m')
+        ORDER BY record_month
+    </select>
+
+</mapper>
