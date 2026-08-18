@@ -36,20 +36,14 @@ public class HomeSetupChecklistResult {
 
     public enum Step {
 
-        // 인증 사용자에게 실제 연결 계좌 또는 카드가 있는지 확인하는 단계입니다.
-        ACCOUNT_LINKED(1, "ACCOUNT_LINKED", "계좌 연결"),
+        // 인증 사용자가 계좌 또는 카드 연결과 결혼자금 입력을 완료했는지 확인하는 단계입니다.
+        ACCOUNT_LINKED(1, "ACCOUNT_LINKED", "계좌/카드 연결"),
 
         // 실제 활성 커플 연결이 완료된 상태를 확인하는 단계입니다.
         COUPLE_CONNECTED(2, "COUPLE_CONNECTED", "커플 연결"),
 
         // 활성 커플에 결혼 목표 시안이 하나 이상 있는지 확인하는 단계입니다.
-        WEDDING_GOAL_CREATED(3, "WEDDING_GOAL_CREATED", "결혼 목표 설정"),
-
-        // 활성 커플에 확정된 메인 시안이 있는지 확인하는 단계입니다.
-        MAIN_PLAN_SELECTED(4, "MAIN_PLAN_SELECTED", "메인 시안 선택"),
-
-        // 메인 홈 화면으로 진입할 수 있는 시작 완료 단계입니다.
-        FIRST_STEP_STARTED(5, "FIRST_STEP_STARTED", "첫걸음 시작");
+        WEDDING_GOAL_CREATED(3, "WEDDING_GOAL_CREATED", "결혼 목표 설정");
 
         // 화면에 표시할 고정 단계 번호입니다.
         private final Integer step;

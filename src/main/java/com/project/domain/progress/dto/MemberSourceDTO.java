@@ -14,6 +14,7 @@ public class MemberSourceDTO {
     private Long userId;
     private String name;
     private String role;
+    private String profileImage;
     private Long asset;
     private Boolean assetShared;
 }

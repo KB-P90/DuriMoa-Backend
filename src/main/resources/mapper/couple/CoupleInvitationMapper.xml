@@ -46,6 +46,14 @@
         WHERE ((c.groom_id = #{userId} AND c.bride_id = #{partnerId})
             OR (c.groom_id = #{partnerId} AND c.bride_id = #{userId}))
           AND c.status != 'DISCONNECTED'
+        ORDER BY
+            CASE
+                WHEN c.status = 'CONNECTED' THEN 1
+                WHEN c.status = 'WAIT' THEN 2
+                ELSE 9
+            END,
+            c.id DESC
+        LIMIT 1
     </select>
 
     <!-- 현재 로그인한 사용자 조회 -->
@@ -63,6 +71,12 @@
         FROM invitation i
                  JOIN `user` u ON u.id = i.inviter_id
         WHERE i.invite_code = #{inviteCode}
+          AND i.invitee_id IS NULL
+          AND i.status = 'CREATED'
+          AND i.expired_at > NOW()
+          AND u.is_deleted = FALSE
+        ORDER BY i.id DESC
+        LIMIT 1
     </select>
 
     <!-- userId가 otherUserId 말고 다른 상대와 CONNECTED된 커플이 있는지 카운트 (WAIT는 여러 명과 동시에 있어도 됨) -->
@@ -80,11 +94,30 @@
         FROM couple
         WHERE (groom_id = #{groomId} AND bride_id = #{brideId})
            OR (groom_id = #{brideId} AND bride_id = #{groomId})
+        ORDER BY
+            CASE
+                WHEN status = 'CONNECTED' THEN 1
+                WHEN status = 'WAIT' THEN 2
+                ELSE 9
+            END,
+            id DESC
+        LIMIT 1
+    </select>
+
+    <!-- inviter의 초대코드를 invitee가 이미 입력해 REQUESTED 상태로 대기 중인지 확인 -->
+    <select id="existsRequestedInvitation" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM invitation
+            WHERE inviter_id = #{inviterId}
+              AND invitee_id = #{inviteeId}
+              AND status = 'REQUESTED'
+        )
     </select>
 
     <!-- 커플 WAIT 상태로 최초 생성 -->
     <insert id="insertCouple">
-        INSERT INTO couple (groom_id, bride_id, status)
+        INSERT IGNORE INTO couple (groom_id, bride_id, status)
         VALUES (#{groomId}, #{brideId}, 'WAIT')
     </insert>
 
@@ -117,23 +150,30 @@
 
     <!-- 상대방 초대코드를 처음 사용했을 때, 마스터 row(invitee_id IS NULL)를 복사해서 이 사람 전용 REQUESTED row를 새로 추가 -->
     <insert id="requestInvitation">
-        INSERT INTO invitation (inviter_id, invitee_id, invite_code, status, expired_at)
+        INSERT IGNORE INTO invitation (inviter_id, invitee_id, invite_code, status, expired_at)
         SELECT inviter_id, #{inviteeId}, invite_code, 'REQUESTED', expired_at
         FROM invitation
         WHERE invite_code = #{inviteCode}
           AND invitee_id IS NULL
+          AND status = 'CREATED'
+          AND expired_at > NOW()
         LIMIT 1
     </insert>
 
     <!-- 상대방 초대코드를 최종 확정했을 때, 마스터 row를 복사해서 이 사람 전용 ACCEPTED row를 새로 추가 -->
-    <insert id="acceptInvitation">
-        INSERT INTO invitation (inviter_id, invitee_id, invite_code, status, expired_at)
-        SELECT inviter_id, #{inviteeId}, invite_code, 'ACCEPTED', expired_at
-        FROM invitation
-        WHERE invite_code = #{inviteCode}
-          AND invitee_id IS NULL
-        LIMIT 1
-    </insert>
+    <update id="acceptInvitation">
+        UPDATE invitation requested
+        INNER JOIN invitation master
+            ON master.invite_code = #{inviteCode}
+           AND master.invitee_id IS NULL
+           AND master.status = 'CREATED'
+           AND master.expired_at > NOW()
+        SET requested.status = 'ACCEPTED',
+            requested.expired_at = master.expired_at
+        WHERE requested.inviter_id = master.inviter_id
+          AND requested.invitee_id = #{inviteeId}
+          AND requested.status = 'REQUESTED'
+    </update>
 
     <!-- 연결이 확정되면 내 초대코드로 그 상대가 걸어놓은 REQUESTED row만 정확히 ACCEPTED로 변경 (다른 사람 요청까지 같이 바뀌면 안 됨) -->
     <update id="acceptOwnInvitation">

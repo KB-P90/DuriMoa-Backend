@@ -28,6 +28,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectItemDTO;
+import com.project.domain.onboarding.dto.OnboardingWeddingFundRequestDTO;
 import com.project.domain.onboarding.mapper.OnboardingMapper;
 import com.project.common.enums.CodefInstitution;
 import com.project.domain.transaction.service.TransactionSyncService;
@@ -50,6 +51,19 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final OnboardingMapper onboardingMapper;
     private final CodefConfig codefConfig;
     private final TransactionSyncService transactionSyncService;
+
+    @Override
+    @Transactional
+    public void saveWeddingFund(Long userId, OnboardingWeddingFundRequestDTO requestDTO) {
+        if (userId == null || userId <= 0) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "인증 정보가 없거나 유효하지 않습니다. 로그인 후 이용해주세요.");
+        }
+        Long weddingFund = parseWeddingFund(requestDTO);
+        if (!Boolean.TRUE.equals(onboardingMapper.existsActiveUserById(userId))) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "결혼 자금을 입력할 사용자를 찾을 수 없습니다.");
+        }
+        onboardingMapper.updateWeddingFund(userId, weddingFund);
+    }
 
     @Override
     @Transactional
@@ -279,6 +293,23 @@ public class OnboardingServiceImpl implements OnboardingService {
             }
         }
         return null;
+    }
+
+    private Long parseWeddingFund(OnboardingWeddingFundRequestDTO requestDTO) {
+        if (requestDTO == null || !StringUtils.hasText(requestDTO.getWeddingFund())) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "결혼 자금(weddingFund)은 필수입니다.");
+        }
+
+        String weddingFundText = requestDTO.getWeddingFund().trim();
+        if (!weddingFundText.matches("^[0-9]+$")) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "결혼 자금(weddingFund)은 0 이상의 숫자만 입력할 수 있습니다.");
+        }
+
+        try {
+            return Long.parseLong(weddingFundText);
+        } catch (NumberFormatException exception) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "결혼 자금(weddingFund)이 입력 가능한 범위를 초과했습니다.");
+        }
     }
 
     @Override

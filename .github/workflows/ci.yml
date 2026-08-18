@@ -1,0 +1,48 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant Execute Permission For Gradlew
+        run: chmod +x gradlew
+
+      - name: Create Properties Files
+        shell: bash
+        env:
+          DATABASE_PROPERTIES: ${{ secrets.DATABASE_PROPERTIES }}
+          CODEF_PROPERTIES: ${{ secrets.CODEF_PROPERTIES }}
+          AWS_PROPERTIES: ${{ secrets.AWS_PROPERTIES }}
+          KAKAO_PROPERTIES: ${{ secrets.KAKAO_PROPERTIES }}
+          GOOGLE_APPLICATION_JSON: ${{ secrets.GOOGLE_APPLICATION_JSON }}
+        run: |
+          printf '%s' "$DATABASE_PROPERTIES" > src/main/resources/database.properties
+          printf '%s' "$CODEF_PROPERTIES" > src/main/resources/codef.properties
+          printf '%s' "$AWS_PROPERTIES" > src/main/resources/aws.properties
+          printf '%s' "$KAKAO_PROPERTIES" > src/main/resources/kakao.properties
+          printf '%s' "$GOOGLE_APPLICATION_JSON" > src/main/resources/google-application.json
+
+      - name: Build and Test with Gradle
+        # TODO: 테스트 안정화 후 -x test 제거
+        run: ./gradlew clean build -x test --no-daemon

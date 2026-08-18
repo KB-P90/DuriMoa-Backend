@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.io.IOException;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -26,7 +28,7 @@ public class GlobalExceptionHandler {
         log.error("CustomException: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
         return ResponseEntity
                 .status(e.getErrorCode().getStatus())
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getErrorCode().getCode(), e.getMessage()));
     }
 
     /**
@@ -58,7 +60,7 @@ public class GlobalExceptionHandler {
         log.error("Input Validation Error (400 BAD_REQUEST): {}", errorMessage);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(errorMessage));
+                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), errorMessage));
     }
 
     /**
@@ -69,7 +71,19 @@ public class GlobalExceptionHandler {
         log.error("File Upload Size Exceeded (400 BAD_REQUEST): {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("업로드 가능한 파일 용량을 초과했습니다."));
+                .body(ApiResponse.error(
+                        ErrorCode.INVALID_INPUT_VALUE.getCode(),
+                        "업로드 가능한 파일 용량을 초과했습니다."));
+    }
+
+    /**
+     * 클라이언트가 연결을 끊어 응답을 더 이상 쓸 수 없는 경우 (예: SSE 연결 끊김).
+     * 이미 text/event-stream으로 시작된 응답에 JSON ApiResponse를 쓰려 하면 2차 예외가
+     * 발생하므로, 응답 본문을 만들지 않고 조용히 무시한다.
+     */
+    @ExceptionHandler(IOException.class)
+    public void handleIOException(IOException e) {
+        log.debug("클라이언트 연결이 끊어져 응답을 쓸 수 없습니다: {}", e.getMessage());
     }
 
     /**
@@ -80,6 +94,8 @@ public class GlobalExceptionHandler {
         log.error("Unhandled System Exception (500 INTERNAL_SERVER_ERROR): ", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
+                .body(ApiResponse.error(
+                        ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                        ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
     }
 }

@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .antMatchers(
                         "/api/auth/signup",
                         "/api/auth/login",
+                        "/api/auth/kakao/login",
+                        "/api/auth/kakao/signup",
                         "/api/auth/refresh",
                         "/api/auth/logout",
                         "/swagger-ui.html",
@@ -57,13 +59,20 @@ public class SecurityConfig {
                 .antMatchers(
                         HttpMethod.GET,
                         "/api/goal/stat",
-                        "/api/goal/stat/estimate")
+                        "/api/goal/stat/estimate",
+                        "/api/goal/stat/all-regions")
                     .permitAll()
                 .antMatchers("/api/notifications/**", "/api/notification-settings/**")
                     .authenticated()
                 .antMatchers("/api/goal", "/api/goal/**")
                     .authenticated()
                 .antMatchers("/api/expense", "/api/expense/**")
+                    .authenticated()
+                .antMatchers("/api/mypage/**")
+                    .authenticated()
+                .antMatchers("/api/push-devices", "/api/push-devices/**")
+                    .authenticated()
+                .antMatchers("/api/ai", "/api/ai/**")
                     .authenticated()
                 // 로그인해야 볼 수 있는 API는 아래처럼 이 위치에 추가하세요.
                 // 예: .antMatchers("/api/members/**").authenticated()
@@ -77,7 +86,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "https://www.durimoa.site",
+                "https://dev.durimoa.site",
+                "https://durimoa.kro.kr"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

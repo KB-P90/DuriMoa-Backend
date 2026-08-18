@@ -8,6 +8,7 @@ import com.project.domain.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -151,6 +153,24 @@ class CoupleInvitationServiceImplTest {
     }
 
     @Test
+    void inviteKeepsWaitingWhenNotificationFails() {
+        when(coupleInvitationMapper.findUserById(1L)).thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.findPartnerByInviteCode("XYZ789"))
+                .thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
+        when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn(null);
+        doThrow(new RuntimeException("notification failed"))
+                .when(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
+
+        CoupleInvitationDTO result = coupleInvitationService.invite(1L, "XYZ789");
+
+        verify(coupleInvitationMapper).insertCouple(1L, 2L);
+        verify(coupleInvitationMapper).requestInvitation("XYZ789", 1L);
+        assertEquals("WAIT", result.getStatus());
+    }
+
+    @Test
     void inviteConnectsExistingWaitCoupleWhenBothEnterCodes() {
         when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
         when(coupleInvitationMapper.findPartnerByInviteCode("ABC123"))
@@ -158,6 +178,7 @@ class CoupleInvitationServiceImplTest {
         when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
         when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
         when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn("WAIT");
+        when(coupleInvitationMapper.existsRequestedInvitation(2L, 1L)).thenReturn(true);
 
         CoupleInvitationDTO result = coupleInvitationService.invite(2L, "ABC123");
 
@@ -169,6 +190,25 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper, never()).insertCouple(any(), any());
         verify(notificationService, times(2)).createNotification(any(NotificationCreateRequestDTO.class));
         assertEquals("CONNECTED", result.getStatus());
+    }
+
+    @Test
+    void inviteKeepsWaitingWhenRequesterEntersSamePartnerCodeAgain() {
+        when(coupleInvitationMapper.findUserById(2L)).thenReturn(new CoupleInvitationDTO(2L, "이유진", "B", null));
+        when(coupleInvitationMapper.findPartnerByInviteCode("ABC123"))
+                .thenReturn(new CoupleInvitationDTO(1L, "김주영", "G", null));
+        when(coupleInvitationMapper.countCoupleExcept(2L, 1L)).thenReturn(0);
+        when(coupleInvitationMapper.countCoupleExcept(1L, 2L)).thenReturn(0);
+        when(coupleInvitationMapper.findCoupleStatus(1L, 2L)).thenReturn("WAIT");
+        when(coupleInvitationMapper.existsRequestedInvitation(2L, 1L)).thenReturn(false);
+
+        CoupleInvitationDTO result = coupleInvitationService.invite(2L, "ABC123");
+
+        verify(coupleInvitationMapper, never()).connectCouple(any(), any());
+        verify(coupleInvitationMapper, never()).acceptInvitation(anyString(), any());
+        verify(coupleInvitationMapper, never()).acceptOwnInvitation(any(), any());
+        verify(notificationService, never()).createNotification(any(NotificationCreateRequestDTO.class));
+        assertEquals("WAIT", result.getStatus());
     }
 
     @Test
@@ -205,7 +245,14 @@ class CoupleInvitationServiceImplTest {
         verify(coupleInvitationMapper).acceptOwnInvitation(2L, 1L);
         verify(coupleInvitationMapper).deleteOtherPendingRequests(1L, 2L);
         verify(coupleInvitationMapper).deleteOtherPendingInvitations(2L, 1L);
-        verify(notificationService).createNotification(any(NotificationCreateRequestDTO.class));
+        ArgumentCaptor<NotificationCreateRequestDTO> notificationCaptor =
+                ArgumentCaptor.forClass(NotificationCreateRequestDTO.class);
+        verify(notificationService).createNotification(notificationCaptor.capture());
+        NotificationCreateRequestDTO notification = notificationCaptor.getValue();
+        assertEquals(1L, notification.getUserId());
+        assertEquals("COUPLE_ACCEPTED", notification.getType());
+        assertEquals("COUPLE", notification.getTargetType());
+        assertEquals(2L, notification.getTargetId());
         assertEquals("CONNECTED", result.getStatus());
         assertEquals("김주영", result.getName());
     }

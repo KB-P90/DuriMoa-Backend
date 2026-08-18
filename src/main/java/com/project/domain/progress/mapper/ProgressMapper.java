@@ -18,6 +18,21 @@ public interface ProgressMapper {
 
     List<GoalItemSourceDTO> findIncludedGoalItems(@Param("goalId") Long goalId);
 
+    Long findActiveGoalIdByGoalItemId(
+            @Param("goalItemId") Long goalItemId,
+            @Param("coupleId") Long coupleId
+    );
+
+    int updateGoalItemCompletion(
+            @Param("goalItemId") Long goalItemId,
+            @Param("goalId") Long goalId,
+            @Param("completed") Boolean completed
+    );
+
+    Integer countCompletedIncludedGoalItems(@Param("goalId") Long goalId);
+
+    Integer countIncludedGoalItems(@Param("goalId") Long goalId);
+
     List<MemberSourceDTO> findMembers(
             @Param("groomId") Long groomId,
             @Param("brideId") Long brideId
@@ -28,12 +43,12 @@ public interface ProgressMapper {
             @Param("categories") List<String> categories
     );
 
-    List<CategoryExpenseDTO> findCategoryWeddingExpenses(
+    LocalDate findFirstWeddingExpenseDate(
             @Param("userIds") List<Long> userIds,
             @Param("categories") List<String> categories
     );
 
-    LocalDate findFirstWeddingExpenseDate(
+    List<CategoryExpenseDTO> findCategoryWeddingExpenses(
             @Param("userIds") List<Long> userIds,
             @Param("categories") List<String> categories
     );

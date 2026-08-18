@@ -3,85 +3,123 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.project.domain.monthly.mapper.MonthlyMapper">
 
-    <resultMap id="ExpenseCategoryResultMap" type="com.project.domain.monthly.dto.ExpenseCategoryDTO">
-        <result property="categoryId" column="category_id"/>
-        <result property="categoryCode" column="category_code"/>
-        <result property="amount" column="amount"/>
-        <result property="comparisonRate" column="comparison_rate"/>
-        <result property="expenseRate" column="expense_rate"/>
-    </resultMap>
-
-    <select id="selectMonthlyExpenseCategories"
-            resultMap="ExpenseCategoryResultMap">
-
+    <select id="selectUserSummary" resultType="com.project.domain.monthly.dto.UserSummaryDTO">
         SELECT
-        ROW_NUMBER() OVER (
-        ORDER BY SUM(curr.amount) DESC
-        ) AS category_id,
+            id AS userId,
+            name
+        FROM user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </select>
 
-        curr.category AS category_code,
-        SUM(curr.amount) AS amount,
-
-        <!--
-        TODO: expense_avg 테이블 생성 후 아래 계산식으로 교체
-
-        CASE
-            WHEN avg_expense.avg_amount IS NULL
-                 OR avg_expense.avg_amount = 0
-            THEN NULL
-            ELSE CAST(
-                ROUND(
-                    (SUM(curr.amount) - avg_expense.avg_amount)
-                    * 100.0 / avg_expense.avg_amount
-                ) AS SIGNED
-            )
-        END AS comparison_rate,
-        -->
-
-        <!-- 임시 테스트 데이터: 평균보다 10% 많이 지출 -->
-        CAST(10 AS SIGNED) AS comparison_rate,
-
-        CAST(
-        ROUND(
-        SUM(curr.amount) * 100.0
-        / NULLIF(total.total_amount, 0)
-        ) AS SIGNED
-        ) AS expense_rate
-
-        FROM service_record curr
-
-        CROSS JOIN (
-        SELECT SUM(amount) AS total_amount
+    <select id="selectMonthlyIncomeBase" resultType="java.lang.Long">
+        SELECT
+            CASE
+                WHEN SUM(
+                    CASE
+                        WHEN COALESCE(changed_category, category) = 'SALARY' THEN amount
+                        ELSE 0
+                    END
+                ) &gt; 0
+                THEN SUM(
+                    CASE
+                        WHEN COALESCE(changed_category, category) = 'SALARY' THEN amount
+                        ELSE 0
+                    END
+                )
+                ELSE COALESCE(SUM(amount), 0)
+            END AS income_base
         FROM service_record
         WHERE user_id = #{userId}
-        AND type = 'EXPENSE'
-        AND YEAR(record_date) = #{year}
-        AND MONTH(record_date) = #{month}
-        ) total
+          AND type = 'INCOME'
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
+    </select>
 
-        <!--
-        TODO: expense_avg 테이블 생성 후 주석 해제
+    <select id="selectConnectedPartnerId" resultType="java.lang.Long">
+        SELECT
+            CASE
+                WHEN groom_id = #{userId} THEN bride_id
+                ELSE groom_id
+            END AS partner_id
+        FROM couple
+        WHERE (groom_id = #{userId} OR bride_id = #{userId})
+          AND status = 'CONNECTED'
+        LIMIT 1
+    </select>
 
-        LEFT JOIN expense_avg avg_expense
-            ON curr.category = avg_expense.category
-        -->
+    <select id="selectCategoryExpensesByUserAndMonth" resultType="com.project.domain.monthly.dto.RawCategoryExpenseDTO">
+        SELECT
+            COALESCE(changed_category, category) AS categoryCode,
+            SUM(amount) AS amount
+        FROM service_record
+        WHERE user_id = #{userId}
+          AND type = 'EXPENSE'
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
+        GROUP BY COALESCE(changed_category, category)
+        ORDER BY amount DESC
+    </select>
 
-        WHERE curr.user_id = #{userId}
-        AND curr.type = 'EXPENSE'
-        AND YEAR(curr.record_date) = #{year}
-        AND MONTH(curr.record_date) = #{month}
+    <select id="selectMonthlyFeedbacks" resultType="com.project.domain.monthly.dto.ExpenseFeedbackDTO">
+        SELECT
+            ef.id AS feedbackId,
+            ef.writer_id AS writerUserId,
+            u.name AS writerName,
+            ef.receiver_id AS receiverId,
+            ef.content AS content
+        FROM expense_feedback ef
+        INNER JOIN user u ON u.id = ef.writer_id
+        WHERE ef.year = #{year}
+          AND ef.month = #{month}
+          AND (
+              (ef.writer_id = #{userId} OR ef.receiver_id = #{userId})
+              <if test="partnerId != null">
+              OR (ef.writer_id = #{partnerId} OR ef.receiver_id = #{partnerId})
+              </if>
+          )
+        ORDER BY ef.id ASC
+    </select>
 
-        GROUP BY
-        curr.category,
-        total.total_amount
+    <insert id="upsertExpenseFeedback"
+            parameterType="com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO"
+            useGeneratedKeys="true"
+            keyProperty="feedbackId"
+            keyColumn="id">
+        INSERT INTO expense_feedback (
+            writer_id,
+            receiver_id,
+            year,
+            month,
+            content
+        ) VALUES (
+            #{writerUserId},
+            #{receiverUserId},
+            #{year},
+            #{month},
+            #{content}
+        )
+        ON DUPLICATE KEY UPDATE
+            id = LAST_INSERT_ID(id),
+            receiver_id = VALUES(receiver_id),
+            content = VALUES(content)
+    </insert>
 
-        <!--
-        TODO: expense_avg 테이블 생성 후 GROUP BY에 추가
-            , avg_expense.avg_amount
-        -->
-
-        ORDER BY SUM(curr.amount) DESC
-
+    <select id="selectExpenseFeedbackById"
+            resultType="com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO">
+        SELECT
+            ef.id AS feedbackId,
+            ef.writer_id AS writerUserId,
+            writer.name AS writerName,
+            ef.receiver_id AS receiverUserId,
+            receiver.name AS receiverName,
+            ef.year AS year,
+            ef.month AS month,
+            ef.content AS content
+        FROM expense_feedback ef
+        INNER JOIN user writer ON writer.id = ef.writer_id
+        INNER JOIN user receiver ON receiver.id = ef.receiver_id
+        WHERE ef.id = #{feedbackId}
     </select>
 
     <resultMap id="SavingMissionResultMap" type="com.project.domain.monthly.dto.SavingMissionDTO">
@@ -101,7 +139,13 @@
             expected_saving AS expected_saving_amount,
             status,
             CASE
-                WHEN status = '도전하기' THEN true
+                WHEN status = '도전하기'
+                     AND created_at &gt;= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')
+                     AND created_at &lt; DATE_ADD(
+                         DATE_FORMAT(CURRENT_DATE, '%Y-%m-01'),
+                         INTERVAL 1 MONTH
+                     )
+                THEN true
                 ELSE false
             END AS is_selectable
         FROM saving_missions
@@ -117,7 +161,30 @@
         WHERE id = #{missionId}
           AND user_id = #{userId}
           AND status = '도전하기'
+          AND created_at &gt;= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')
+          AND created_at &lt; DATE_ADD(
+              DATE_FORMAT(CURRENT_DATE, '%Y-%m-01'),
+              INTERVAL 1 MONTH
+          )
     </update>
+
+    <select id="selectActiveUserIds" resultType="java.lang.Long">
+        SELECT
+            id
+        FROM user
+        WHERE is_deleted = FALSE
+        ORDER BY id
+    </select>
+
+    <select id="existsSavingMissionByUserAndMonth" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM saving_missions
+            WHERE user_id = #{userId}
+              AND YEAR(created_at) = #{year}
+              AND MONTH(created_at) = #{month}
+        )
+    </select>
 
     <resultMap id="CategoryExpenseAnalysisResultMap" type="com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO">
         <result property="categoryCode" column="category_code"/>
@@ -127,7 +194,7 @@
 
     <select id="selectCategoryExpenseAnalysis" resultMap="CategoryExpenseAnalysisResultMap">
         SELECT
-            category AS category_code,
+            COALESCE(changed_category, category) AS category_code,
             SUM(amount) AS total_amount,
             COUNT(id) AS tx_count
         FROM service_record
@@ -135,8 +202,39 @@
           AND type = 'EXPENSE'
           AND record_date &gt;= #{startDate}
           AND record_date &lt; #{endDate}
-        GROUP BY category
+        GROUP BY COALESCE(changed_category, category)
         ORDER BY total_amount DESC
+    </select>
+
+    <select id="selectCategoryExpenseStatistics"
+            resultType="com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO">
+        SELECT
+            CASE
+                WHEN category_name IN ('식료품·비주류음료', '음식·숙박') THEN 'FOOD'
+                WHEN category_name IN ('주거·수도·광열', '가정용품·가사서비스', '보건', '교통', '통신') THEN 'LIVING'
+                WHEN category_name = '의류·신발' THEN 'SHOPPING'
+                WHEN category_name = '오락·문화' THEN 'CULTURE'
+                WHEN category_name IN ('주류·담배', '교육', '기타상품·서비스') THEN 'ETC'
+            END AS categoryCode,
+            SUM(average_amount) AS averageAmount
+        FROM expense_statistics
+        WHERE age_group = 'ALL'
+          AND household_type = 'SINGLE'
+          AND year = (
+              SELECT MAX(year)
+              FROM expense_statistics
+              WHERE age_group = 'ALL'
+                AND household_type = 'SINGLE'
+                AND year &lt;= #{analysisYear}
+          )
+          AND category_name IN (
+              '식료품·비주류음료', '음식·숙박',
+              '주거·수도·광열', '가정용품·가사서비스', '보건', '교통', '통신',
+              '의류·신발', '오락·문화',
+              '주류·담배', '교육', '기타상품·서비스'
+          )
+        GROUP BY categoryCode
+        ORDER BY FIELD(categoryCode, 'FOOD', 'LIVING', 'SHOPPING', 'CULTURE', 'ETC')
     </select>
 
     <insert id="insertSavingMission" useGeneratedKeys="true" keyProperty="id">
@@ -144,6 +242,7 @@
             user_id,
             category,
             title,
+            baseline_amount,
             expected_saving,
             status,
             created_at
@@ -151,10 +250,45 @@
             #{userId},
             #{categoryCode},
             #{title},
+            #{baselineAmount},
             #{expectedSavingAmount},
             #{status},
             #{createdAt}
         )
     </insert>
+
+    <update id="updateInProgressSavingMissionResults">
+        UPDATE saving_missions sm
+        LEFT JOIN (
+            SELECT
+                user_id,
+                COALESCE(changed_category, category) AS category_code,
+                SUM(amount) AS total_amount
+            FROM service_record
+            WHERE type = 'EXPENSE'
+              AND record_date &gt;= #{startDate}
+              AND record_date &lt; #{endDate}
+            GROUP BY user_id, COALESCE(changed_category, category)
+        ) expense
+            ON expense.user_id = sm.user_id
+           AND expense.category_code = sm.category
+        SET sm.status = CASE
+            WHEN COALESCE(expense.total_amount, 0)
+                    &lt;= GREATEST(sm.baseline_amount - sm.expected_saving, 0)
+                THEN #{successStatus}
+            ELSE #{failureStatus}
+        END
+        WHERE sm.created_at &gt;= #{startDate}
+          AND sm.created_at &lt; #{endDate}
+          AND sm.status = #{inProgressStatus}
+    </update>
+
+    <update id="expireUnstartedSavingMissions">
+        UPDATE saving_missions
+        SET status = #{expiredStatus}
+        WHERE created_at &gt;= #{startDate}
+          AND created_at &lt; #{endDate}
+          AND status = #{challengeStatus}
+    </update>
 
 </mapper>

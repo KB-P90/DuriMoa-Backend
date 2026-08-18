@@ -11,9 +11,13 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class CoupleInvitationServiceImpl implements CoupleInvitationService {
@@ -21,9 +25,12 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final String TARGET_TYPE_COUPLE = "COUPLE";
     private static final String COUPLE_REQUESTED = "COUPLE_REQUESTED";
+    private static final String COUPLE_ACCEPTED = "COUPLE_ACCEPTED";
     private static final String COUPLE_DISCONNECTED = "COUPLE_DISCONNECTED";
     private static final String COUPLE_REQUEST_TITLE = "커플 연결 요청";
+    private static final String COUPLE_ACCEPTED_TITLE = "커플 연결 수락";
     private static final String COUPLE_DISCONNECTED_TITLE = "커플 연결이 해제되었습니다.";
+    private static final String LOG_MARKER = "==============================";
 
     private final CoupleInvitationMapper coupleInvitationMapper;
     private final NotificationService notificationService;
@@ -90,6 +97,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             coupleInvitationMapper.acceptOwnInvitation(currentUserId, partner.getUserId());
             coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
             coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partner.getUserId());
+            createCoupleAcceptedNotification(partner, currentUser);
             return new CoupleInvitationDTO(
                     partner.getUserId(),
                     partner.getName(),
@@ -133,6 +141,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         coupleInvitationMapper.acceptOwnInvitation(currentUserId, partnerUserId);
         coupleInvitationMapper.deleteOtherPendingRequests(groomId, brideId);
         coupleInvitationMapper.deleteOtherPendingInvitations(currentUserId, partnerUserId);
+        createCoupleAcceptedNotification(couple, currentUser);
 
         return new CoupleInvitationDTO(
                 couple.getUserId(),
@@ -185,8 +194,19 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "두 사용자의 역할이 동일합니다.");
         }
 
-        if (coupleInvitationMapper.countCoupleExcept(currentUser.getUserId(), partner.getUserId()) > 0
-                || coupleInvitationMapper.countCoupleExcept(partner.getUserId(), currentUser.getUserId()) > 0) {
+
+        int currentUserCoupleCount = coupleInvitationMapper.countCoupleExcept(
+                currentUser.getUserId(),
+                partner.getUserId()
+        );
+
+        int partnerCoupleCount = coupleInvitationMapper.countCoupleExcept(
+                partner.getUserId(),
+                currentUser.getUserId()
+        );
+
+        if (currentUserCoupleCount > 0 || partnerCoupleCount > 0) {
+
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미 다른 커플과 연결되어 있습니다.");
         }
     }
@@ -225,6 +245,19 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
         );
     }
 
+    private void createCoupleAcceptedNotification(
+            CoupleInvitationDTO requester,
+            CoupleInvitationDTO acceptor
+    ) {
+        createNotification(
+                requester.getUserId(),
+                COUPLE_ACCEPTED,
+                COUPLE_ACCEPTED_TITLE,
+                acceptor.getName() + "님이 커플 연결 요청을 수락했습니다.",
+                acceptor.getUserId()
+        );
+    }
+
     private void createNotification(
             Long userId,
             String type,
@@ -232,13 +265,37 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
             String content,
             Long targetId
     ) {
-        notificationService.createNotification(NotificationCreateRequestDTO.builder()
+        NotificationCreateRequestDTO request = NotificationCreateRequestDTO.builder()
                 .userId(userId)
                 .type(type)
                 .title(title)
                 .content(content)
                 .targetType(TARGET_TYPE_COUPLE)
                 .targetId(targetId)
-                .build());
+                .build();
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendNotification(request);
+                }
+            });
+            return;
+        }
+
+        sendNotification(request);
+    }
+
+    private void sendNotification(NotificationCreateRequestDTO request) {
+        try {
+            notificationService.createNotification(request);
+
+        } catch (RuntimeException exception) {
+            log.info("{} 커플 알림 생성 예외 발생 - userId: {}, type: {}, targetId: {}, exceptionType: {}, message: {}",
+                    LOG_MARKER,
+                    request.getUserId(), request.getType(), request.getTargetId(), exception);
+        }
     }
 }

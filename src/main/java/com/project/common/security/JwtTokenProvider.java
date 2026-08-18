@@ -26,18 +26,24 @@ public class JwtTokenProvider {
     private static final String TOKEN_TYPE_CLAIM = "type";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String REFRESH_TOKEN_TYPE = "REFRESH";
+    private static final String KAKAO_SIGNUP_TOKEN_TYPE = "KAKAO_SIGNUP";
+    private static final String NAME_CLAIM = "name";
+    private static final String PROFILE_IMAGE_CLAIM = "profileImage";
 
     private final Key signingKey;
     private final Long accessTokenExpiration;
     private final Long refreshTokenExpiration;
+    private final Long kakaoSignupTokenExpiration;
 
     public JwtTokenProvider(
             @Value("${jwt.secret:}") String secret,
             @Value("${jwt.access-token-expiration:3600000}") Long accessTokenExpiration,
-            @Value("${jwt.refresh-token-expiration:1209600000}") Long refreshTokenExpiration) {
+            @Value("${jwt.refresh-token-expiration:1209600000}") Long refreshTokenExpiration,
+            @Value("${kakao.signup-token-expiration:600000}") Long kakaoSignupTokenExpiration) {
         this.signingKey = createSigningKey(secret);
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
+        this.kakaoSignupTokenExpiration = kakaoSignupTokenExpiration;
     }
 
     public String createAccessToken(Long userId, String role) {
@@ -68,6 +74,25 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createKakaoSignupToken(
+            String providerId,
+            String name,
+            String profileImage) {
+        Date issuedAt = new Date();
+        Date expiration = new Date(issuedAt.getTime() + kakaoSignupTokenExpiration);
+
+        io.jsonwebtoken.JwtBuilder builder = Jwts.builder()
+                .setSubject(providerId)
+                .claim(NAME_CLAIM, name)
+                .claim(TOKEN_TYPE_CLAIM, KAKAO_SIGNUP_TOKEN_TYPE)
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiration);
+        if (profileImage != null && !profileImage.isBlank()) {
+            builder.claim(PROFILE_IMAGE_CLAIM, profileImage);
+        }
+        return builder.signWith(signingKey, SignatureAlgorithm.HS256).compact();
+    }
+
     public Boolean validateToken(String token) {
         try {
             parseClaims(token);
@@ -85,12 +110,28 @@ public class JwtTokenProvider {
         return validateTokenType(token, REFRESH_TOKEN_TYPE);
     }
 
+    public Boolean validateKakaoSignupToken(String token) {
+        return validateTokenType(token, KAKAO_SIGNUP_TOKEN_TYPE);
+    }
+
     public Long getUserId(String token) {
         return Long.valueOf(parseClaims(token).getSubject());
     }
 
     public String getRole(String token) {
         return parseClaims(token).get(ROLE_CLAIM, String.class);
+    }
+
+    public String getKakaoProviderId(String token) {
+        return parseClaims(token).getSubject();
+    }
+
+    public String getKakaoName(String token) {
+        return parseClaims(token).get(NAME_CLAIM, String.class);
+    }
+
+    public String getKakaoProfileImage(String token) {
+        return parseClaims(token).get(PROFILE_IMAGE_CLAIM, String.class);
     }
 
     public Duration getRefreshTokenExpiration() {

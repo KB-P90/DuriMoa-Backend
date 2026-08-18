@@ -66,7 +66,7 @@ class HomeControllerTest {
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
         Assertions.assertEquals("홈 화면 조회에 성공했습니다.", response.get("message").asText());
-        Assertions.assertEquals(5, response.at("/data/setup_checklist/total_count").asInt());
+        Assertions.assertEquals(3, response.at("/data/setup_checklist/total_count").asInt());
         Assertions.assertEquals(1, response.at("/data/setup_checklist/current_step").asInt());
         Mockito.verify(homeService).getHome(1L);
     }
@@ -88,7 +88,7 @@ class HomeControllerTest {
     private HomeResponseDTO homeResponse() {
         return HomeResponseDTO.builder()
                 .setupChecklist(SetupChecklistResponseDTO.builder()
-                        .totalCount(5)
+                        .totalCount(3)
                         .completedCount(0)
                         .currentStep(1)
                         .steps(Collections.emptyList())

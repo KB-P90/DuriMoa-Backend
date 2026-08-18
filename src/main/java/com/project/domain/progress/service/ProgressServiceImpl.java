@@ -9,12 +9,14 @@ import com.project.domain.progress.dto.ActiveGoalDTO;
 import com.project.domain.progress.dto.CategoryExpenseDTO;
 import com.project.domain.progress.dto.GoalItemSourceDTO;
 import com.project.domain.progress.dto.MemberSourceDTO;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO;
+import com.project.domain.progress.dto.MonthlyProgressResponseDTO.MonthlyProgressItemDTO;
 import com.project.domain.progress.dto.MonthlyExpenseDTO;
+import com.project.domain.progress.dto.ProgressItemCompletionRequestDTO;
+import com.project.domain.progress.dto.ProgressItemCompletionResponseDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.GoalItemProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.MemberProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressDTO;
-import com.project.domain.progress.dto.ProgressResponseDTO.MonthlyProgressItemDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.OverallProgressDTO;
 import com.project.domain.progress.dto.ProgressResponseDTO.PersonalProgressDTO;
 import com.project.domain.progress.mapper.ProgressMapper;
@@ -69,9 +71,60 @@ public class ProgressServiceImpl implements ProgressService {
                 .overall(buildOverall(activeGoal, memberIds, weddingCategoryCodes,
                         totalExpenseAmount, overallProgressRate))
                 .personal(buildPersonal(userId, couple, activeGoal))
-                .monthlyProgress(buildMonthlyProgress(activeGoal, memberIds,
-                        weddingCategoryCodes, overallProgressRate))
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MonthlyProgressResponseDTO getMonthlyProgress(Long userId) {
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(userId);
+        ActiveGoalDTO activeGoal = getActiveGoal(couple.getId());
+        List<Long> memberIds = List.of(couple.getGroomId(), couple.getBrideId());
+        List<String> weddingCategoryCodes = ExpenseCategory.getWeddingCodes();
+        Long totalExpenseAmount = defaultAmount(
+                progressMapper.findTotalWeddingExpense(memberIds, weddingCategoryCodes)
+        );
+
+        return buildMonthlyProgress(
+                activeGoal,
+                memberIds,
+                weddingCategoryCodes,
+                calculateIntegerRate(totalExpenseAmount, activeGoal.getTargetAmount())
+        );
+    }
+
+    @Override
+    @Transactional
+    public ProgressItemCompletionResponseDTO updateItemCompletion(
+            Long userId,
+            Long goalItemId,
+            ProgressItemCompletionRequestDTO request
+    ) {
+        CoupleDTO couple = coupleService.getConnectedCoupleByUserId(userId);
+        Long goalId = progressMapper.findActiveGoalIdByGoalItemId(goalItemId, couple.getId());
+        if (goalId == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "활성 결혼 목표 항목을 찾을 수 없습니다.");
+        }
+
+        progressMapper.updateGoalItemCompletion(goalItemId, goalId, request.getCompleted());
+        return ProgressItemCompletionResponseDTO.builder()
+                .goalItemId(goalItemId)
+                .completed(request.getCompleted())
+                .completedItemCount(defaultCount(
+                        progressMapper.countCompletedIncludedGoalItems(goalId)))
+                .totalItemCount(defaultCount(progressMapper.countIncludedGoalItems(goalId)))
+                .build();
+    }
+
+    private ActiveGoalDTO getActiveGoal(Long coupleId) {
+        ActiveGoalDTO activeGoal = progressMapper.findActiveGoal(coupleId);
+        if (activeGoal == null) {
+            throw new CustomException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "활성 결혼 목표를 찾을 수 없습니다."
+            );
+        }
+        return activeGoal;
     }
 
     private OverallProgressDTO buildOverall(
@@ -150,9 +203,10 @@ public class ProgressServiceImpl implements ProgressService {
                 ));
 
         List<MemberProgressDTO> responseMembers = new ArrayList<>();
-        addIfNotNull(responseMembers, buildMember(memberById.get(userId), couple, activeGoal));
+        addIfNotNull(responseMembers, buildMember(memberById.get(userId), userId, couple, activeGoal));
         addIfNotNull(responseMembers, buildMember(
                 memberById.get(findPartnerId(userId, couple)),
+                userId,
                 couple,
                 activeGoal
         ));
@@ -164,6 +218,7 @@ public class ProgressServiceImpl implements ProgressService {
 
     private MemberProgressDTO buildMember(
             MemberSourceDTO member,
+            Long authenticatedUserId,
             CoupleDTO couple,
             ActiveGoalDTO activeGoal
     ) {
@@ -172,23 +227,27 @@ public class ProgressServiceImpl implements ProgressService {
         }
 
         boolean assetShared = Boolean.TRUE.equals(member.getAssetShared());
+        boolean isOwner = member.getUserId().equals(authenticatedUserId);
+        boolean canViewAssetAmount = assetShared || isOwner;
         Long targetAmount = calculateMemberTargetAmount(member.getUserId(), couple, activeGoal);
         Long currentAmount = defaultAmount(member.getAsset());
         Double progressRate = calculateDecimalRate(currentAmount, targetAmount);
 
-        // 자산 비공개 사용자는 금액만 숨기고, 목표 금액과 달성률은 그대로 제공한다.
+        // 비공개 자산은 상대방에게만 금액을 숨기고, 본인에게는 정상 제공한다.
         return MemberProgressDTO.builder()
                 .userId(member.getUserId())
                 .name(member.getName())
+                .role(member.getRole())
+                .profileImage(member.getProfileImage())
                 .assetShared(assetShared)
-                .assetAmount(assetShared ? currentAmount : null)
+                .assetAmount(canViewAssetAmount ? currentAmount : null)
                 .targetAmount(targetAmount)
-                .currentAmount(assetShared ? currentAmount : null)
+                .currentAmount(canViewAssetAmount ? currentAmount : null)
                 .progressRate(progressRate)
                 .build();
     }
 
-    private MonthlyProgressDTO buildMonthlyProgress(
+    private MonthlyProgressResponseDTO buildMonthlyProgress(
             ActiveGoalDTO activeGoal,
             List<Long> memberIds,
             List<String> weddingCategoryCodes,
@@ -239,7 +298,7 @@ public class ProgressServiceImpl implements ProgressService {
         }
 
         months.sort(Comparator.comparing(MonthlyProgressItemDTO::getYearMonth).reversed());
-        return MonthlyProgressDTO.builder()
+        return MonthlyProgressResponseDTO.builder()
                 .overallProgressRate(overallProgressRate)
                 .months(months)
                 .build();
@@ -295,14 +354,22 @@ public class ProgressServiceImpl implements ProgressService {
                 .doubleValue();
     }
 
-    private YearMonth resolveStartMonth(LocalDate firstExpenseDate, LocalDateTime createdAt) {
-        if (firstExpenseDate != null) {
+    private YearMonth resolveStartMonth(
+            LocalDate firstExpenseDate,
+            LocalDateTime goalCreatedAt
+    ) {
+        if (firstExpenseDate == null && goalCreatedAt == null) {
+            return YearMonth.now();
+        }
+        if (firstExpenseDate == null) {
+            return YearMonth.from(goalCreatedAt);
+        }
+        if (goalCreatedAt == null) {
             return YearMonth.from(firstExpenseDate);
         }
-        if (createdAt == null) {
-            return YearMonth.from(LocalDate.now());
-        }
-        return YearMonth.from(createdAt);
+        return YearMonth.from(firstExpenseDate).isBefore(YearMonth.from(goalCreatedAt))
+                ? YearMonth.from(firstExpenseDate)
+                : YearMonth.from(goalCreatedAt);
     }
 
     private Long findPartnerId(Long userId, CoupleDTO couple) {
@@ -314,6 +381,10 @@ public class ProgressServiceImpl implements ProgressService {
 
     private Long defaultAmount(Long amount) {
         return amount == null ? 0L : amount;
+    }
+
+    private Integer defaultCount(Integer count) {
+        return count == null ? 0 : count;
     }
 
     private void addIfNotNull(List<MemberProgressDTO> members, MemberProgressDTO member) {

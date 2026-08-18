@@ -6,6 +6,7 @@ import com.project.domain.onboarding.dto.OnboardingRegisterRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingRegisterResponseDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectRequestDTO;
 import com.project.domain.onboarding.dto.OnboardingSelectResponseDTO;
+import com.project.domain.onboarding.dto.OnboardingWeddingFundRequestDTO;
 
 public interface OnboardingService {
 
@@ -17,4 +18,7 @@ public interface OnboardingService {
 
     // 3. 계좌/카드 선택 및 거래 내역 저장 API
     OnboardingSelectResponseDTO selectAccountsOrCards(Long userId, OnboardingSelectRequestDTO requestDTO);
+
+    // 4. 결혼 자금 입력 API
+    void saveWeddingFund(Long userId, OnboardingWeddingFundRequestDTO requestDTO);
 }

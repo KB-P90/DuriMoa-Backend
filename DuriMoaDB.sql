@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS `card_product`;
 DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `codef_access_token`;
+DROP TABLE IF EXISTS `expense_feedback`;
 -- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -34,22 +35,37 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE `user`
 (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '사용자 ID',
-    `phone`         VARCHAR(20)  NOT NULL COMMENT '핸드폰 번호',
+    `phone`         VARCHAR(20)  NULL COMMENT '핸드폰 번호; 소셜 로그인 사용자는 NULL 가능',
     `password`      VARCHAR(255) NULL COMMENT '암호화된 비밀번호; 소셜 로그인 사용자는 NULL 가능',
     `name`          VARCHAR(50)  NOT NULL COMMENT '이름',
     `role`          VARCHAR(10)  NOT NULL COMMENT '역할: B(신부), G(신랑)',
     `profile_image` VARCHAR(500) NULL COMMENT '프로필 이미지 S3 URL',
     `provider`      VARCHAR(10)  NOT NULL DEFAULT 'LOCAL' COMMENT 'LOCAL, KAKAO, NAVER',
+    `provider_id`   VARCHAR(255) NULL COMMENT '소셜 로그인 제공자 사용자 ID',
     `income`        BIGINT       NOT NULL DEFAULT 0 COMMENT '연소득',
     `asset`         BIGINT       NOT NULL DEFAULT 0 COMMENT '총자산',
+    `wedding_fund` BIGINT NULL COMMENT '사용자가 결혼자금으로 포함하겠다고 입력한 현재 보유 금액',
     `connected_id`  VARCHAR(255) NULL COMMENT '커넥티드 ID',
     `is_shared`     BOOLEAN      NOT NULL DEFAULT FALSE COMMENT '상대방 공유 여부',
     `is_deleted`    BOOLEAN      NOT NULL DEFAULT FALSE COMMENT '회원 탈퇴 여부',
     `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
-
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_phone` (`phone`)
-);
+    UNIQUE KEY `uk_user_phone` (`phone`),
+    UNIQUE KEY `uk_user_provider_id` (`provider`, `provider_id`),
+    CONSTRAINT `chk_user_provider_fields`
+        CHECK (
+            (`provider` = 'LOCAL'
+                AND `phone` IS NOT NULL
+                AND `password` IS NOT NULL
+                AND `provider_id` IS NULL)
+                OR
+            (`provider` <> 'LOCAL'
+                AND `password` IS NULL
+                AND `provider_id` IS NOT NULL)
+        ),
+    CONSTRAINT `chk_user_wedding_fund`
+        CHECK (`wedding_fund` IS NULL OR `wedding_fund` >= 0)
+            );
 
 -- 약관 동의
 CREATE TABLE `terms_agreement`
@@ -83,6 +99,19 @@ CREATE TABLE `notification_setting`
     CONSTRAINT `fk_notification_setting_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- 푸시 기기 (FCM)
+CREATE TABLE IF NOT EXISTS `push_device`
+(
+    `id`           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id`      BIGINT       NOT NULL,
+    `token`        VARCHAR(255) NOT NULL,
+    `platform`     VARCHAR(20)  NOT NULL,
+    `push_enabled` TINYINT(1)   NOT NULL DEFAULT 1,
+    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uq_push_device_token` (`token`),
+    KEY `idx_push_device_user` (`user_id`)
 );
 
 -- 알림
@@ -420,6 +449,7 @@ CREATE TABLE `saving_missions`
     `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID',
     `category`        VARCHAR(50)  NOT NULL COMMENT '지출 카테고리',
     `title`           VARCHAR(100) NOT NULL COMMENT '미션 제목',
+    `baseline_amount` BIGINT       NOT NULL DEFAULT 0 COMMENT '미션 생성 기준 월의 카테고리 지출액',
     `expected_saving` BIGINT       NOT NULL DEFAULT 0 COMMENT '예상 절감액',
     `status`          VARCHAR(10)  NOT NULL COMMENT '미션 상태',
     `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -431,7 +461,9 @@ CREATE TABLE `saving_missions`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT `chk_saving_missions_expected_saving`
-        CHECK (`expected_saving` >= 0)
+        CHECK (`expected_saving` >= 0),
+    CONSTRAINT `chk_saving_missions_baseline_amount`
+        CHECK (`baseline_amount` >= 0)
 );
 
 -- 결혼 통계
@@ -460,6 +492,60 @@ CREATE TABLE `codef_access_token`
     token_type   VARCHAR(20),
     expires_at   DATETIME NOT NULL,
     created_at   DATETIME NOT NULL
+);
+
+-- 지출 피드백
+CREATE TABLE `expense_feedback`
+(
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '지출 피드백 ID',
+    `writer_id`   BIGINT       NOT NULL COMMENT '피드백 작성자 ID',
+    `receiver_id` BIGINT       NOT NULL COMMENT '피드백 대상 사용자 ID',
+    `year`        INT          NOT NULL COMMENT '피드백 대상 연도',
+    `month`       INT          NOT NULL COMMENT '피드백 대상 월',
+    `content`     VARCHAR(100) NOT NULL COMMENT '지출 피드백 내용',
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+    PRIMARY KEY (`id`),
+
+    UNIQUE KEY `uk_expense_feedback_writer_year_month` (`writer_id`, `year`, `month`),
+
+    CONSTRAINT `fk_expense_feedback_writer`
+        FOREIGN KEY (`writer_id`) REFERENCES `user` (`id`)
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+
+    CONSTRAINT `fk_expense_feedback_receiver`
+        FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id`)
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+);
+
+CREATE TABLE expense_statistics
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+
+    age_group       VARCHAR(20)  NOT NULL COMMENT '연령 그룹, 예: ALL_SINGLE, UNDER_40',
+    household_type  VARCHAR(20)  NOT NULL COMMENT '가구 유형, 예: SINGLE',
+    year            INT          NOT NULL COMMENT '통계 기준 연도',
+
+    category_code   VARCHAR(50)  NOT NULL COMMENT 'KOSIS 원본 카테고리 코드',
+    category_name   VARCHAR(100) NOT NULL COMMENT 'KOSIS 원본 카테고리명',
+
+    average_amount  BIGINT       NOT NULL COMMENT '월평균 지출 금액',
+
+    source          VARCHAR(100) NOT NULL DEFAULT 'KOSIS',
+    source_table_id VARCHAR(50)  NULL COMMENT 'KOSIS 통계표 ID',
+
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_expense_statistics (
+                                      age_group,
+                                      household_type,
+                                      year,
+                                      category_code
+        )
 );
 
 /*

@@ -34,10 +34,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Log4j2
 @Service
 public class GoalServiceImpl implements GoalService {
 
@@ -48,6 +52,7 @@ public class GoalServiceImpl implements GoalService {
     private static final String GOAL_APPROVAL_REQUESTED = "GOAL_APPROVAL_REQUESTED";
     private static final String GOAL_APPROVED = "GOAL_APPROVED";
     private static final String GOAL_REJECTED = "GOAL_REJECTED";
+    private static final String LOG_MARKER = "----------";
 
     private final GoalMapper goalMapper;
     private final CoupleService coupleService;
@@ -126,7 +131,7 @@ public class GoalServiceImpl implements GoalService {
                 .totalBudget(goal.getTotalBudget())
                 .groomRatio(goal.getGroomRatio())
                 .brideRatio(goal.getBrideRatio())
-                .status(GoalStatus.NORMAL.name())
+                .status(goal.getStatus())
                 .createdAt(createdAt)
                 .items(request.getItems().stream()
                         .map(GoalCreateItemResponseDTO::from)
@@ -595,6 +600,9 @@ public class GoalServiceImpl implements GoalService {
                 .totalBudget(totalBudget)
                 .groomRatio(request.getGroomRatio())
                 .brideRatio(request.getBrideRatio())
+                .status(Boolean.TRUE.equals(isMain)
+                        ? GoalStatus.CONFIRMED.name()
+                        : GoalStatus.NORMAL.name())
                 .isMain(isMain)
                 .createdAt(createdAt)
                 .build();
@@ -632,14 +640,39 @@ public class GoalServiceImpl implements GoalService {
         if (notificationService == null || receiverId == null) {
             return;
         }
-        notificationService.createNotification(NotificationCreateRequestDTO.builder()
+        NotificationCreateRequestDTO request = NotificationCreateRequestDTO.builder()
                 .userId(receiverId)
                 .type(type)
                 .title(title)
                 .content(content)
                 .targetType(TARGET_TYPE_GOAL)
                 .targetId(goalId)
-                .build());
+                .build();
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            log.info("{} 목표 알림 afterCommit 등록 - userId: {}, type: {}, goalId: {}",
+                    LOG_MARKER, request.getUserId(), request.getType(), request.getTargetId());
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendGoalNotification(request);
+                }
+            });
+            return;
+        }
+
+        sendGoalNotification(request);
+    }
+
+    private void sendGoalNotification(NotificationCreateRequestDTO request) {
+        try {
+            notificationService.createNotification(request);
+        } catch (RuntimeException exception) {
+            log.info("{} 목표 알림 생성 예외 발생 - userId: {}, type: {}, goalId: {}, "
+                            + "exceptionType: {}, message: {}",
+                    LOG_MARKER, request.getUserId(), request.getType(), request.getTargetId(),
+                    exception.getClass().getName(), exception.getMessage(), exception);
+        }
     }
 
     private String trim(String value) {

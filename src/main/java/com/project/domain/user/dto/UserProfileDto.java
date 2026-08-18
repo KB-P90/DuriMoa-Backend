@@ -33,6 +33,8 @@ public class UserProfileDto {
 
     private String partnerName;
     private String partnerRole;
+    @JsonProperty("partnerProfileImage")
+    private String partnerProfileImageUrl;
 
     @JsonFormat(pattern = "yyyyMMdd")
     private LocalDateTime coupleCreatedAt;

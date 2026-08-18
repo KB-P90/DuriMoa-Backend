@@ -1,0 +1,103 @@
+name: Backend CD
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant Execute Permission For Gradlew
+        run: chmod +x gradlew
+
+      - name: Create Properties Files
+        shell: bash
+        env:
+          DATABASE_PROPERTIES: ${{ secrets.DATABASE_PROPERTIES }}
+          CODEF_PROPERTIES: ${{ secrets.CODEF_PROPERTIES }}
+          AWS_PROPERTIES: ${{ secrets.AWS_PROPERTIES }}
+          KAKAO_PROPERTIES: ${{ secrets.KAKAO_PROPERTIES }}
+          GOOGLE_APPLICATION_JSON: ${{ secrets.GOOGLE_APPLICATION_JSON }}
+        run: |
+          printf '%s' "$DATABASE_PROPERTIES" > src/main/resources/database.properties
+          printf '%s' "$CODEF_PROPERTIES" > src/main/resources/codef.properties
+          printf '%s' "$AWS_PROPERTIES" > src/main/resources/aws.properties
+          printf '%s' "$KAKAO_PROPERTIES" > src/main/resources/kakao.properties
+          printf '%s' "$GOOGLE_APPLICATION_JSON" > src/main/resources/google-application.json
+
+      - name: Build WAR
+        run: ./gradlew clean build -x test --no-daemon
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$EC2_SSH_KEY" > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+
+      - name: Create Deploy Directory
+        run: |
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i ~/.ssh/ec2.pem \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} \
+            "mkdir -p ~/durimoa-deploy"
+
+      - name: Transfer WAR and Dockerfile
+        run: |
+          scp \
+            -o StrictHostKeyChecking=no \
+            -i ~/.ssh/ec2.pem \
+            build/libs/backend-1.0.0-SNAPSHOT.war \
+            Dockerfile \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/durimoa-deploy/
+
+      - name: Deploy Docker Container
+        run: |
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i ~/.ssh/ec2.pem \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+
+            set -e
+
+            cd ~/durimoa-deploy
+
+            docker stop durimoa-backend || true
+            docker rm durimoa-backend || true
+
+            docker build -t durimoa-backend .
+
+            docker run -d \
+              --name durimoa-backend \
+              --restart unless-stopped \
+              --network durimoa-network \
+              -p 8080:8080 \
+              -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+              -e OPENAI_MODEL='gpt-5-nano' \
+              -e TEAM_CODE='p90' \
+              durimoa-backend
+
+            docker ps
+
+          EOF

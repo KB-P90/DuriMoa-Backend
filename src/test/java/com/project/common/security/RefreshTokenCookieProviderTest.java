@@ -4,15 +4,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseCookie;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RefreshTokenCookieProviderTest {
 
     @Test
-    void createsHttpOnlyRefreshTokenCookieForLocalEnvironment() {
+    void createsSecureHttpOnlyRefreshTokenCookie() {
         RefreshTokenCookieProvider cookieProvider =
-                new RefreshTokenCookieProvider(false, 1209600000L);
+                new RefreshTokenCookieProvider(1209600000L);
 
         ResponseCookie cookie = cookieProvider.createCookie("refreshToken");
 
@@ -22,13 +21,13 @@ class RefreshTokenCookieProviderTest {
         assertEquals(1209600L, cookie.getMaxAge().getSeconds());
         assertEquals("Lax", cookie.getSameSite());
         assertTrue(cookie.isHttpOnly());
-        assertFalse(cookie.isSecure());
+        assertTrue(cookie.isSecure());
     }
 
     @Test
     void createsExpiredCookieForLogout() {
         RefreshTokenCookieProvider cookieProvider =
-                new RefreshTokenCookieProvider(false, 1209600000L);
+                new RefreshTokenCookieProvider(1209600000L);
 
         ResponseCookie cookie = cookieProvider.deleteCookie();
 
@@ -38,5 +37,6 @@ class RefreshTokenCookieProviderTest {
         assertEquals(0L, cookie.getMaxAge().getSeconds());
         assertEquals("Lax", cookie.getSameSite());
         assertTrue(cookie.isHttpOnly());
+        assertTrue(cookie.isSecure());
     }
 }
