@@ -35,11 +35,13 @@ class MonthlyServiceEmptyFeedbackTest {
         Mockito.when(monthlyMapper.selectUserSummary(userId)).thenReturn(UserSummaryDTO.builder()
                 .userId(userId)
                 .name("나")
+                .profileImageUrl("https://example.com/profile/user1.jpg")
                 .build());
         Mockito.when(monthlyMapper.selectConnectedPartnerId(userId)).thenReturn(partnerId);
         Mockito.when(monthlyMapper.selectUserSummary(partnerId)).thenReturn(UserSummaryDTO.builder()
                 .userId(partnerId)
                 .name("상대방")
+                .profileImageUrl("https://example.com/profile/user2.jpg")
                 .build());
         Mockito.when(monthlyMapper.selectCategoryExpensesByUserAndMonth(userId, year, month))
                 .thenReturn(Collections.emptyList());
@@ -52,15 +54,18 @@ class MonthlyServiceEmptyFeedbackTest {
                 userId, year, month);
 
         Assertions.assertEquals(2, response.getFeedbacks().size());
-        assertEmptyFeedback(response.getFeedbacks().get(0), partnerId, "상대방");
-        assertEmptyFeedback(response.getFeedbacks().get(1), userId, "나");
+        assertEmptyFeedback(response.getFeedbacks().get(0), partnerId, "상대방",
+                "https://example.com/profile/user2.jpg");
+        assertEmptyFeedback(response.getFeedbacks().get(1), userId, "나",
+                "https://example.com/profile/user1.jpg");
     }
 
     private void assertEmptyFeedback(
-            ExpenseFeedbackDTO feedback, Long userId, String userName) {
+            ExpenseFeedbackDTO feedback, Long userId, String userName, String profileImageUrl) {
         Assertions.assertNull(feedback.getFeedbackId());
         Assertions.assertEquals(userId, feedback.getWriterUserId());
         Assertions.assertEquals(userName, feedback.getWriterName());
+        Assertions.assertEquals(profileImageUrl, feedback.getWriterProfileImageUrl());
         Assertions.assertEquals(userId, feedback.getReceiverId());
         Assertions.assertEquals("", feedback.getContent());
     }

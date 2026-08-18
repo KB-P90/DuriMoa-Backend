@@ -39,6 +39,7 @@ class MonthlyServiceFeedbackTest {
                         .feedbackId(3L)
                         .writerUserId(userId)
                         .writerName("나")
+                        .writerProfileImageUrl("https://example.com/profile/user1.jpg")
                         .receiverUserId(partnerId)
                         .receiverName("상대방")
                         .year(2026)
@@ -59,6 +60,8 @@ class MonthlyServiceFeedbackTest {
 
         Assertions.assertEquals(3L, response.getFeedbackId());
         Assertions.assertEquals(userId, response.getWriterUserId());
+        Assertions.assertEquals("https://example.com/profile/user1.jpg",
+                response.getWriterProfileImageUrl());
         Assertions.assertEquals(partnerId, response.getReceiverUserId());
         Assertions.assertEquals(request.getContent(), response.getContent());
 
