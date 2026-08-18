@@ -30,4 +30,13 @@ public class DailyRecordDTO {
 
     @ApiModelProperty(value = "거래 소유자", example = "나")
     private String owner;
+
+    @ApiModelProperty(value = "거래 소유자 id", example = "1")
+    private Long ownerId;
+
+    @ApiModelProperty(value = "거래 소유자 여부", example = "false")
+    private boolean isMine;
+
+    @ApiModelProperty(value = "사용자 직접 추가 여부", example = "false")
+    private boolean isUserCreated;
 }

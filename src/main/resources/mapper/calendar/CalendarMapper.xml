@@ -128,7 +128,17 @@
             END AS category,
             sr.amount,
             sr.memo,
-            u.name AS owner
+            u.name AS owner,
+            sr.user_id AS ownerId,
+            CASE
+                WHEN sr.user_id = #{userId} THEN TRUE
+                ELSE FALSE
+            END AS isMine,
+            CASE
+                WHEN sr.account_record_id IS NULL AND sr.card_record_id IS NULL
+                    THEN TRUE
+                ELSE FALSE
+                END AS isUserCreated
         FROM service_record sr
         INNER JOIN user u
             ON sr.user_id = u.id
@@ -148,7 +158,17 @@
             END AS category,
             sr.amount,
             sr.memo,
-            u.name AS owner
+            u.name AS owner,
+            sr.user_id AS ownerId,
+            CASE
+                WHEN sr.user_id = #{userId} THEN TRUE
+                ELSE FALSE
+            END AS isMine,
+            CASE
+                WHEN sr.account_record_id IS NULL AND sr.card_record_id IS NULL
+                    THEN TRUE
+                ELSE FALSE
+            END AS isUserCreated
         FROM service_record sr
         INNER JOIN user u
             ON sr.user_id = u.id
