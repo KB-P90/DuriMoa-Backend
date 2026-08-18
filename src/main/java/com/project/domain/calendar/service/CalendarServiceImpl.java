@@ -70,9 +70,6 @@ public class CalendarServiceImpl implements CalendarService {
         // 월 요약
         MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);
 
-        // TODO Goal 기능 병합 후 GoalMapper로 교체
-        summary.setGoalAmount(0L);
-
         // 달력 조회
         List<CalendarDayDTO> calendar = buildCalendar(start, end, mapper.selectMonthlyWeddingCalendar(userId, start, end, categories));
 

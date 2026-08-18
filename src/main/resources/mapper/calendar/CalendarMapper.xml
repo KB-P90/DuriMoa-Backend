@@ -33,6 +33,17 @@
     <select id="selectMonthlyWeddingSummary"
             resultType="com.project.domain.calendar.dto.response.MonthlyWeddingSummaryDTO">
         SELECT
+            (
+                SELECT g.total_budget
+                FROM goal g
+                JOIN couple c ON c.id = g.couple_id
+                WHERE g.is_main = TRUE
+                AND c.status = 'CONNECTED'
+                AND (
+                    c.groom_id = #{userId}
+                    OR c.bride_id = #{userId}
+                )
+            ) AS goalAmount,
             COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
             COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
         FROM service_record sr
