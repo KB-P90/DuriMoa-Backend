@@ -1,5 +1,6 @@
 package com.project.domain.monthly.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,9 @@ public class UserExpenseDetailDTO {
 
     @ApiModelProperty(value = "사용자 이름", example = "나")
     private String name;
+
+    @JsonIgnore
+    private String profileImageUrl;
 
     @ApiModelProperty(value = "카테고리별 지출 목록")
     private List<ExpenseCategoryDTO> expenseCategories;

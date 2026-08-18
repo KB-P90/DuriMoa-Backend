@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.domain.transaction.mapper.TransactionSyncMapper">
+
+    <select id="findConnectedIdByUserId" resultType="string">
+        SELECT connected_id
+        FROM user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="findAccountsByUserId" resultType="com.project.domain.transaction.dto.TransactionSyncTargetDTO">
+        SELECT
+            a.id AS id,
+            a.company AS company,
+            a.number AS number,
+            EXISTS(
+                SELECT 1
+                FROM account_record ar
+                WHERE ar.account_id = a.id
+            ) AS has_records
+        FROM account a
+        WHERE a.user_id = #{userId}
+        ORDER BY a.id
+    </select>
+
+    <select id="findCardsByUserId" resultType="com.project.domain.transaction.dto.TransactionSyncTargetDTO">
+        SELECT
+            c.id AS id,
+            c.company AS company,
+            c.number AS number,
+            EXISTS (
+                SELECT 1
+                FROM card_record cr
+                WHERE cr.card_id = c.id
+            ) AS has_records
+        FROM card c
+        WHERE c.user_id = #{userId}
+        ORDER BY c.id
+    </select>
+
+    <select id="findLastSyncAtByUserId" resultType="java.time.LocalDateTime">
+        SELECT last_sync_at
+        FROM last_sync
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insertLastSync">
+        INSERT INTO last_sync (
+            user_id,
+            last_sync_at,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            #{userId},
+            #{lastSyncAt},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateLastSync">
+        UPDATE last_sync
+        SET
+            last_sync_at = #{lastSyncAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <insert id="insertAccountRecord">
+        INSERT IGNORE INTO account_record (
+            account_id, source_key, transaction_date, transaction_time,
+            out_amount, in_amount, after_transaction_balance,
+            description1, description2, description3, description4, raw_data
+        ) VALUES (
+            #{accountId}, #{sourceKey}, #{transactionDate}, #{transactionTime},
+            #{outAmount}, #{inAmount}, #{afterTransactionBalance},
+            #{description1}, #{description2}, #{description3}, #{description4}, CAST(#{rawData} AS JSON)
+        )
+    </insert>
+
+    <insert id="insertCardRecord">
+        INSERT IGNORE INTO card_record (
+            card_id, source_key, used_date, used_time,
+            store_name, used_amount, payment_type, installment_month,
+            approval_no, payment_due_date,
+            domestic_foreign_type, store_corp_no, store_type, store_no,
+            cancel_status, cancel_amount, vat, cash_back,
+            krw_amount, currency, raw_data
+        ) VALUES (
+            #{cardId}, #{sourceKey}, #{usedDate}, #{usedTime},
+            #{storeName}, #{usedAmount}, #{paymentType}, #{installmentMonth},
+            #{approvalNo}, #{paymentDueDate},
+            #{domesticForeignType}, #{storeCorpNo}, #{storeType}, #{storeNo},
+            #{cancelStatus}, #{cancelAmount}, #{vat}, #{cashBack},
+            #{krwAmount}, #{currency}, #{rawData}
+        )
+    </insert>
+
+    <insert id="insertServiceRecord">
+        INSERT INTO service_record (
+            user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, status, memo
+        ) VALUES (
+            #{userId}, #{cardRecordId}, #{accountRecordId},
+            #{recordDate}, #{type}, #{amount}, #{category}, #{status}, #{memo}
+        )
+    </insert>
+
+    <select id="findNewCardRecords" resultType="com.project.domain.transaction.domain.CardRecord">
+        SELECT cr.id,
+               cr.card_id,
+               cr.source_key,
+               cr.used_date,
+               cr.used_time,
+               cr.store_name,
+               cr.used_amount,
+               cr.payment_type,
+               cr.installment_month,
+               cr.approval_no,
+               cr.payment_due_date,
+               cr.domestic_foreign_type,
+               cr.store_corp_no,
+               cr.store_type,
+               cr.store_no,
+               cr.cancel_status,
+               cr.cancel_amount,
+               cr.vat,
+               cr.cash_back,
+               cr.krw_amount,
+               cr.currency,
+               cr.raw_data,
+               cr.created_at
+        FROM card_record cr
+                 JOIN card c ON c.id = cr.card_id
+        WHERE c.user_id = #{userId}
+          AND (
+            #{lastSyncAt} IS NULL
+                OR cr.created_at > #{lastSyncAt}
+            )
+        ORDER BY cr.created_at, cr.id
+    </select>
+
+    <select id="findNewAccountRecords" resultType="com.project.domain.transaction.domain.AccountRecord">
+        SELECT ar.id,
+               ar.account_id,
+               ar.source_key,
+               ar.transaction_date,
+               ar.transaction_time,
+               ar.out_amount,
+               ar.in_amount,
+               ar.after_transaction_balance,
+               ar.description1,
+               ar.description2,
+               ar.description3,
+               ar.description4,
+               ar.raw_data,
+               ar.created_at
+        FROM account_record ar
+                 JOIN account a ON a.id = ar.account_id
+        WHERE a.user_id = #{userId}
+          AND (
+            #{lastSyncAt} IS NULL
+                OR ar.created_at > #{lastSyncAt}
+            )
+        ORDER BY ar.created_at, ar.id
+    </select>
+
+    <select id="findMatchingAccountRecord" resultType="com.project.domain.transaction.domain.AccountRecord">
+        SELECT ar.id,
+               ar.account_id,
+               ar.source_key,
+               ar.transaction_date,
+               ar.transaction_time,
+               ar.out_amount,
+               ar.in_amount,
+               ar.after_transaction_balance,
+               ar.description1,
+               ar.description2,
+               ar.description3,
+               ar.description4,
+               ar.raw_data,
+               ar.created_at
+        FROM account_record ar
+                 INNER JOIN account a
+                            ON a.id = ar.account_id
+        WHERE a.user_id = #{userId}
+          AND ar.transaction_date = #{record.usedDate}
+          AND ar.out_amount = #{record.usedAmount}
+          AND ABS(TIME_TO_SEC(TIMEDIFF(ar.transaction_time, #{record.usedTime}))) &lt;= 600
+        ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(ar.transaction_time, #{record.usedTime}))), ar.id LIMIT 1
+    </select>
+
+    <select id="findMatchingCardRecord" resultType="com.project.domain.transaction.domain.CardRecord">
+        SELECT cr.id,
+               cr.card_id,
+               cr.source_key,
+               cr.used_date,
+               cr.used_time,
+               cr.store_name,
+               cr.used_amount,
+               cr.payment_type,
+               cr.installment_month,
+               cr.approval_no,
+               cr.payment_due_date,
+               cr.domestic_foreign_type,
+               cr.store_corp_no,
+               cr.store_type,
+               cr.store_no,
+               cr.cancel_status,
+               cr.cancel_amount,
+               cr.vat,
+               cr.cash_back,
+               cr.krw_amount,
+               cr.currency,
+               cr.raw_data,
+               cr.created_at
+        FROM card_record cr
+                 INNER JOIN card c
+                            ON c.id = cr.card_id
+        WHERE c.user_id = #{userId}
+          AND cr.used_date = #{record.transactionDate}
+          AND cr.used_amount = #{record.outAmount}
+          AND ABS(TIME_TO_SEC(TIMEDIFF(cr.used_time, #{record.transactionTime}))) &lt;= 600
+        ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(cr.used_time, #{record.transactionTime}))), cr.id LIMIT 1
+    </select>
+
+    <select id="findByAccountRecordId" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT
+            id, user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, changed_category,
+            status, memo, created_at, updated_at
+        FROM service_record
+        WHERE account_record_id = #{recordId}
+    </select>
+
+    <select id="findByCardRecordId" resultType="com.project.domain.calendar.domain.ServiceRecord">
+        SELECT
+            id, user_id, card_record_id, account_record_id,
+            record_date, type, amount, category, changed_category,
+            status, memo, created_at, updated_at
+        FROM service_record
+        WHERE card_record_id = #{recordId}
+    </select>
+
+    <update id="attachCardRecord">
+        UPDATE service_record
+        SET card_record_id = #{cardRecordId},
+            updated_at     = CURRENT_TIMESTAMP
+        WHERE id = #{serviceRecordId}
+    </update>
+
+    <update id="attachAccountRecord">
+        UPDATE service_record
+        SET account_record_id = #{accountRecordId},
+            updated_at        = CURRENT_TIMESTAMP
+        WHERE id = #{serviceRecordId}
+    </update>
+
+</mapper>

@@ -200,6 +200,7 @@ class MonthlyControllerTest {
                         .feedbackId(3L)
                         .writerUserId(userId)
                         .writerName("나")
+                        .writerProfileImageUrl("https://example.com/profile/user1.jpg")
                         .receiverUserId(2L)
                         .receiverName("상대방")
                         .year(2026)
@@ -224,6 +225,8 @@ class MonthlyControllerTest {
         Assertions.assertTrue(response.get("success").asBoolean());
         Assertions.assertEquals("피드백을 등록했습니다.", response.get("message").asText());
         Assertions.assertEquals(3L, response.path("data").path("feedbackId").asLong());
+        Assertions.assertEquals("https://example.com/profile/user1.jpg",
+                response.path("data").path("writerProfileImageUrl").asText());
         Assertions.assertEquals(2L, response.path("data").path("receiverUserId").asLong());
     }
 

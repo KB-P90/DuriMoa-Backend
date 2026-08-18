@@ -11,6 +11,8 @@ import com.project.domain.calendar.domain.ServiceRecord;
 import com.project.domain.calendar.dto.request.RecordRequestDTO;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
+import com.project.domain.transaction.service.TransactionSyncAsyncService;
+import com.project.domain.transaction.service.TransactionSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -28,9 +30,15 @@ import java.util.stream.Collectors;
 @Log4j2
 public class CalendarServiceImpl implements CalendarService {
     final private CalendarMapper mapper;
+    final private TransactionSyncService transactionSyncService;
+    final private TransactionSyncAsyncService transactionSyncAsyncService;
 
     @Override
     public Object getMonthly(Long userId, YearMonth month, CalendarType type) {
+        if (transactionSyncService.needSync(userId) && transactionSyncAsyncService.tryStarySync(userId)) {
+            transactionSyncAsyncService.syncUserTransactionsAsync(userId);
+        }
+
         return switch (type) {
             case PERSONAL -> getMonthlyPersonal(userId, month);
             case WEDDING -> getMonthlyWedding(userId, month);

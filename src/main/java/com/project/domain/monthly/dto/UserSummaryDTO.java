@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class UserSummaryDTO {
     private Long userId;
     private String name;
+
+    private String profileImageUrl;
 }

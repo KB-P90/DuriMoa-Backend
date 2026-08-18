@@ -24,6 +24,9 @@ public class ExpenseFeedbackDTO {
     @ApiModelProperty(value = "작성자 이름", example = "상대방")
     private String writerName;
 
+    @ApiModelProperty(value = "작성자 프로필 이미지 URL", example = "https://example.com/profile/user2.jpg")
+    private String writerProfileImageUrl;
+
     @JsonProperty("receiver_id")
     @ApiModelProperty(value = "수신자 사용자 ID", example = "2")
     private Long receiverId;
