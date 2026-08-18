@@ -13,18 +13,20 @@ import java.time.LocalDateTime;
 @Builder
 public class ServiceRecord {
     private Long id;
-
     private Long userId;
 
-    private RecordType type;
-
-    private String category;
-
-    private String changedCategory;
-
-    private Long amount;
+    private Long cardRecordId;
+    private Long accountRecordId;
 
     private LocalDate recordDate;
+
+    private RecordType type;
+    private Long amount;
+
+    private String category;
+    private String changedCategory;
+
+    private String status;
 
     private String memo;
 }
