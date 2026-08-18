@@ -5,8 +5,18 @@ import com.openai.models.Reasoning;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
+import com.openai.models.responses.StructuredResponse;
+import com.openai.models.responses.StructuredResponseCreateParams;
+import com.project.domain.ai.domain.AiAction;
+import com.project.domain.ai.domain.AiBudgetType;
+import com.project.domain.ai.domain.AiIntent;
+import com.project.domain.ai.dto.AiBudgetTypeModelResponseDTO;
 import com.project.domain.ai.dto.AiChatResponseDTO;
 import com.project.domain.ai.dto.AiConnectionTestResponseDTO;
+import com.project.domain.ai.dto.AiIntentModelResponseDTO;
+import com.project.domain.ai.model.AiWeddingBudgetSelectionContext;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,16 +32,33 @@ public class AiServiceImpl implements AiService {
             "연결 테스트입니다. 반드시 'OpenAI 연결 성공'이라고만 답변하세요.";
     private static final String CHAT_INSTRUCTION =
             "당신은 결혼 준비와 공동 예산 관리를 돕는 두리모아 AI입니다. "
-                    + "사용자의 질문에 한국어로 친절하고 간결하게 답변하세요. "
-                    + "짧은 인사에도 반드시 자연스러운 최종 답변을 작성하세요.\n\n사용자 질문:\n";
-    private static final String CHAT_RETRY_INSTRUCTION =
-            "\n\n사용자에게 보여줄 최종 답변 텍스트를 반드시 작성하세요.";
+                    + "사용자 입력을 지원 기능 중 하나로 분류하세요. "
+                    + "결혼 예산, 소비 내역 기반 결혼 비용, 예식장·스튜디오·드레스·메이크업 "
+                    + "예산 요청은 WEDDING_BUDGET_RECOMMENDATION입니다. "
+                    + "인사는 GREETING입니다. 그 외 요청은 UNKNOWN입니다. "
+                    + "GREETING이면 결혼 예산 추천 기능을 자연스럽게 안내하고, "
+                    + "UNKNOWN이면 현재 결혼 예산 추천을 지원한다고 간결하게 안내하세요. "
+                    + "한국어로 한두 문장만 작성하세요.";
+    private static final String BUDGET_SELECTION_INSTRUCTION =
+            "당신은 예비부부의 결혼 예산 유형을 추천하는 두리모아 AI입니다. "
+                    + "eligibleBudgetTypes에 포함된 값만 선택해야 합니다. "
+                    + "균형형을 감당할 수 있고 최근 저축이 안정적이면 BALANCED를 우선하고, "
+                    + "재정 여유와 저축률이 충분하며 FLEX가 허용된 경우에만 FLEX를 고려하세요. "
+                    + "reason은 제공된 집계 수치만 근거로 한국어 한두 문장으로 작성하세요.";
     private static final String CHAT_FALLBACK_RESPONSE =
-            "답변을 생성하지 못했어요. 잠시 후 다시 질문해 주세요.";
+            "현재는 소비 내역을 바탕으로 한 결혼 예산 추천을 도와드릴 수 있어요.";
+    private static final String UNKNOWN_RESPONSE =
+            "아직 지원하지 않는 요청이에요.\n"
+                    + "현재 두리모아 AI는 다음 기능을 지원해요.\n\n"
+                    + "• 맞춤 결혼 예산 추천\n"
+                    + "• 결혼 준비 소비 리포트\n"
+                    + "• 커플 저축 플랜\n\n"
+                    + "지원 기능 중 필요한 도움을 말씀해 주세요.";
+    private static final String BUDGET_REASON_FALLBACK =
+            "최근 3개월의 수입, 지출, 저축 여력과 지역별 결혼 비용 통계를 반영했어요.";
     private static final Long CONNECTION_TEST_MAX_OUTPUT_TOKENS = 256L;
-    private static final Long CHAT_MAX_OUTPUT_TOKENS = 1024L;
-    private static final Integer CHAT_MAX_ATTEMPTS = 2;
-    private static final Reasoning CHAT_REASONING = Reasoning.builder()
+    private static final Long STRUCTURED_MAX_OUTPUT_TOKENS = 512L;
+    private static final Reasoning MINIMAL_REASONING = Reasoning.builder()
             .effort(ReasoningEffort.MINIMAL)
             .build();
 
@@ -70,94 +97,149 @@ public class AiServiceImpl implements AiService {
     public AiChatResponseDTO chat(String message) {
         String model = getEnvironmentValue("OPENAI_MODEL", DEFAULT_MODEL);
         String teamCode = getEnvironmentValue("TEAM_CODE", "NOT_CONFIGURED");
-        long startedAt = System.nanoTime();
-
-        log.info("[teamCode={}] OpenAI chat request started: model={}", teamCode, model);
+        log.info("[teamCode={}] OpenAI intent classification started: model={}", teamCode, model);
 
         try {
-            for (int attempt = 1; attempt <= CHAT_MAX_ATTEMPTS; attempt++) {
-                long attemptStartedAt = System.nanoTime();
-                ResponseCreateParams params = createChatParams(model, message, attempt);
-                Response response = openAIClientProvider.getObject()
-                        .responses()
-                        .create(params);
-                long attemptElapsedMillis =
-                        (System.nanoTime() - attemptStartedAt) / 1_000_000L;
-
-                log.info(
-                        "[teamCode={}] OpenAI chat response received: model={}, attempt={}, "
-                                + "outputCount={}, elapsedMillis={}",
-                        teamCode,
-                        model,
-                        attempt,
-                        response.output().size(),
-                        attemptElapsedMillis);
-
-                String responseText = extractOutputText(response);
-                boolean hasText = responseText != null && !responseText.trim().isEmpty();
-                log.info(
-                        "[teamCode={}] OpenAI chat text extracted: model={}, attempt={}, "
-                                + "hasText={}",
-                        teamCode,
-                        model,
-                        attempt,
-                        hasText);
-
-                if (hasText) {
-                    log.info(
-                            "[teamCode={}] OpenAI chat request completed: model={}, attempt={}",
-                            teamCode,
-                            model,
-                            attempt);
-                    return AiChatResponseDTO.builder()
+            StructuredResponseCreateParams<AiIntentModelResponseDTO> params =
+                    ResponseCreateParams.builder()
                             .model(model)
-                            .response(responseText)
+                            .input(message.trim())
+                            .instructions(CHAT_INSTRUCTION)
+                            .reasoning(MINIMAL_REASONING)
+                            .maxOutputTokens(STRUCTURED_MAX_OUTPUT_TOKENS)
+                            .text(AiIntentModelResponseDTO.class)
                             .build();
-                }
 
-                log.warn(
-                        "[teamCode={}] OpenAI chat output text missing: model={}, attempt={}, "
-                                + "willRetry={}",
-                        teamCode,
-                        model,
-                        attempt,
-                        attempt < CHAT_MAX_ATTEMPTS);
-            }
+            StructuredResponse<AiIntentModelResponseDTO> response = openAIClientProvider
+                    .getObject()
+                    .responses()
+                    .create(params);
+            AiIntentModelResponseDTO result = extractStructuredOutput(response);
+            AiIntent intent = result == null || result.getIntent() == null
+                    ? AiIntent.UNKNOWN
+                    : result.getIntent();
+            String responseText = intent == AiIntent.UNKNOWN
+                    ? UNKNOWN_RESPONSE
+                    : resolveResponseText(result);
 
-            log.warn(
-                    "[teamCode={}] OpenAI chat fallback returned after retries: model={}",
+            log.info(
+                    "[teamCode={}] OpenAI intent classification completed: model={}, intent={}",
                     teamCode,
-                    model);
+                    model,
+                    intent);
             return AiChatResponseDTO.builder()
                     .model(model)
-                    .response(CHAT_FALLBACK_RESPONSE)
+                    .response(responseText)
+                    .intent(intent)
+                    .action(resolveAction(intent))
                     .build();
         } catch (RuntimeException exception) {
-            long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L;
             log.error(
-                    "[teamCode={}] OpenAI chat request failed: model={}, exceptionType={}, "
-                            + "elapsedMillis={}",
+                    "[teamCode={}] OpenAI intent classification failed: model={}, exceptionType={}",
                     teamCode,
                     model,
                     exception.getClass().getName(),
-                    elapsedMillis,
                     exception);
-            throw exception;
+            return AiChatResponseDTO.builder()
+                    .model(model)
+                    .response(CHAT_FALLBACK_RESPONSE)
+                    .intent(AiIntent.UNKNOWN)
+                    .action(null)
+                    .build();
         }
     }
 
-    private ResponseCreateParams createChatParams(String model, String message, int attempt) {
-        String input = CHAT_INSTRUCTION + message.trim();
-        if (attempt > 1) {
-            input += CHAT_RETRY_INSTRUCTION;
+    @Override
+    public AiBudgetTypeModelResponseDTO selectWeddingBudgetType(
+            AiWeddingBudgetSelectionContext context
+    ) {
+        List<AiBudgetType> eligibleTypes = context.getEligibleBudgetTypes();
+        AiBudgetType fallbackType = resolveFallbackBudgetType(eligibleTypes);
+        if (eligibleTypes == null || eligibleTypes.size() <= 1) {
+            return new AiBudgetTypeModelResponseDTO(fallbackType, BUDGET_REASON_FALLBACK);
         }
 
-        return ResponseCreateParams.builder()
-                .model(model)
-                .input(input)
-                .reasoning(CHAT_REASONING)
-                .maxOutputTokens(CHAT_MAX_OUTPUT_TOKENS)
-                .build();
+        String model = getEnvironmentValue("OPENAI_MODEL", DEFAULT_MODEL);
+        String input = buildBudgetSelectionInput(context);
+        try {
+            StructuredResponseCreateParams<AiBudgetTypeModelResponseDTO> params =
+                    ResponseCreateParams.builder()
+                            .model(model)
+                            .input(input)
+                            .instructions(BUDGET_SELECTION_INSTRUCTION)
+                            .reasoning(MINIMAL_REASONING)
+                            .maxOutputTokens(STRUCTURED_MAX_OUTPUT_TOKENS)
+                            .text(AiBudgetTypeModelResponseDTO.class)
+                            .build();
+            StructuredResponse<AiBudgetTypeModelResponseDTO> response = openAIClientProvider
+                    .getObject()
+                    .responses()
+                    .create(params);
+            AiBudgetTypeModelResponseDTO result = extractStructuredOutput(response);
+
+            if (result == null
+                    || result.getBudgetType() == null
+                    || !eligibleTypes.contains(result.getBudgetType())) {
+                return new AiBudgetTypeModelResponseDTO(fallbackType, BUDGET_REASON_FALLBACK);
+            }
+            if (isBlank(result.getReason())) {
+                result.setReason(BUDGET_REASON_FALLBACK);
+            }
+            return result;
+        } catch (RuntimeException exception) {
+            log.error(
+                    "OpenAI wedding budget type selection failed: exceptionType={}",
+                    exception.getClass().getName(),
+                    exception);
+            return new AiBudgetTypeModelResponseDTO(fallbackType, BUDGET_REASON_FALLBACK);
+        }
+    }
+
+    private AiAction resolveAction(AiIntent intent) {
+        if (intent == AiIntent.WEDDING_BUDGET_RECOMMENDATION) {
+            return AiAction.START_WEDDING_BUDGET_FLOW;
+        }
+        return null;
+    }
+
+    private String resolveResponseText(AiIntentModelResponseDTO result) {
+        return result == null || isBlank(result.getResponse())
+                ? CHAT_FALLBACK_RESPONSE
+                : result.getResponse().trim();
+    }
+
+    private AiBudgetType resolveFallbackBudgetType(List<AiBudgetType> eligibleTypes) {
+        if (eligibleTypes != null && eligibleTypes.contains(AiBudgetType.BALANCED)) {
+            return AiBudgetType.BALANCED;
+        }
+        if (eligibleTypes != null && eligibleTypes.contains(AiBudgetType.FLEX)) {
+            return AiBudgetType.FLEX;
+        }
+        return AiBudgetType.SAVING;
+    }
+
+    private String buildBudgetSelectionInput(AiWeddingBudgetSelectionContext context) {
+        String eligibleTypes = context.getEligibleBudgetTypes().stream()
+                .map(Enum::name)
+                .collect(Collectors.joining(","));
+        return "eligibleBudgetTypes=" + eligibleTypes
+                + "\nmedianMonthlyIncome=" + context.getMedianMonthlyIncome()
+                + "\nmedianMonthlyExpense=" + context.getMedianMonthlyExpense()
+                + "\nmedianMonthlySaving=" + context.getMedianMonthlySaving()
+                + "\nsustainableMonthlySaving=" + context.getSustainableMonthlySaving()
+                + "\naffordableTotalBudget=" + context.getAffordableTotalBudget()
+                + "\nmonthsUntilWedding=" + context.getMonthsUntilWedding()
+                + "\nregion=" + context.getRegion();
+    }
+
+    private <T> T extractStructuredOutput(StructuredResponse<T> response) {
+        return response.output().stream()
+                .filter(outputItem -> outputItem.isMessage())
+                .flatMap(outputItem -> outputItem.asMessage().content().stream())
+                .filter(content -> content.isOutputText())
+                .map(content -> content.asOutputText())
+                .findFirst()
+                .orElse(null);
     }
 
     private String extractOutputText(Response response) {
@@ -167,6 +249,10 @@ public class AiServiceImpl implements AiService {
                 .filter(content -> content.isOutputText())
                 .map(content -> content.asOutputText().text())
                 .reduce("", String::concat);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private String getEnvironmentValue(String name, String defaultValue) {
