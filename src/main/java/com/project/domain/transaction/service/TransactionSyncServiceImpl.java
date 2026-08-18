@@ -41,7 +41,8 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private static final int INITIAL_LOOKBACK_MONTHS = 3;
 
     // 거래 내역 재동기화 간격 (5분)
-    private static final int SYNC_INTERVAL_MINUTES = 5;
+    // TODO: 개발 환경에서 CODEF 1일 한도를 금방 달성하게 되어 임시로 6시간으로 변경
+    private static final int SYNC_INTERVAL_MINUTES = 360;
 
     private static final DateTimeFormatter CODEF_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final DateTimeFormatter CODEF_TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmmss");
