@@ -35,17 +35,8 @@ public interface ProgressMapper {
 
     List<MemberSourceDTO> findMembers(
             @Param("groomId") Long groomId,
-            @Param("brideId") Long brideId
-    );
-
-    Long findTotalWeddingExpense(
-            @Param("userIds") List<Long> userIds,
-            @Param("categories") List<String> categories
-    );
-
-    LocalDate findFirstWeddingExpenseDate(
-            @Param("userIds") List<Long> userIds,
-            @Param("categories") List<String> categories
+            @Param("brideId") Long brideId,
+            @Param("savingCategories") List<String> savingCategories
     );
 
     List<CategoryExpenseDTO> findCategoryWeddingExpenses(
@@ -53,7 +44,12 @@ public interface ProgressMapper {
             @Param("categories") List<String> categories
     );
 
-    List<MonthlyExpenseDTO> findMonthlyWeddingExpenses(
+    LocalDate findFirstWeddingSavingDate(
+            @Param("userIds") List<Long> userIds,
+            @Param("categories") List<String> categories
+    );
+
+    List<MonthlyExpenseDTO> findMonthlyWeddingSaving(
             @Param("userIds") List<Long> userIds,
             @Param("categories") List<String> categories,
             @Param("startAt") LocalDateTime startAt,
