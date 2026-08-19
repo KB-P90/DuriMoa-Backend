@@ -46,11 +46,29 @@ class SignupRequestDTOTest {
                         "010-1234-5678", "password123", "password123", "홍길동", "G");
         setField(request, "serviceTermsAgreed", null);
         setField(request, "privacyTermsAgreed", null);
-        setField(request, "marketingTermsAgreed", null);
+        setField(request, "financeTermsAgreed", null);
 
         Set<ConstraintViolation<SignupRequestDTO>> violations = validator.validate(request);
 
         assertEquals(3, violations.size());
+    }
+
+    @Test
+    void falseRequiredTermsAgreementFieldsFailValidation() throws Exception {
+        String[] requiredTermsFields = {
+            "serviceTermsAgreed", "privacyTermsAgreed", "financeTermsAgreed"
+        };
+
+        for (String fieldName : requiredTermsFields) {
+            SignupRequestDTO request =
+                    createRequest(
+                            "010-1234-5678", "password123", "password123", "홍길동", "G");
+            setField(request, fieldName, false);
+
+            Set<ConstraintViolation<SignupRequestDTO>> violations = validator.validate(request);
+
+            assertEquals(1, violations.size(), fieldName);
+        }
     }
 
     private SignupRequestDTO createRequest(
@@ -67,7 +85,7 @@ class SignupRequestDTOTest {
         setField(request, "role", role);
         setField(request, "serviceTermsAgreed", true);
         setField(request, "privacyTermsAgreed", true);
-        setField(request, "marketingTermsAgreed", false);
+        setField(request, "financeTermsAgreed", true);
         return request;
     }
 

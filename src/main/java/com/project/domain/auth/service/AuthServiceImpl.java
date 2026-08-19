@@ -33,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
 
     private static final String SERVICE_TERMS = "SERVICE";
     private static final String PRIVACY_TERMS = "PRIVACY";
-    private static final String MARKETING_TERMS = "MARKETING";
+    private static final String FINANCE_TERMS = "FINANCE";
     private static final String KAKAO_PROVIDER = "KAKAO";
 
     private final AuthMapper authMapper;
@@ -52,12 +52,10 @@ public class AuthServiceImpl implements AuthService {
                     ErrorCode.INVALID_INPUT_VALUE,
                     "비밀번호와 비밀번호 확인이 일치하지 않습니다.");
         }
-        if (!Boolean.TRUE.equals(request.getServiceTermsAgreed())
-                || !Boolean.TRUE.equals(request.getPrivacyTermsAgreed())) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT_VALUE,
-                    "필수 약관에 동의해야 회원가입이 가능합니다.");
-        }
+        validateRequiredTerms(
+                request.getServiceTermsAgreed(),
+                request.getPrivacyTermsAgreed(),
+                request.getFinanceTermsAgreed());
 
         String normalizedPhone = request.getPhone().replace("-", "");
         if (Boolean.TRUE.equals(authMapper.existsUserByPhone(normalizedPhone))) {
@@ -138,7 +136,8 @@ public class AuthServiceImpl implements AuthService {
     public LoginResultDTO signupWithKakao(KakaoSignupRequestDTO request) {
         validateRequiredTerms(
                 request.getServiceTermsAgreed(),
-                request.getPrivacyTermsAgreed());
+                request.getPrivacyTermsAgreed(),
+                request.getFinanceTermsAgreed());
         if (!jwtTokenProvider.validateKakaoSignupToken(request.getSignupToken())) {
             throw new CustomException(
                     ErrorCode.UNAUTHORIZED,
@@ -181,7 +180,7 @@ public class AuthServiceImpl implements AuthService {
                 loginUser.getUserId(),
                 request.getServiceTermsAgreed(),
                 request.getPrivacyTermsAgreed(),
-                request.getMarketingTermsAgreed());
+                request.getFinanceTermsAgreed());
         coupleInvitationService.createInviteCode(loginUser.getUserId());
         return issueLoginTokens(loginUser);
     }
@@ -236,17 +235,17 @@ public class AuthServiceImpl implements AuthService {
                 userId,
                 request.getServiceTermsAgreed(),
                 request.getPrivacyTermsAgreed(),
-                request.getMarketingTermsAgreed());
+                request.getFinanceTermsAgreed());
     }
 
     private void saveTermsAgreements(
             Long userId,
             Boolean serviceTermsAgreed,
             Boolean privacyTermsAgreed,
-            Boolean marketingTermsAgreed) {
+            Boolean financeTermsAgreed) {
         authMapper.insertTermsAgreement(userId, SERVICE_TERMS, serviceTermsAgreed);
         authMapper.insertTermsAgreement(userId, PRIVACY_TERMS, privacyTermsAgreed);
-        authMapper.insertTermsAgreement(userId, MARKETING_TERMS, marketingTermsAgreed);
+        authMapper.insertTermsAgreement(userId, FINANCE_TERMS, financeTermsAgreed);
     }
 
     private LoginResultDTO issueLoginTokens(LoginUserDTO loginUser) {
@@ -282,12 +281,14 @@ public class AuthServiceImpl implements AuthService {
 
     private void validateRequiredTerms(
             Boolean serviceTermsAgreed,
-            Boolean privacyTermsAgreed) {
+            Boolean privacyTermsAgreed,
+            Boolean financeTermsAgreed) {
         if (!Boolean.TRUE.equals(serviceTermsAgreed)
-                || !Boolean.TRUE.equals(privacyTermsAgreed)) {
+                || !Boolean.TRUE.equals(privacyTermsAgreed)
+                || !Boolean.TRUE.equals(financeTermsAgreed)) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT_VALUE,
-                    "필수 약관에 동의해야 회원가입이 가능합니다.");
+                    "필수 약관에 모두 동의해야 회원가입이 가능합니다.");
         }
     }
 
