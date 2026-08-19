@@ -13,6 +13,7 @@ import com.project.domain.notification.dto.NotificationListResponseDTO;
 import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
+import com.project.domain.notification.dto.NotificationSettingBatchUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
@@ -186,20 +187,23 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void updateSetting(
+    public void updateSettings(
             Long authenticatedUserId,
-            NotificationSettingUpdateRequestDTO request
+            NotificationSettingBatchUpdateRequestDTO request
     ) {
         validateUserId(authenticatedUserId);
-        validateSettingRequest(request);
+        List<NotificationSettingUpdateRequestDTO> settings = validateBatchSettingRequest(request);
 
-        Integer updatedCount = notificationMapper.upsertNotificationSetting(
-                authenticatedUserId,
-                request.getType(),
-                request.getPushEnabled()
-        );
-        if (updatedCount == null || updatedCount < 1) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "알림 설정 저장에 실패했습니다.");
+        for (NotificationSettingUpdateRequestDTO setting : settings) {
+            validateSettingRequest(setting);
+            Integer updatedCount = notificationMapper.upsertNotificationSetting(
+                    authenticatedUserId,
+                    setting.getType(),
+                    setting.getPushEnabled()
+            );
+            if (updatedCount == null || updatedCount < 1) {
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "알림 설정 저장에 실패했습니다.");
+            }
         }
     }
 
@@ -292,6 +296,15 @@ public class NotificationServiceImpl implements NotificationService {
         if (request.getTargetId() != null && request.getTargetId() <= 0) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이동 대상 ID가 올바르지 않습니다.");
         }
+    }
+
+    private List<NotificationSettingUpdateRequestDTO> validateBatchSettingRequest(
+            NotificationSettingBatchUpdateRequestDTO request
+    ) {
+        if (request == null || request.getSettings() == null || request.getSettings().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "수정할 알림 설정 목록은 필수입니다.");
+        }
+        return request.getSettings();
     }
 
     private void validateSettingRequest(NotificationSettingUpdateRequestDTO request) {

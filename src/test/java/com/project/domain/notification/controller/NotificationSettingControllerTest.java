@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
 import com.project.domain.notification.domain.NotificationType;
+import com.project.domain.notification.dto.NotificationSettingBatchUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.service.NotificationService;
@@ -70,11 +71,19 @@ class NotificationSettingControllerTest {
     }
 
     @Test
-    void updateSettingDelegatesToService() throws Exception {
+    void updateSettingsDelegatesToService() throws Exception {
         setAuthentication(1L);
-        NotificationSettingUpdateRequestDTO request = NotificationSettingUpdateRequestDTO.builder()
-                .type(NotificationType.GOAL_CHANGED)
-                .pushEnabled(false)
+        NotificationSettingBatchUpdateRequestDTO request = NotificationSettingBatchUpdateRequestDTO.builder()
+                .settings(List.of(
+                        NotificationSettingUpdateRequestDTO.builder()
+                                .type(NotificationType.GOAL_CHANGED)
+                                .pushEnabled(false)
+                                .build(),
+                        NotificationSettingUpdateRequestDTO.builder()
+                                .type(NotificationType.COUPLE_REQUESTED)
+                                .pushEnabled(true)
+                                .build()
+                ))
                 .build();
 
         MvcResult result = mockMvc.perform(patch("/api/notification-settings")
@@ -85,19 +94,19 @@ class NotificationSettingControllerTest {
 
         JsonNode response = readResponse(result);
         Assertions.assertEquals("알림 설정을 저장했습니다.", response.get("message").asText());
-        Mockito.verify(notificationService).updateSetting(
+        Mockito.verify(notificationService).updateSettings(
                 Mockito.eq(1L),
-                Mockito.any(NotificationSettingUpdateRequestDTO.class)
+                Mockito.any(NotificationSettingBatchUpdateRequestDTO.class)
         );
     }
 
     @Test
-    void updateSettingRejectsInvalidRequest() throws Exception {
+    void updateSettingsRejectsInvalidRequest() throws Exception {
         setAuthentication(1L);
 
         MvcResult result = mockMvc.perform(patch("/api/notification-settings")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"\",\"pushEnabled\":true}"))
+                        .content("{\"settings\":[{\"type\":\"\",\"pushEnabled\":true}]}"))
                 .andExpect(status().isBadRequest())
                 .andReturn();
 
