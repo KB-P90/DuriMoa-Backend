@@ -1,5 +1,6 @@
 package com.project.domain.calendar.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.common.enums.RecordType;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -30,4 +31,15 @@ public class DailyRecordDTO {
 
     @ApiModelProperty(value = "거래 소유자", example = "나")
     private String owner;
+
+    @ApiModelProperty(value = "거래 소유자 id", example = "1")
+    private Long ownerId;
+
+    @JsonProperty("isMine")
+    @ApiModelProperty(value = "거래 소유자 여부", example = "false")
+    private boolean isMine;
+
+    @JsonProperty("isUserCreated")
+    @ApiModelProperty(value = "사용자 직접 추가 여부", example = "false")
+    private boolean isUserCreated;
 }

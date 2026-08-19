@@ -12,7 +12,7 @@ public enum SavingCategory {
 
     GENERALSAVING("저축", false),
 
-    WEDDINGSAVING("결혼 저축", true);
+    WEDDINGSAVING("결혼 자금", true);
 
     private final String categoryName;
     private final boolean wedding;

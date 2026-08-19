@@ -48,7 +48,7 @@ public class CalendarServiceImpl implements CalendarService {
     // 월별 조회 - 개인 소비
     private MonthlyPersonalResponseDTO getMonthlyPersonal(Long userId, YearMonth month) {
         LocalDate start = month.atDay(1);
-        LocalDate end = getEndDate(month);
+        LocalDate end = month.atEndOfMonth();
 
         // 월 요약
         MonthlyPersonalSummaryDTO summary = mapper.selectMonthlyPersonalSummary(userId, start, end);
@@ -62,7 +62,7 @@ public class CalendarServiceImpl implements CalendarService {
     // 월별 조회 - 결혼 비용
     private MonthlyWeddingResponseDTO getMonthlyWedding(Long userId, YearMonth month) {
         LocalDate start = month.atDay(1);
-        LocalDate end = getEndDate(month);
+        LocalDate end = month.atEndOfMonth();
 
         // 결혼 카테고리
         List<String> categories = getWeddingCategories();
@@ -70,19 +70,10 @@ public class CalendarServiceImpl implements CalendarService {
         // 월 요약
         MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);
 
-        // TODO Goal 기능 병합 후 GoalMapper로 교체
-        summary.setGoalAmount(0L);
-
         // 달력 조회
         List<CalendarDayDTO> calendar = buildCalendar(start, end, mapper.selectMonthlyWeddingCalendar(userId, start, end, categories));
 
         return new MonthlyWeddingResponseDTO(summary, calendar);
-    }
-
-    // 해당 월 마지막 날짜 계산 - 현재 달일 경우 오늘까지 조회
-    private LocalDate getEndDate(YearMonth month) {
-        LocalDate today = LocalDate.now();
-        return month.equals(YearMonth.from(today)) ? today : month.atEndOfMonth();
     }
 
     // 거래 내역 없어서 비어있는 날짜 있으면 데이터 추가
@@ -182,8 +173,18 @@ public class CalendarServiceImpl implements CalendarService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
+        // 사용자가 직접 추가한 거래 내역인지, CODEF 연동 거래 내역인지 확인
+        boolean isUserCreated = existingRecord.getAccountRecordId() == null && existingRecord.getCardRecordId() == null;
+
         ServiceRecord record = recordDTO.toVO(userId);
         record.setId(recordId);
+
+        // CODEF 연동 거래는 금액 수정 불가능: 기존 금액 그대로 적용
+        // type도 수정 안 되게 기존 타입 그대로 적용
+        if (!isUserCreated) {
+            record.setAmount(existingRecord.getAmount());
+            record.setType(existingRecord.getType());
+        }
 
         mapper.update(record);
 
