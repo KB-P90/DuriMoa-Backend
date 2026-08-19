@@ -15,6 +15,8 @@ public class MemberSourceDTO {
     private String name;
     private String role;
     private String profileImage;
-    private Long asset;
     private Boolean assetShared;
+    private Long assetAmount;
+    private Long weddingFund;
+    private Long savingAmount;
 }

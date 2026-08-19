@@ -72,8 +72,40 @@
             u.name AS name,
             u.role AS role,
             u.profile_image AS profileImage,
-            u.asset AS asset,
-            u.is_shared AS assetShared
+            u.is_shared AS assetShared,
+            <!-- 계좌별 최신 거래 후 잔액을 합산한 실제 자산입니다. -->
+            COALESCE((
+                SELECT SUM(latest.after_transaction_balance)
+                FROM (
+                    SELECT
+                        ar.account_id,
+                        ar.after_transaction_balance,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY ar.account_id
+                            ORDER BY ar.transaction_date DESC, ar.transaction_time DESC, ar.id DESC
+                        ) AS rn
+                    FROM account_record ar
+                    INNER JOIN account acc ON acc.id = ar.account_id
+                    WHERE acc.user_id = u.id
+                ) latest
+                WHERE latest.rn = 1
+            ), 0) AS assetAmount,
+            COALESCE(u.wedding_fund, 0) AS weddingFund,
+            <!-- 모은 돈 = 기존에 모은 돈(wedding_fund) + 결혼 저축 거래 누적 -->
+            COALESCE(u.wedding_fund, 0) + COALESCE((
+                SELECT SUM(sr.amount)
+                FROM service_record sr
+                WHERE sr.user_id = u.id
+                  AND sr.type = 'SAVING'
+                  AND COALESCE(sr.changed_category, sr.category) IN
+                <foreach collection="savingCategories"
+                         item="category"
+                         open="("
+                         separator=","
+                         close=")">
+                    #{category}
+                </foreach>
+            ), 0) AS savingAmount
         FROM user u
         WHERE u.id IN (#{groomId}, #{brideId})
         ORDER BY
@@ -83,29 +115,7 @@
             END
     </select>
 
-    <select id="findTotalWeddingExpense" resultType="long">
-        SELECT COALESCE(SUM(sr.amount), 0)
-        FROM service_record sr
-        WHERE sr.user_id IN
-        <foreach collection="userIds"
-                 item="userId"
-                 open="("
-                 separator=","
-                 close=")">
-            #{userId}
-        </foreach>
-          AND sr.type = 'EXPENSE'
-          AND COALESCE(sr.changed_category, sr.category) IN
-        <foreach collection="categories"
-                 item="category"
-                 open="("
-                 separator=","
-                 close=")">
-            #{category}
-        </foreach>
-    </select>
-
-    <select id="findFirstWeddingExpenseDate" resultType="java.time.LocalDate">
+    <select id="findFirstWeddingSavingDate" resultType="java.time.LocalDate">
         SELECT MIN(sr.record_date)
         FROM service_record sr
         WHERE sr.user_id IN
@@ -116,7 +126,7 @@
                  close=")">
             #{userId}
         </foreach>
-          AND sr.type = 'EXPENSE'
+          AND sr.type = 'SAVING'
           AND COALESCE(sr.changed_category, sr.category) IN
         <foreach collection="categories"
                  item="category"
@@ -153,7 +163,8 @@
         GROUP BY COALESCE(sr.changed_category, sr.category)
     </select>
 
-    <select id="findMonthlyWeddingExpenses"
+    <!-- 결과의 expenseAmount 컬럼은 월별로 모은 저축 금액을 담습니다(MonthlyExpenseDTO 재사용). -->
+    <select id="findMonthlyWeddingSaving"
             resultType="com.project.domain.progress.dto.MonthlyExpenseDTO">
         SELECT
             DATE_FORMAT(sr.record_date, '%Y-%m') AS yearMonth,
@@ -167,7 +178,7 @@
                  close=")">
             #{userId}
         </foreach>
-          AND sr.type = 'EXPENSE'
+          AND sr.type = 'SAVING'
           AND COALESCE(sr.changed_category, sr.category) IN
         <foreach collection="categories"
                  item="category"
