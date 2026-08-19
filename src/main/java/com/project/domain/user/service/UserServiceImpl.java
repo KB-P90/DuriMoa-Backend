@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -83,9 +84,16 @@ public class UserServiceImpl implements UserService {
 
         String uploadedImageUrl = null;
         if (hasNewImage) {
+            MultipartFile profileImage = request.getProfileImage();
+            log.info("프로필 이미지 수신: originalFilename={}, contentType={}, size={} bytes",
+                    profileImage.getOriginalFilename(), profileImage.getContentType(), profileImage.getSize());
             try {
-                uploadedImageUrl = s3Uploader.upload(request.getProfileImage().getBytes(), PROFILE_IMAGE_DIR);
+                byte[] imageBytes = profileImage.getBytes();
+                log.info("프로필 이미지 바이트 변환 완료: {} bytes", imageBytes.length);
+                uploadedImageUrl = s3Uploader.upload(imageBytes, PROFILE_IMAGE_DIR);
+                log.info("프로필 이미지 S3 업로드 완료: url={}", uploadedImageUrl);
             } catch (IOException e) {
+                log.error("프로필 이미지 파일을 읽는 중 오류 발생", e);
                 throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미지 파일을 읽을 수 없습니다.");
             }
         }
