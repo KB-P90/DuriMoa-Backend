@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.common.exception.GlobalExceptionHandler;
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.service.NotificationService;
@@ -63,7 +64,7 @@ class NotificationSettingControllerTest {
 
         JsonNode response = readResponse(result);
         Assertions.assertTrue(response.get("success").asBoolean());
-        Assertions.assertEquals("GOAL", response.at("/data/0/type").asText());
+        Assertions.assertEquals("GOAL_CHANGED", response.at("/data/0/type").asText());
         Assertions.assertFalse(response.at("/data/0/pushEnabled").asBoolean());
         Mockito.verify(notificationService).getSettings(1L);
     }
@@ -72,7 +73,7 @@ class NotificationSettingControllerTest {
     void updateSettingDelegatesToService() throws Exception {
         setAuthentication(1L);
         NotificationSettingUpdateRequestDTO request = NotificationSettingUpdateRequestDTO.builder()
-                .type("GOAL")
+                .type(NotificationType.GOAL_CHANGED)
                 .pushEnabled(false)
                 .build();
 
@@ -114,7 +115,7 @@ class NotificationSettingControllerTest {
         return NotificationSettingResponseDTO.builder()
                 .id(1L)
                 .userId(1L)
-                .type("GOAL")
+                .type(NotificationType.GOAL_CHANGED)
                 .pushEnabled(false)
                 .createdAt(LocalDateTime.of(2026, 7, 31, 10, 30))
                 .build();

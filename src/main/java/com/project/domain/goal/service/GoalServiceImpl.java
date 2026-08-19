@@ -21,6 +21,7 @@ import com.project.domain.goal.dto.GoalStatusUpdateResponseDTO;
 import com.project.domain.goal.dto.GoalUpdateRequestDTO;
 import com.project.domain.goal.dto.GoalUpdateResponseDTO;
 import com.project.domain.goal.mapper.GoalMapper;
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.service.NotificationService;
 import java.time.Clock;
@@ -47,11 +48,6 @@ public class GoalServiceImpl implements GoalService {
 
     private static final Long RATIO_TOTAL = 100L;
     private static final String TARGET_TYPE_GOAL = "GOAL";
-    private static final String GOAL_CREATED = "GOAL_CREATED";
-    private static final String GOAL_CHANGED = "GOAL_CHANGED";
-    private static final String GOAL_APPROVAL_REQUESTED = "GOAL_APPROVAL_REQUESTED";
-    private static final String GOAL_APPROVED = "GOAL_APPROVED";
-    private static final String GOAL_REJECTED = "GOAL_REJECTED";
     private static final String LOG_MARKER = "----------";
 
     private final GoalMapper goalMapper;
@@ -117,7 +113,7 @@ public class GoalServiceImpl implements GoalService {
 
         createGoalNotification(
                 findPartnerId(authenticatedUserId, couple),
-                GOAL_CREATED,
+                NotificationType.GOAL_CREATED,
                 "새 시안이 생성되었습니다.",
                 goal.getName() + " 시안이 생성되었습니다.",
                 goal.getId()
@@ -213,7 +209,7 @@ public class GoalServiceImpl implements GoalService {
 
         createGoalNotification(
                 findPartnerId(authenticatedUserId, couple),
-                GOAL_CHANGED,
+                NotificationType.GOAL_CHANGED,
                 "시안이 수정되었습니다.",
                 updatedGoal.getName() + " 시안이 수정되었습니다.",
                 goalId
@@ -294,7 +290,7 @@ public class GoalServiceImpl implements GoalService {
         );
         createGoalNotification(
                 findPartnerId(authenticatedUserId, couple),
-                GOAL_APPROVAL_REQUESTED,
+                NotificationType.GOAL_APPROVAL_REQUESTED,
                 "메인 시안 승인 요청이 도착했습니다.",
                 goal.getName() + " 시안의 메인 설정 승인을 요청했습니다.",
                 goalId
@@ -374,7 +370,7 @@ public class GoalServiceImpl implements GoalService {
             );
             createGoalNotification(
                     goal.getRequestedBy(),
-                    GOAL_REJECTED,
+                    NotificationType.GOAL_REJECTED,
                     "메인 시안 요청이 거절되었습니다.",
                     goal.getName() + " 시안의 메인 설정 요청이 거절되었습니다.",
                     goalId
@@ -389,7 +385,7 @@ public class GoalServiceImpl implements GoalService {
         );
         createGoalNotification(
                 goal.getRequestedBy(),
-                GOAL_APPROVED,
+                NotificationType.GOAL_APPROVED,
                 "메인 시안 요청이 승인되었습니다.",
                 goal.getName() + " 시안이 메인 시안으로 승인되었습니다.",
                 goalId
@@ -632,7 +628,7 @@ public class GoalServiceImpl implements GoalService {
 
     private void createGoalNotification(
             Long receiverId,
-            String type,
+            NotificationType type,
             String title,
             String content,
             Long goalId

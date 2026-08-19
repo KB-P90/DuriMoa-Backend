@@ -1,5 +1,6 @@
 package com.project.domain.notification.mapper;
 
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
@@ -52,12 +53,12 @@ public interface NotificationMapper {
 
     Boolean selectNotificationSettingEnabled(
             @Param("userId") Long userId,
-            @Param("type") String type
+            @Param("type") NotificationType type
     );
 
     Integer upsertNotificationSetting(
             @Param("userId") Long userId,
-            @Param("type") String type,
+            @Param("type") NotificationType type,
             @Param("pushEnabled") Boolean pushEnabled
     );
 

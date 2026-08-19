@@ -3,6 +3,7 @@ package com.project.domain.notification.service;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.util.FcmSender;
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
@@ -33,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    private static final Integer TYPE_MAX_LENGTH = 50;
     private static final Integer TITLE_MAX_LENGTH = 100;
     private static final Integer TARGET_TYPE_MAX_LENGTH = 20;
     private static final Integer DEFAULT_PAGE = 0;
@@ -195,7 +195,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         Integer updatedCount = notificationMapper.upsertNotificationSetting(
                 authenticatedUserId,
-                request.getType().trim(),
+                request.getType(),
                 request.getPushEnabled()
         );
         if (updatedCount == null || updatedCount < 1) {
@@ -207,7 +207,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public Long createNotification(NotificationCreateRequestDTO request) {
         validateCreateRequest(request);
-        String type = request.getType().trim();
+        NotificationType type = request.getType();
         Boolean pushEnabled = notificationMapper.selectNotificationSettingEnabled(
                 request.getUserId(),
                 type
@@ -230,7 +230,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         Map<String, String> data = Map.of(
-                "type", type,
+                "type", type.name(),
                 "message", notification.getContent(),
                 "occurredAt", LocalDateTime.now().toString()
         );
@@ -323,8 +323,10 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private void validateType(String type) {
-        validateText(type, TYPE_MAX_LENGTH, "알림 종류");
+    private void validateType(NotificationType type) {
+        if (type == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "알림 종류는 필수입니다.");
+        }
     }
 
     private void validateText(String value, Integer maxLength, String fieldName) {

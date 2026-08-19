@@ -16,7 +16,7 @@ public class NotificationVO {
 
     private Long id;
     private Long userId;
-    private String type;
+    private NotificationType type;
     private String title;
     private String content;
     private Boolean isRead;

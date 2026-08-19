@@ -1,6 +1,7 @@
 package com.project.domain.notification.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.project.domain.notification.domain.NotificationType;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import java.time.LocalDateTime;
@@ -22,8 +23,8 @@ public class NotificationSettingResponseDTO {
     @ApiModelProperty(value = "사용자 ID", example = "1")
     private Long userId;
 
-    @ApiModelProperty(value = "알림 종류", example = "GOAL")
-    private String type;
+    @ApiModelProperty(value = "알림 종류", example = "GOAL_CHANGED")
+    private NotificationType type;
 
     @ApiModelProperty(value = "푸시 알림 활성화 여부", example = "true")
     private Boolean pushEnabled;

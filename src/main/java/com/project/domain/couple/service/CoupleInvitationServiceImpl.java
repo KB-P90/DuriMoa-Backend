@@ -5,6 +5,7 @@ import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleInvitationDTO;
 import com.project.domain.couple.mapper.CoupleInvitationMapper;
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.service.NotificationService;
 import java.security.SecureRandom;
@@ -24,9 +25,6 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
 
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final String TARGET_TYPE_COUPLE = "COUPLE";
-    private static final String COUPLE_REQUESTED = "COUPLE_REQUESTED";
-    private static final String COUPLE_ACCEPTED = "COUPLE_ACCEPTED";
-    private static final String COUPLE_DISCONNECTED = "COUPLE_DISCONNECTED";
     private static final String COUPLE_REQUEST_TITLE = "커플 연결 요청";
     private static final String COUPLE_ACCEPTED_TITLE = "커플 연결 수락";
     private static final String COUPLE_DISCONNECTED_TITLE = "커플 연결이 해제되었습니다.";
@@ -225,7 +223,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
     ) {
         createNotification(
                 receiver.getUserId(),
-                COUPLE_REQUESTED,
+                NotificationType.COUPLE_REQUESTED,
                 COUPLE_REQUEST_TITLE,
                 requester.getName() + "님이 커플 연결을 요청했습니다.",
                 requester.getUserId()
@@ -238,7 +236,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
     ) {
         createNotification(
                 receiver.getUserId(),
-                COUPLE_DISCONNECTED,
+                NotificationType.COUPLE_DISCONNECTED,
                 COUPLE_DISCONNECTED_TITLE,
                 partner.getName() + "님과의 커플 연결이 해제되었습니다.",
                 partner.getUserId()
@@ -251,7 +249,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
     ) {
         createNotification(
                 requester.getUserId(),
-                COUPLE_ACCEPTED,
+                NotificationType.COUPLE_ACCEPTED,
                 COUPLE_ACCEPTED_TITLE,
                 acceptor.getName() + "님이 커플 연결 요청을 수락했습니다.",
                 acceptor.getUserId()
@@ -260,7 +258,7 @@ public class CoupleInvitationServiceImpl implements CoupleInvitationService {
 
     private void createNotification(
             Long userId,
-            String type,
+            NotificationType type,
             String title,
             String content,
             Long targetId
