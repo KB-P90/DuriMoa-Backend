@@ -212,7 +212,7 @@ class AuthControllerTest {
                                 + "\"role\":\"G\","
                                 + "\"serviceTermsAgreed\":true,"
                                 + "\"privacyTermsAgreed\":true,"
-                                + "\"marketingTermsAgreed\":false"
+                                + "\"financeTermsAgreed\":true"
                                 + "}"))
                 .andExpect(status().isCreated())
                 .andReturn();

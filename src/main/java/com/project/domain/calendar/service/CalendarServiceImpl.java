@@ -179,11 +179,11 @@ public class CalendarServiceImpl implements CalendarService {
         ServiceRecord record = recordDTO.toVO(userId);
         record.setId(recordId);
 
-        // CODEF 연동 거래는 금액 수정 불가능: 기존 금액 그대로 적용
-        // type도 수정 안 되게 기존 타입 그대로 적용
+        // CODEF 연동 거래는 카테고리와 메모만 수정 가능
         if (!isUserCreated) {
             record.setAmount(existingRecord.getAmount());
             record.setType(existingRecord.getType());
+            record.setRecordDate(existingRecord.getRecordDate());
         }
 
         mapper.update(record);

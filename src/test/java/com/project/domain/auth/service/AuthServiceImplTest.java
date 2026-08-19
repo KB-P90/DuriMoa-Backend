@@ -85,7 +85,7 @@ class AuthServiceImplTest {
                 "01012345678", "encodedPassword", "홍길동", "G");
         verify(authMapper).insertTermsAgreement(1L, "SERVICE", true);
         verify(authMapper).insertTermsAgreement(1L, "PRIVACY", true);
-        verify(authMapper).insertTermsAgreement(1L, "MARKETING", false);
+        verify(authMapper).insertTermsAgreement(1L, "FINANCE", true);
         assertEquals(1L, response.getUserId());
         assertEquals("01012345678", response.getPhone());
         assertEquals("LOCAL", response.getProvider());
@@ -120,7 +120,7 @@ class AuthServiceImplTest {
                 "password123",
                 "홍길동",
                 "G",
-                false,
+                true,
                 true,
                 false);
 
@@ -248,7 +248,7 @@ class AuthServiceImplTest {
 
     @Test
     void kakaoSignupStoresUserTermsAndIssuesServiceTokens() throws Exception {
-        KakaoSignupRequestDTO request = createKakaoSignupRequest(true, true, false);
+        KakaoSignupRequestDTO request = createKakaoSignupRequest(true, true, true);
         LoginUserDTO loginUser = new LoginUserDTO(
                 8L, null, null, "카카오 사용자", "G",
                 "https://example.com/profile.png", "KAKAO");
@@ -272,14 +272,14 @@ class AuthServiceImplTest {
                 "https://example.com/profile.png");
         verify(authMapper).insertTermsAgreement(8L, "SERVICE", true);
         verify(authMapper).insertTermsAgreement(8L, "PRIVACY", true);
-        verify(authMapper).insertTermsAgreement(8L, "MARKETING", false);
+        verify(authMapper).insertTermsAgreement(8L, "FINANCE", true);
         verify(coupleInvitationService).createInviteCode(8L);
         assertEquals("Bearer accessToken", result.getResponse().getAccessToken());
     }
 
     @Test
     void kakaoSignupRejectsMissingRequiredTerms() throws Exception {
-        KakaoSignupRequestDTO request = createKakaoSignupRequest(false, true, false);
+        KakaoSignupRequestDTO request = createKakaoSignupRequest(true, true, false);
 
         assertThrows(CustomException.class, () -> authService.signupWithKakao(request));
 
@@ -371,7 +371,7 @@ class AuthServiceImplTest {
             String passwordConfirm,
             String name,
             String role) throws Exception {
-        return createRequest(phone, password, passwordConfirm, name, role, true, true, false);
+        return createRequest(phone, password, passwordConfirm, name, role, true, true, true);
     }
 
     private SignupRequestDTO createRequest(
@@ -382,7 +382,7 @@ class AuthServiceImplTest {
             String role,
             Boolean serviceTermsAgreed,
             Boolean privacyTermsAgreed,
-            Boolean marketingTermsAgreed) throws Exception {
+            Boolean financeTermsAgreed) throws Exception {
         SignupRequestDTO request = new SignupRequestDTO();
         setField(request, "phone", phone);
         setField(request, "password", password);
@@ -391,7 +391,7 @@ class AuthServiceImplTest {
         setField(request, "role", role);
         setField(request, "serviceTermsAgreed", serviceTermsAgreed);
         setField(request, "privacyTermsAgreed", privacyTermsAgreed);
-        setField(request, "marketingTermsAgreed", marketingTermsAgreed);
+        setField(request, "financeTermsAgreed", financeTermsAgreed);
         return request;
     }
 
@@ -405,13 +405,13 @@ class AuthServiceImplTest {
     private KakaoSignupRequestDTO createKakaoSignupRequest(
             Boolean serviceTermsAgreed,
             Boolean privacyTermsAgreed,
-            Boolean marketingTermsAgreed) throws Exception {
+            Boolean financeTermsAgreed) throws Exception {
         KakaoSignupRequestDTO request = new KakaoSignupRequestDTO();
         setField(request, "signupToken", "signupToken");
         setField(request, "role", "G");
         setField(request, "serviceTermsAgreed", serviceTermsAgreed);
         setField(request, "privacyTermsAgreed", privacyTermsAgreed);
-        setField(request, "marketingTermsAgreed", marketingTermsAgreed);
+        setField(request, "financeTermsAgreed", financeTermsAgreed);
         return request;
     }
 
