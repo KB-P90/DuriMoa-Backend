@@ -54,60 +54,65 @@ class ProgressServiceImplTest {
     @Test
     void getsOverallAndPersonalProgressWithoutMonthlyQuery() {
         stubConnectedCoupleAndGoal();
-        when(progressMapper.findTotalWeddingExpense(anyList(), anyList())).thenReturn(22_700_000L);
         when(progressMapper.findIncludedGoalItems(GOAL_ID)).thenReturn(List.of(
                 new GoalItemSourceDTO(1L, "WEDDINGHALL", 10_800_000L, true)
         ));
         when(progressMapper.findCategoryWeddingExpenses(anyList(), anyList())).thenReturn(List.of(
                 new CategoryExpenseDTO("WEDDINGHALL", 10_500_000L)
         ));
-        when(progressMapper.findMembers(USER_ID, PARTNER_ID)).thenReturn(List.of(
+        // assetAmount(실제 잔액)와 savingAmount(모은 돈)를 의도적으로 다른 값으로 둬서 두 값이 분리되어 쓰이는지 검증한다.
+        when(progressMapper.findMembers(eq(USER_ID), eq(PARTNER_ID), anyList())).thenReturn(List.of(
                 new MemberSourceDTO(USER_ID, "User", "G", "https://example.com/groom.jpg",
-                        14_670_000L, false),
-                new MemberSourceDTO(PARTNER_ID, "Partner", "B", null, 16_520_000L, false)
+                        false, 20_000_000L, 5_000_000L, 14_670_000L),
+                new MemberSourceDTO(PARTNER_ID, "Partner", "B", null,
+                        false, 16_520_000L, 0L, 16_520_000L)
         ));
 
         ProgressResponseDTO result = progressService.getProgress(USER_ID);
 
-        assertEquals(227, result.getOverall().getProgressRate());
+        assertEquals(312, result.getOverall().getProgressRate());
         assertEquals(1, result.getOverall().getCompletedItemCount());
         assertEquals(USER_ID, result.getPersonal().getMembers().get(0).getUserId());
         assertEquals("G", result.getPersonal().getMembers().get(0).getRole());
         assertEquals("https://example.com/groom.jpg",
                 result.getPersonal().getMembers().get(0).getProfileImage());
         assertFalse(result.getPersonal().getMembers().get(0).getAssetShared());
-        assertEquals(14_670_000L, result.getPersonal().getMembers().get(0).getAssetAmount());
+        assertEquals(20_000_000L, result.getPersonal().getMembers().get(0).getAssetAmount());
         assertEquals(14_670_000L, result.getPersonal().getMembers().get(0).getCurrentAmount());
         assertEquals("B", result.getPersonal().getMembers().get(1).getRole());
         assertNull(result.getPersonal().getMembers().get(1).getProfileImage());
         assertFalse(result.getPersonal().getMembers().get(1).getAssetShared());
         assertNull(result.getPersonal().getMembers().get(1).getAssetAmount());
         assertNull(result.getPersonal().getMembers().get(1).getCurrentAmount());
-        verify(progressMapper, never()).findMonthlyWeddingExpenses(
+        verify(progressMapper, never()).findMonthlyWeddingSaving(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     @Test
-    void getsMonthlyProgressFromEarliestExpenseMonth() {
+    void getsMonthlyProgressFromEarliestSavingMonthIncludingWeddingFundBaseline() {
         YearMonth goalMonth = YearMonth.now();
-        YearMonth firstExpenseMonth = goalMonth.minusMonths(2);
+        YearMonth firstSavingMonth = goalMonth.minusMonths(2);
         stubConnectedCoupleAndGoal(goalMonth);
-        when(progressMapper.findTotalWeddingExpense(anyList(), anyList())).thenReturn(2_000_000L);
-        when(progressMapper.findFirstWeddingExpenseDate(anyList(), anyList()))
-                .thenReturn(firstExpenseMonth.atDay(15));
-        when(progressMapper.findMonthlyWeddingExpenses(
+        // weddingFund 합계 500,000 + 저축 거래 합계 2,000,000 = 모은 돈 2,500,000
+        when(progressMapper.findMembers(eq(USER_ID), eq(PARTNER_ID), anyList())).thenReturn(List.of(
+                new MemberSourceDTO(USER_ID, "User", "G", null, false, 0L, 300_000L, 1_300_000L),
+                new MemberSourceDTO(PARTNER_ID, "Partner", "B", null, false, 0L, 200_000L, 1_200_000L)
+        ));
+        when(progressMapper.findFirstWeddingSavingDate(anyList(), anyList()))
+                .thenReturn(firstSavingMonth.atDay(15));
+        when(progressMapper.findMonthlyWeddingSaving(
                 anyList(), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(List.of(new MonthlyExpenseDTO(firstExpenseMonth.toString(), 2_000_000L)));
+                .thenReturn(List.of(new MonthlyExpenseDTO(firstSavingMonth.toString(), 2_000_000L)));
 
         MonthlyProgressResponseDTO result = progressService.getMonthlyProgress(USER_ID);
 
-        assertEquals(20, result.getOverallProgressRate());
+        assertEquals(25, result.getOverallProgressRate());
         assertEquals(3, result.getMonths().size());
         assertEquals(YearMonth.now().toString(), result.getMonths().get(0).getYearMonth());
-        assertEquals(2_000_000L, result.getMonths().get(0).getCumulativeExpenseAmount());
+        assertEquals(2_500_000L, result.getMonths().get(0).getCumulativeExpenseAmount());
         assertEquals(2_000_000L, result.getMonths().get(2).getExpenseAmount());
-        verify(progressMapper).findMonthlyWeddingExpenses(
-                anyList(), anyList(), eq(firstExpenseMonth.atDay(1).atStartOfDay()), any(LocalDateTime.class));
+        verify(progressMapper).findMonthlyWeddingSaving(
+                anyList(), anyList(), eq(firstSavingMonth.atDay(1).atStartOfDay()), any(LocalDateTime.class));
     }
 
     @Test

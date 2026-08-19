@@ -1,6 +1,7 @@
 package com.project.domain.progress.service;
 
 import com.project.common.enums.ExpenseCategory;
+import com.project.common.enums.SavingCategory;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.domain.couple.dto.CoupleDTO;
@@ -58,19 +59,20 @@ public class ProgressServiceImpl implements ProgressService {
         }
 
         List<Long> memberIds = List.of(couple.getGroomId(), couple.getBrideId());
-        List<String> weddingCategoryCodes = ExpenseCategory.getWeddingCodes();
-        Long totalExpenseAmount = defaultAmount(
-                progressMapper.findTotalWeddingExpense(memberIds, weddingCategoryCodes)
-        );
+        List<String> weddingExpenseCategoryCodes = ExpenseCategory.getWeddingCodes();
+        List<MemberSourceDTO> members = nullToEmpty(progressMapper.findMembers(
+                couple.getGroomId(), couple.getBrideId(), SavingCategory.getWeddingCodes()
+        ));
+        Long totalSavedAmount = sumAmounts(members, MemberSourceDTO::getSavingAmount);
         Integer overallProgressRate = calculateIntegerRate(
-                totalExpenseAmount,
+                totalSavedAmount,
                 activeGoal.getTargetAmount()
         );
 
         return ProgressResponseDTO.builder()
-                .overall(buildOverall(activeGoal, memberIds, weddingCategoryCodes,
-                        totalExpenseAmount, overallProgressRate))
-                .personal(buildPersonal(userId, couple, activeGoal))
+                .overall(buildOverall(activeGoal, memberIds, weddingExpenseCategoryCodes,
+                        totalSavedAmount, overallProgressRate))
+                .personal(buildPersonal(userId, couple, activeGoal, members))
                 .build();
     }
 
@@ -80,16 +82,19 @@ public class ProgressServiceImpl implements ProgressService {
         CoupleDTO couple = coupleService.getConnectedCoupleByUserId(userId);
         ActiveGoalDTO activeGoal = getActiveGoal(couple.getId());
         List<Long> memberIds = List.of(couple.getGroomId(), couple.getBrideId());
-        List<String> weddingCategoryCodes = ExpenseCategory.getWeddingCodes();
-        Long totalExpenseAmount = defaultAmount(
-                progressMapper.findTotalWeddingExpense(memberIds, weddingCategoryCodes)
-        );
+        List<String> weddingSavingCategoryCodes = SavingCategory.getWeddingCodes();
+        List<MemberSourceDTO> members = nullToEmpty(progressMapper.findMembers(
+                couple.getGroomId(), couple.getBrideId(), weddingSavingCategoryCodes
+        ));
+        Long weddingFundBaseline = sumAmounts(members, MemberSourceDTO::getWeddingFund);
+        Long totalSavedAmount = sumAmounts(members, MemberSourceDTO::getSavingAmount);
 
         return buildMonthlyProgress(
                 activeGoal,
                 memberIds,
-                weddingCategoryCodes,
-                calculateIntegerRate(totalExpenseAmount, activeGoal.getTargetAmount())
+                weddingSavingCategoryCodes,
+                weddingFundBaseline,
+                calculateIntegerRate(totalSavedAmount, activeGoal.getTargetAmount())
         );
     }
 
@@ -130,15 +135,16 @@ public class ProgressServiceImpl implements ProgressService {
     private OverallProgressDTO buildOverall(
             ActiveGoalDTO activeGoal,
             List<Long> memberIds,
-            List<String> weddingCategoryCodes,
-            Long totalExpenseAmount,
+            List<String> weddingExpenseCategoryCodes,
+            Long totalSavedAmount,
             Integer overallProgressRate
     ) {
         List<GoalItemSourceDTO> goalItems = nullToEmpty(
                 progressMapper.findIncludedGoalItems(activeGoal.getGoalId())
         );
+        // 카테고리별 항목 진행률은 기존과 동일하게 지출(EXPENSE) 기준을 유지한다.
         Map<String, Long> expenseByCategory = nullToEmpty(
-                progressMapper.findCategoryWeddingExpenses(memberIds, weddingCategoryCodes)
+                progressMapper.findCategoryWeddingExpenses(memberIds, weddingExpenseCategoryCodes)
         ).stream()
                 .filter(expense -> expense.getCategoryCode() != null)
                 .collect(Collectors.toMap(
@@ -157,7 +163,7 @@ public class ProgressServiceImpl implements ProgressService {
 
         return OverallProgressDTO.builder()
                 .targetAmount(activeGoal.getTargetAmount())
-                .currentAmount(totalExpenseAmount)
+                .currentAmount(totalSavedAmount)
                 .progressRate(overallProgressRate)
                 .completedItemCount(completedItemCount)
                 .totalItemCount(items.size())
@@ -189,11 +195,9 @@ public class ProgressServiceImpl implements ProgressService {
     private PersonalProgressDTO buildPersonal(
             Long userId,
             CoupleDTO couple,
-            ActiveGoalDTO activeGoal
+            ActiveGoalDTO activeGoal,
+            List<MemberSourceDTO> members
     ) {
-        List<MemberSourceDTO> members = nullToEmpty(
-                progressMapper.findMembers(couple.getGroomId(), couple.getBrideId())
-        );
         Map<Long, MemberSourceDTO> memberById = members.stream()
                 .filter(member -> member.getUserId() != null)
                 .collect(Collectors.toMap(
@@ -230,8 +234,10 @@ public class ProgressServiceImpl implements ProgressService {
         boolean isOwner = member.getUserId().equals(authenticatedUserId);
         boolean canViewAssetAmount = assetShared || isOwner;
         Long targetAmount = calculateMemberTargetAmount(member.getUserId(), couple, activeGoal);
-        Long currentAmount = defaultAmount(member.getAsset());
-        Double progressRate = calculateDecimalRate(currentAmount, targetAmount);
+        // assetAmount는 계좌 실제 잔액 종합, currentAmount는 달성률 계산에 쓰이는 "모은 돈"으로 서로 다른 값이다.
+        Long assetAmount = defaultAmount(member.getAssetAmount());
+        Long savingAmount = defaultAmount(member.getSavingAmount());
+        Double progressRate = calculateDecimalRate(savingAmount, targetAmount);
 
         // 비공개 자산은 상대방에게만 금액을 숨기고, 본인에게는 정상 제공한다.
         return MemberProgressDTO.builder()
@@ -240,9 +246,9 @@ public class ProgressServiceImpl implements ProgressService {
                 .role(member.getRole())
                 .profileImage(member.getProfileImage())
                 .assetShared(assetShared)
-                .assetAmount(canViewAssetAmount ? currentAmount : null)
+                .assetAmount(canViewAssetAmount ? assetAmount : null)
                 .targetAmount(targetAmount)
-                .currentAmount(canViewAssetAmount ? currentAmount : null)
+                .currentAmount(canViewAssetAmount ? savingAmount : null)
                 .progressRate(progressRate)
                 .build();
     }
@@ -250,48 +256,51 @@ public class ProgressServiceImpl implements ProgressService {
     private MonthlyProgressResponseDTO buildMonthlyProgress(
             ActiveGoalDTO activeGoal,
             List<Long> memberIds,
-            List<String> weddingCategoryCodes,
+            List<String> weddingSavingCategoryCodes,
+            Long weddingFundBaseline,
             Integer overallProgressRate
     ) {
-        LocalDate firstExpenseDate = progressMapper.findFirstWeddingExpenseDate(
+        LocalDate firstSavingDate = progressMapper.findFirstWeddingSavingDate(
                 memberIds,
-                weddingCategoryCodes
+                weddingSavingCategoryCodes
         );
-        YearMonth startMonth = resolveStartMonth(firstExpenseDate, activeGoal.getCreatedAt());
+        YearMonth startMonth = resolveStartMonth(firstSavingDate, activeGoal.getCreatedAt());
         YearMonth currentMonth = YearMonth.now();
         LocalDateTime startAt = startMonth.atDay(1).atStartOfDay();
         LocalDateTime endAt = currentMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        Map<YearMonth, Long> expenseByMonth = nullToEmpty(
-                progressMapper.findMonthlyWeddingExpenses(
+        // MonthlyExpenseDTO의 expenseAmount 컬럼을 월별로 모은 저축 금액 용도로 재사용한다.
+        Map<YearMonth, Long> savingByMonth = nullToEmpty(
+                progressMapper.findMonthlyWeddingSaving(
                         memberIds,
-                        weddingCategoryCodes,
+                        weddingSavingCategoryCodes,
                         startAt,
                         endAt
                 )
         ).stream()
-                .filter(monthlyExpense -> monthlyExpense.getYearMonth() != null)
+                .filter(monthlySaving -> monthlySaving.getYearMonth() != null)
                 .collect(Collectors.toMap(
-                        monthlyExpense -> YearMonth.parse(monthlyExpense.getYearMonth()),
-                        monthlyExpense -> defaultAmount(monthlyExpense.getExpenseAmount()),
+                        monthlySaving -> YearMonth.parse(monthlySaving.getYearMonth()),
+                        monthlySaving -> defaultAmount(monthlySaving.getExpenseAmount()),
                         Long::sum
                 ));
 
         List<MonthlyProgressItemDTO> months = new ArrayList<>();
-        Long cumulativeExpenseAmount = 0L;
-        // DB는 지출이 있는 월만 반환하므로 목표 생성월부터 현재월까지 직접 채운다.
-        // 월별 달성률은 누적 기준이므로 지출이 없는 월도 이전 누적률을 유지한다.
+        // 온보딩에서 입력한 기존 모은 돈(wedding_fund)을 누적액의 시작 기준값으로 더해준다.
+        Long cumulativeSavedAmount = defaultAmount(weddingFundBaseline);
+        // DB는 저축이 있는 월만 반환하므로 목표 생성월부터 현재월까지 직접 채운다.
+        // 월별 달성률은 누적 기준이므로 저축이 없는 월도 이전 누적률을 유지한다.
         for (YearMonth month = startMonth;
              !month.isAfter(currentMonth);
              month = month.plusMonths(1)) {
-            Long expenseAmount = expenseByMonth.getOrDefault(month, 0L);
-            cumulativeExpenseAmount += expenseAmount;
+            Long savedAmount = savingByMonth.getOrDefault(month, 0L);
+            cumulativeSavedAmount += savedAmount;
             months.add(MonthlyProgressItemDTO.builder()
                     .yearMonth(month.toString())
-                    .expenseAmount(expenseAmount)
-                    .cumulativeExpenseAmount(cumulativeExpenseAmount)
+                    .expenseAmount(savedAmount)
+                    .cumulativeExpenseAmount(cumulativeSavedAmount)
                     .progressRate(calculateIntegerRate(
-                            cumulativeExpenseAmount,
+                            cumulativeSavedAmount,
                             activeGoal.getTargetAmount()
                     ))
                     .build());
@@ -355,20 +364,20 @@ public class ProgressServiceImpl implements ProgressService {
     }
 
     private YearMonth resolveStartMonth(
-            LocalDate firstExpenseDate,
+            LocalDate firstSavingDate,
             LocalDateTime goalCreatedAt
     ) {
-        if (firstExpenseDate == null && goalCreatedAt == null) {
+        if (firstSavingDate == null && goalCreatedAt == null) {
             return YearMonth.now();
         }
-        if (firstExpenseDate == null) {
+        if (firstSavingDate == null) {
             return YearMonth.from(goalCreatedAt);
         }
         if (goalCreatedAt == null) {
-            return YearMonth.from(firstExpenseDate);
+            return YearMonth.from(firstSavingDate);
         }
-        return YearMonth.from(firstExpenseDate).isBefore(YearMonth.from(goalCreatedAt))
-                ? YearMonth.from(firstExpenseDate)
+        return YearMonth.from(firstSavingDate).isBefore(YearMonth.from(goalCreatedAt))
+                ? YearMonth.from(firstSavingDate)
                 : YearMonth.from(goalCreatedAt);
     }
 
@@ -377,6 +386,13 @@ public class ProgressServiceImpl implements ProgressService {
             return couple.getBrideId();
         }
         return couple.getGroomId();
+    }
+
+    private Long sumAmounts(List<MemberSourceDTO> members, Function<MemberSourceDTO, Long> amountGetter) {
+        return members.stream()
+                .map(amountGetter)
+                .map(this::defaultAmount)
+                .reduce(0L, Long::sum);
     }
 
     private Long defaultAmount(Long amount) {
