@@ -19,6 +19,7 @@ ext {
     junitVersion = '5.10.2'
     jacksonVersion = '2.15.2'
     log4jVersion = '2.20.0'
+    awsSdkVersion = '1.12.797'
 }
 
 sourceCompatibility = JavaVersion.VERSION_17
@@ -30,6 +31,13 @@ tasks.withType(JavaCompile) {
 
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+    // spring-cloud-starter-aws가 끌어오는 aws-java-sdk-core 1.11.792는 Jackson의
+    // PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE 필드를 참조하는데, 이 필드는
+    // Jackson 2.12부터 제거되어 다른 의존성들이 강제 승격시키는 최신 jackson-databind와
+    // 조합되면 EC2MetadataUtils 클래스 로딩 시 NoSuchFieldError가 발생한다. SDK를
+    // 해당 필드를 참조하지 않는 버전으로 명시적으로 올려서 고정한다.
+    implementation "com.amazonaws:aws-java-sdk-core:${awsSdkVersion}"
+    implementation "com.amazonaws:aws-java-sdk-s3:${awsSdkVersion}"
 
     // OpenAI
     implementation 'com.openai:openai-java:4.0.0'
