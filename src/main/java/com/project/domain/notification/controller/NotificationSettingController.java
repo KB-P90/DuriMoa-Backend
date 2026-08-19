@@ -3,8 +3,8 @@ package com.project.domain.notification.controller;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
+import com.project.domain.notification.dto.NotificationSettingBatchUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
-import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.service.NotificationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -41,15 +41,15 @@ public class NotificationSettingController {
         return ResponseEntity.ok(ApiResponse.success("알림 설정 조회에 성공했습니다.", response));
     }
 
-    @ApiOperation(value = "알림 설정 수정", notes = "인증 사용자의 특정 알림 종류 수신 여부를 저장합니다.")
+    @ApiOperation(value = "알림 설정 일괄 수정", notes = "인증 사용자의 알림 종류별 수신 여부를 한 번에 저장합니다.")
     @PatchMapping
-    public ResponseEntity<ApiResponse<Void>> updateSetting(
+    public ResponseEntity<ApiResponse<Void>> updateSettings(
             @ApiIgnore @AuthenticationPrincipal Long userId,
             @ApiIgnore Authentication authentication,
-            @Valid @RequestBody NotificationSettingUpdateRequestDTO request
+            @Valid @RequestBody NotificationSettingBatchUpdateRequestDTO request
     ) {
         Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
-        notificationService.updateSetting(authenticatedUserId, request);
+        notificationService.updateSettings(authenticatedUserId, request);
         return ResponseEntity.ok(ApiResponse.success("알림 설정을 저장했습니다."));
     }
 

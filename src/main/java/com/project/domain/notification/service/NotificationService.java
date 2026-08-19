@@ -8,8 +8,8 @@ import com.project.domain.notification.dto.NotificationListResponseDTO;
 import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
+import com.project.domain.notification.dto.NotificationSettingBatchUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
-import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
 import java.util.List;
 
@@ -64,11 +64,11 @@ public interface NotificationService {
     List<NotificationSettingResponseDTO> getSettings(Long authenticatedUserId);
 
     /**
-     * 인증 사용자의 특정 알림 종류 수신 설정을 저장하거나 수정합니다.
+     * 인증 사용자의 알림 종류별 수신 설정을 한 번에 저장하거나 수정합니다.
      */
-    void updateSetting(
+    void updateSettings(
             Long authenticatedUserId,
-            NotificationSettingUpdateRequestDTO request
+            NotificationSettingBatchUpdateRequestDTO request
     );
 
     /**

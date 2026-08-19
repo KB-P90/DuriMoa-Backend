@@ -3,6 +3,7 @@ package com.project.domain.notification.service;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.util.FcmSender;
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.domain.NotificationVO;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
@@ -12,6 +13,7 @@ import com.project.domain.notification.dto.NotificationListResponseDTO;
 import com.project.domain.notification.dto.NotificationReadAllResponseDTO;
 import com.project.domain.notification.dto.NotificationReadResponseDTO;
 import com.project.domain.notification.dto.NotificationResponseDTO;
+import com.project.domain.notification.dto.NotificationSettingBatchUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationSettingResponseDTO;
 import com.project.domain.notification.dto.NotificationSettingUpdateRequestDTO;
 import com.project.domain.notification.dto.NotificationUnreadCountResponseDTO;
@@ -33,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    private static final Integer TYPE_MAX_LENGTH = 50;
     private static final Integer TITLE_MAX_LENGTH = 100;
     private static final Integer TARGET_TYPE_MAX_LENGTH = 20;
     private static final Integer DEFAULT_PAGE = 0;
@@ -186,20 +187,23 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void updateSetting(
+    public void updateSettings(
             Long authenticatedUserId,
-            NotificationSettingUpdateRequestDTO request
+            NotificationSettingBatchUpdateRequestDTO request
     ) {
         validateUserId(authenticatedUserId);
-        validateSettingRequest(request);
+        List<NotificationSettingUpdateRequestDTO> settings = validateBatchSettingRequest(request);
 
-        Integer updatedCount = notificationMapper.upsertNotificationSetting(
-                authenticatedUserId,
-                request.getType().trim(),
-                request.getPushEnabled()
-        );
-        if (updatedCount == null || updatedCount < 1) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "알림 설정 저장에 실패했습니다.");
+        for (NotificationSettingUpdateRequestDTO setting : settings) {
+            validateSettingRequest(setting);
+            Integer updatedCount = notificationMapper.upsertNotificationSetting(
+                    authenticatedUserId,
+                    setting.getType(),
+                    setting.getPushEnabled()
+            );
+            if (updatedCount == null || updatedCount < 1) {
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "알림 설정 저장에 실패했습니다.");
+            }
         }
     }
 
@@ -207,7 +211,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public Long createNotification(NotificationCreateRequestDTO request) {
         validateCreateRequest(request);
-        String type = request.getType().trim();
+        NotificationType type = request.getType();
         Boolean pushEnabled = notificationMapper.selectNotificationSettingEnabled(
                 request.getUserId(),
                 type
@@ -230,7 +234,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         Map<String, String> data = Map.of(
-                "type", type,
+                "type", type.name(),
                 "message", notification.getContent(),
                 "occurredAt", LocalDateTime.now().toString()
         );
@@ -294,6 +298,15 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    private List<NotificationSettingUpdateRequestDTO> validateBatchSettingRequest(
+            NotificationSettingBatchUpdateRequestDTO request
+    ) {
+        if (request == null || request.getSettings() == null || request.getSettings().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "수정할 알림 설정 목록은 필수입니다.");
+        }
+        return request.getSettings();
+    }
+
     private void validateSettingRequest(NotificationSettingUpdateRequestDTO request) {
         if (request == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "알림 설정 정보가 필요합니다.");
@@ -323,8 +336,10 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private void validateType(String type) {
-        validateText(type, TYPE_MAX_LENGTH, "알림 종류");
+    private void validateType(NotificationType type) {
+        if (type == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "알림 종류는 필수입니다.");
+        }
     }
 
     private void validateText(String value, Integer maxLength, String fieldName) {

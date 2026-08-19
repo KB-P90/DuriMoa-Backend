@@ -1,6 +1,7 @@
 package com.project.domain.notification.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.project.domain.notification.domain.NotificationType;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import java.time.LocalDateTime;
@@ -29,7 +30,7 @@ public class NotificationResponseDTO {
     private Long userId;
 
     @ApiModelProperty(value = "알림 종류", example = "GOAL_CHANGED")
-    private String type;
+    private NotificationType type;
 
     @ApiModelProperty(value = "알림 제목", example = "시안이 수정되었습니다.")
     private String title;
@@ -62,7 +63,7 @@ public class NotificationResponseDTO {
         return userId;
     }
 
-    public String getType() {
+    public NotificationType getType() {
         return type;
     }
 

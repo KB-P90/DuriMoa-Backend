@@ -1,5 +1,6 @@
 package com.project.domain.notification.dto;
 
+import com.project.domain.notification.domain.NotificationType;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotBlank;
@@ -21,10 +22,9 @@ public class NotificationCreateRequestDTO {
     @ApiModelProperty(value = "알림 수신 사용자 ID", required = true, example = "1")
     private Long userId;
 
-    @NotBlank(message = "알림 종류는 필수입니다.")
-    @Size(max = 50, message = "알림 종류는 50자 이하여야 합니다.")
+    @NotNull(message = "알림 종류는 필수입니다.")
     @ApiModelProperty(value = "알림 종류", required = true, example = "GOAL_CHANGED")
-    private String type;
+    private NotificationType type;
 
     @NotBlank(message = "알림 제목은 필수입니다.")
     @Size(max = 100, message = "알림 제목은 100자 이하여야 합니다.")
