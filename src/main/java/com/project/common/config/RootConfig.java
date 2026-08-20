@@ -2,10 +2,10 @@ package com.project.common.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -45,8 +45,15 @@ public class RootConfig {
     @Value("${jdbc.password}")
     String password;
 
-    @Autowired
-    ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
+    private final PrometheusMeterRegistry prometheusMeterRegistry;
+
+    public RootConfig(
+            ApplicationContext applicationContext,
+            PrometheusMeterRegistry prometheusMeterRegistry) {
+        this.applicationContext = applicationContext;
+        this.prometheusMeterRegistry = prometheusMeterRegistry;
+    }
 
     @Bean
     public DataSource dataSource() {
@@ -56,6 +63,7 @@ public class RootConfig {
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
+        config.setMetricRegistry(prometheusMeterRegistry);
 
         HikariDataSource dataSource = new HikariDataSource(config);
         return dataSource;

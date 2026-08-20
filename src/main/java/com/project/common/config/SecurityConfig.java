@@ -51,6 +51,7 @@ public class SecurityConfig {
                         "/api/auth/kakao/signup",
                         "/api/auth/refresh",
                         "/api/auth/logout",
+                        "/actuator/prometheus",
                         "/swagger-ui.html",
                         "/swagger-resources/**",
                         "/v2/api-docs",

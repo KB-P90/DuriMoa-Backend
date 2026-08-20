@@ -1,0 +1,58 @@
+name: durimoa-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-remote-write-receiver
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["load-test"]
+    depends_on:
+      - prometheus
+    environment:
+      BASE_URL: ${BASE_URL:-http://host.docker.internal:8080}
+      API_PATH: ${API_PATH:-/v2/api-docs}
+      ACCESS_TOKEN: ${ACCESS_TOKEN:-}
+      K6_VUS: ${K6_VUS:-10}
+      K6_DURATION: ${K6_DURATION:-30s}
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_STATS: p(90),p(95),p(99),max
+      K6_TEST_RUN_ID: ${K6_TEST_RUN_ID:-local}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./monitoring/k6:/scripts:ro
+    command: run -o experimental-prometheus-rw /scripts/load-test.js
+
+volumes:
+  prometheus-data:
+  grafana-data:

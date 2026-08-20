@@ -26,3 +26,7 @@ kakao.properties
 
 # Firebase service account credentials
 google-application.json
+
+# Local monitoring secrets
+.env
+monitoring/.env
