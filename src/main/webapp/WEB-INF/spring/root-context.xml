@@ -12,6 +12,13 @@
     <!-- Database Properties -->
     <context:property-placeholder location="classpath:database.properties"/>
 
+    <!-- One registry shared by JVM, HikariCP, and the MVC child context. -->
+    <bean id="monitoringRegistryFactory"
+          class="com.project.common.monitoring.MonitoringRegistryFactory"/>
+    <bean id="prometheusMeterRegistry"
+          factory-bean="monitoringRegistryFactory"
+          factory-method="createRegistry"/>
+
     <!-- HikariCP Config & DataSource -->
     <bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
         <property name="driverClassName" value="${jdbc.driverClassName}"/>
@@ -23,6 +30,7 @@
         <property name="idleTimeout" value="30000"/>
         <!-- DB 연결 실패 시에도 서버가 정상 기동되도록 설정 (-1: 기동 시 DB 연결 실패 예외 방지) -->
         <property name="initializationFailTimeout" value="-1"/>
+        <property name="metricRegistry" ref="prometheusMeterRegistry"/>
     </bean>
 
     <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">

@@ -20,6 +20,7 @@ ext {
     jacksonVersion = '2.15.2'
     log4jVersion = '2.20.0'
     awsSdkVersion = '1.12.797'
+    micrometerVersion = '1.12.6'
 }
 
 sourceCompatibility = JavaVersion.VERSION_17
@@ -68,6 +69,7 @@ dependencies {
     // Database (MySQL, HikariCP, MyBatis)
     implementation 'com.mysql:mysql-connector-j:8.3.0'
     implementation 'com.zaxxer:HikariCP:5.1.0'
+    implementation "io.micrometer:micrometer-registry-prometheus:${micrometerVersion}"
     implementation "org.mybatis:mybatis:${mybatisVersion}"
     implementation "org.mybatis:mybatis-spring:${mybatisSpringVersion}"
 
