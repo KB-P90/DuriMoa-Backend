@@ -5,9 +5,9 @@
 - k6: 배포 서비스에 부하를 발생시키고 외부 체감 성능을 Remote Write로 전송
 - Spring MVC: HTTP 요청, JVM, CPU, HikariCP 내부 상태를 `/actuator/prometheus`로 노출
 
-## 로컬 백엔드 모니터링
+## 배포 백엔드 모니터링
 
-백엔드를 `http://localhost:8080`에서 먼저 실행한 뒤 저장소 루트에서 실행합니다.
+기본 모니터링 대상은 배포 백엔드 `https://durimoa.kro.kr`입니다. 저장소 루트에서 실행합니다.
 
 ```powershell
 docker compose -f docker-compose.monitoring.yml up -d prometheus grafana
@@ -15,7 +15,7 @@ docker compose -f docker-compose.monitoring.yml up -d prometheus grafana
 
 확인 주소:
 
-- Backend metrics: <http://localhost:8080/actuator/prometheus>
+- Backend metrics: <https://durimoa.kro.kr/actuator/prometheus>
 - Prometheus targets: <http://localhost:9090/targets>
 - Prometheus: <http://localhost:9090>
 - Grafana: <http://localhost:3000> (기본 계정 `admin` / `admin`)
@@ -35,7 +35,7 @@ docker compose -f docker-compose.monitoring.yml --profile load-test run --rm k6
 실제 배포 서버 테스트 예시:
 
 ```powershell
-$env:BASE_URL='https://api.example.com'
+$env:BASE_URL='https://durimoa.kro.kr'
 $env:API_PATH='/api/goal/stat'
 $env:K6_VUS='10'
 $env:K6_DURATION='30s'
@@ -47,24 +47,25 @@ docker compose -f docker-compose.monitoring.yml --profile load-test run --rm k6
 
 ## 배포 백엔드 내부 메트릭 수집
 
-기본 Prometheus 대상은 Docker 호스트에서 실행 중인 로컬 백엔드입니다.
-
-```yaml
-- job_name: spring-monitoring
-  metrics_path: /actuator/prometheus
-  static_configs:
-    - targets: ["host.docker.internal:8080"]
-```
-
-배포 서버의 내부 메트릭을 수집하려면
-`monitoring/prometheus/prometheus.yml`의 target과 scheme을 배포 환경에 맞게 변경합니다.
+기본 Prometheus 대상은 배포 백엔드입니다.
 
 ```yaml
 - job_name: spring-monitoring-production
   scheme: https
   metrics_path: /actuator/prometheus
   static_configs:
-    - targets: ["api.example.com"]
+    - targets: ["durimoa.kro.kr"]
+```
+
+다른 배포 서버의 내부 메트릭을 수집하려면
+`monitoring/prometheus/prometheus.yml`의 target과 scheme을 해당 배포 환경에 맞게 변경합니다.
+
+```yaml
+- job_name: spring-monitoring-production
+  scheme: https
+  metrics_path: /actuator/prometheus
+  static_configs:
+    - targets: ["durimoa.kro.kr"]
 ```
 
 변경 후 설정을 다시 불러옵니다.

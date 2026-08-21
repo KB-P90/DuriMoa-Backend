@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-const baseUrl = (__ENV.BASE_URL || 'http://host.docker.internal:8080').replace(/\/$/, '');
+const baseUrl = (__ENV.BASE_URL || 'https://durimoa.kro.kr').replace(/\/$/, '');
 const apiPath = (__ENV.API_PATH || '/v2/api-docs').startsWith('/')
     ? (__ENV.API_PATH || '/v2/api-docs')
     : `/${__ENV.API_PATH}`;
