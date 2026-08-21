@@ -7,8 +7,8 @@ const apiPath = (__ENV.API_PATH || '/v2/api-docs').startsWith('/')
     : `/${__ENV.API_PATH}`;
 
 export const options = {
-    vus: Number(__ENV.K6_VUS || 10),
-    duration: __ENV.K6_DURATION || '30s',
+    vus: Number(__ENV.TEST_VUS || 10),
+    duration: __ENV.TEST_DURATION || '30s',
     thresholds: {
         http_req_failed: ['rate<0.01'],
         http_req_duration: ['p(95)<500'],
