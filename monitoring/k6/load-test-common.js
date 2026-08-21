@@ -38,13 +38,41 @@ export function createLoadTestOptions(defaultTestRunId) {
     };
 }
 
+export function createFixedLoadTestOptions(defaultTestRunId, vus, duration) {
+    return {
+        scenarios: {
+            fixed_load: {
+                executor: 'constant-vus',
+                vus,
+                duration,
+                gracefulStop: '30s',
+            },
+        },
+        thresholds: {
+            'http_req_failed{request_type:load_test}': ['rate<0.01'],
+            'http_req_duration{request_type:load_test}': ['p(95)<500'],
+            checks: ['rate>0.99'],
+        },
+        setupTimeout: '2m',
+        tags: {
+            application: 'durimoa-backend',
+            test_type: 'load_test',
+            test_run_id: __ENV.K6_TEST_RUN_ID || defaultTestRunId,
+        },
+    };
+}
+
 export function setup() {
-    const accountCount = Number(__ENV.LOAD_TEST_ACCOUNT_COUNT || REQUIRED_ACCOUNT_COUNT);
+    return loginLoadTestAccounts(REQUIRED_ACCOUNT_COUNT);
+}
+
+export function loginLoadTestAccounts(requiredAccountCount) {
+    const accountCount = Number(__ENV.LOAD_TEST_ACCOUNT_COUNT || requiredAccountCount);
     const phonePrefix = __ENV.LOAD_TEST_PHONE_PREFIX || '010-9900-';
     const password = __ENV.LOAD_TEST_PASSWORD;
 
-    if (!Number.isInteger(accountCount) || accountCount < REQUIRED_ACCOUNT_COUNT) {
-        throw new Error(`LOAD_TEST_ACCOUNT_COUNT must be at least ${REQUIRED_ACCOUNT_COUNT}`);
+    if (!Number.isInteger(accountCount) || accountCount < requiredAccountCount) {
+        throw new Error(`LOAD_TEST_ACCOUNT_COUNT must be at least ${requiredAccountCount}`);
     }
     if (!password) {
         throw new Error('LOAD_TEST_PASSWORD environment variable is required');
