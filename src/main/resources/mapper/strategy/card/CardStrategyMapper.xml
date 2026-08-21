@@ -76,9 +76,9 @@
             GREATEST(
                 COALESCE(SUM(
                     CASE
-                        WHEN cr.type = 'EXPENSE' THEN cr.amount
-                        WHEN cr.type = 'INCOME' THEN -cr.amount
-                        ELSE 0
+                        WHEN cr.cancel_status IN ('1', '3') THEN 0
+                        WHEN cr.cancel_status = '2' THEN cr.used_amount - COALESCE(cr.cancel_amount, 0)
+                        ELSE cr.used_amount
                     END
                 ), 0),
                 0
@@ -86,9 +86,8 @@
         FROM card c
         LEFT JOIN card_record cr
             ON cr.card_id = c.id
-           AND cr.record_date &gt;= #{startDate}
-           AND cr.record_date &lt;= #{endDate}
-           AND cr.type IN ('EXPENSE', 'INCOME')
+           AND cr.used_date &gt;= #{startDate}
+           AND cr.used_date &lt;= #{endDate}
         WHERE c.id IN
         <foreach collection="cardIds" item="cardId" open="(" separator="," close=")">
             #{cardId}
