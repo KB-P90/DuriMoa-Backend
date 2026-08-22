@@ -33,17 +33,8 @@
         FROM service_record
         WHERE user_id = #{userId}
           AND type = 'INCOME'
-          AND record_date &gt;= STR_TO_DATE(
-              CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'),
-              '%Y-%m-%d'
-          )
-          AND record_date &lt; DATE_ADD(
-              STR_TO_DATE(
-                  CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'),
-                  '%Y-%m-%d'
-              ),
-              INTERVAL 1 MONTH
-          )
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
     </select>
 
     <select id="selectConnectedPartnerId" resultType="java.lang.Long">
@@ -65,17 +56,8 @@
         FROM service_record
         WHERE user_id = #{userId}
           AND type = 'EXPENSE'
-          AND record_date &gt;= STR_TO_DATE(
-              CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'),
-              '%Y-%m-%d'
-          )
-          AND record_date &lt; DATE_ADD(
-              STR_TO_DATE(
-                  CONCAT(#{year}, '-', LPAD(#{month}, 2, '0'), '-01'),
-                  '%Y-%m-%d'
-              ),
-              INTERVAL 1 MONTH
-          )
+          AND YEAR(record_date) = #{year}
+          AND MONTH(record_date) = #{month}
         GROUP BY COALESCE(changed_category, category)
         ORDER BY amount DESC
     </select>
