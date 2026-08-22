@@ -5,6 +5,7 @@ import com.project.common.enums.MissionStatus;
 import com.project.common.exception.CustomException;
 import com.project.common.exception.ErrorCode;
 import com.project.common.response.ApiResponse;
+import com.project.domain.calendar.domain.ServiceRecord;
 import com.project.domain.monthly.dto.CategoryExpenseAnalysisDTO;
 import com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO;
 import com.project.domain.monthly.dto.ExpenseCategoryDTO;
@@ -24,11 +25,15 @@ import com.project.domain.monthly.dto.UserExpenseDetailDTO;
 import com.project.domain.monthly.dto.UserSummaryDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
 import com.project.domain.monthly.domain.GeneratedMissionInfoVO;
+import com.project.domain.notification.domain.NotificationType;
+import com.project.domain.notification.dto.NotificationCreateRequestDTO;
+import com.project.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,14 +43,17 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class MonthlyServiceImpl implements MonthlyService {
 
     private final MonthlyMapper monthlyMapper;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -401,6 +409,64 @@ public class MonthlyServiceImpl implements MonthlyService {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("절약 추천 미션이 생성되었습니다.", responseDTO));
+    }
+
+    @Override
+    @Transactional
+    public void notifyInProgressMissionExpenses(Long userId, List<ServiceRecord> todayExpenseRecords) {
+        if (todayExpenseRecords == null || todayExpenseRecords.isEmpty()) {
+            return;
+        }
+
+        Set<String> todayExpenseCategories = new LinkedHashSet<>();
+        for (ServiceRecord record : todayExpenseRecords) {
+            String category = StringUtils.hasText(record.getChangedCategory())
+                    ? record.getChangedCategory() : record.getCategory();
+            if (StringUtils.hasText(category)) {
+                todayExpenseCategories.add(category.toUpperCase());
+            }
+        }
+
+        if (todayExpenseCategories.isEmpty()) {
+            return;
+        }
+
+        List<SavingMissionDTO> inProgressMissions = monthlyMapper.selectInProgressSavingMissions(userId);
+        if (inProgressMissions == null || inProgressMissions.isEmpty()) {
+            return;
+        }
+
+        for (SavingMissionDTO mission : inProgressMissions) {
+            if (mission.getCategoryCode() == null
+                    || !todayExpenseCategories.contains(mission.getCategoryCode().toUpperCase())) {
+                continue;
+            }
+            if (notificationService.existsNotificationToday(
+                    userId, NotificationType.SAVING_MISSION_EXPENSE_ALERT, mission.getMissionId())) {
+                continue;
+            }
+
+            String categoryName = resolveCategoryName(mission.getCategoryCode());
+            String missionProgress = stripReduceSuffix(mission.getTitle());
+            String content = "오늘 " + categoryName + " 지출이 발생했어요 (도전 중: " + missionProgress + ")";
+
+            notificationService.createNotification(NotificationCreateRequestDTO.builder()
+                    .userId(userId)
+                    .type(NotificationType.SAVING_MISSION_EXPENSE_ALERT)
+                    .title(categoryName + " 절약 미션 알림")
+                    .content(content)
+                    .targetType("SAVING_MISSION")
+                    .targetId(mission.getMissionId())
+                    .build());
+        }
+    }
+
+    // "월 10회에서 8회로 줄이면" -> "월 10회에서 8회" (알림 문구에서는 목표 수치만 보여줌)
+    private String stripReduceSuffix(String title) {
+        if (title == null) {
+            return title;
+        }
+        return title.replaceAll("로\\s*줄이면\\s*$", "").trim();
     }
 
     private GeneratedMissionInfoVO createStatisticsMission(

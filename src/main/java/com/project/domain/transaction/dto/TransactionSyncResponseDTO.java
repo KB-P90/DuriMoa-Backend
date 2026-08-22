@@ -1,7 +1,10 @@
 package com.project.domain.transaction.dto;
 
+import com.project.domain.calendar.domain.ServiceRecord;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import java.util.Collections;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,4 +31,8 @@ public class TransactionSyncResponseDTO {
 
     @ApiModelProperty(value = "조회한 카드 수")
     private Integer cardCount;
+
+    @ApiModelProperty(value = "이번 동기화로 새로 생성된 지출 서비스 레코드 목록")
+    @Builder.Default
+    private List<ServiceRecord> newExpenseRecords = Collections.emptyList();
 }

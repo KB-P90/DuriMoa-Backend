@@ -158,6 +158,16 @@
             is_push_enabled = VALUES(is_push_enabled)
     </insert>
 
+    <select id="countNotificationsSentToday" resultType="java.lang.Integer">
+        SELECT
+            COUNT(id)
+        FROM notification
+        WHERE user_id = #{userId}
+          AND type = #{type}
+          AND target_id = #{targetId}
+          AND DATE(created_at) = CURDATE()
+    </select>
+
     <insert id="insertNotification"
             parameterType="com.project.domain.notification.domain.NotificationVO"
             useGeneratedKeys="true"

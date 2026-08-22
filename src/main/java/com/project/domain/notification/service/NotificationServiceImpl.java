@@ -245,6 +245,13 @@ public class NotificationServiceImpl implements NotificationService {
         return notification.getId();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsNotificationToday(Long userId, NotificationType type, Long targetId) {
+        Integer count = notificationMapper.countNotificationsSentToday(userId, type, targetId);
+        return count != null && count > 0;
+    }
+
     private Integer resolvePage(Integer page) {
         if (page == null) {
             return DEFAULT_PAGE;
