@@ -14,6 +14,8 @@ import com.project.domain.ai.dto.AiBudgetTypeModelResponseDTO;
 import com.project.domain.ai.dto.AiChatResponseDTO;
 import com.project.domain.ai.dto.AiConnectionTestResponseDTO;
 import com.project.domain.ai.dto.AiIntentModelResponseDTO;
+import com.project.domain.ai.dto.AiSpendingReportSummaryModelResponseDTO;
+import com.project.domain.ai.model.AiSpendingReportSummaryContext;
 import com.project.domain.ai.model.AiWeddingBudgetSelectionContext;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,9 +37,10 @@ public class AiServiceImpl implements AiService {
                     + "사용자 입력을 지원 기능 중 하나로 분류하세요. "
                     + "결혼 예산, 소비 내역 기반 결혼 비용, 예식장·스튜디오·드레스·메이크업 "
                     + "예산 요청은 WEDDING_BUDGET_RECOMMENDATION입니다. "
-                    + "인사는 GREETING입니다. 그 외 요청은 UNKNOWN입니다. "
-                    + "GREETING이면 결혼 예산 추천 기능을 자연스럽게 안내하고, "
-                    + "UNKNOWN이면 현재 결혼 예산 추천을 지원한다고 간결하게 안내하세요. "
+                    + "가입 이후 지출 흐름, 소비 분석, 소비 리포트, 카테고리·요일별 지출 분석 "
+                    + "요청은 SPENDING_REPORT입니다. 인사는 GREETING입니다. "
+                    + "그 외 요청은 UNKNOWN입니다. GREETING이면 결혼 예산 추천과 소비 리포트 "
+                    + "기능을 자연스럽게 안내하고, UNKNOWN이면 현재 지원 기능을 간결하게 안내하세요. "
                     + "한국어로 한두 문장만 작성하세요.";
     private static final String BUDGET_SELECTION_INSTRUCTION =
             "당신은 예비부부의 결혼 예산 유형을 추천하는 두리모아 AI입니다. "
@@ -45,6 +48,12 @@ public class AiServiceImpl implements AiService {
                     + "균형형을 감당할 수 있고 최근 저축이 안정적이면 BALANCED를 우선하고, "
                     + "재정 여유와 저축률이 충분하며 FLEX가 허용된 경우에만 FLEX를 고려하세요. "
                     + "reason은 제공된 집계 수치만 근거로 한국어 한두 문장으로 작성하세요.";
+    private static final String SPENDING_REPORT_SUMMARY_INSTRUCTION =
+            "당신은 개인 소비를 분석하는 두리모아 AI입니다. 제공된 집계 수치만 사용해서 "
+                    + "한국어 2~3문장으로 요약하세요. 첫 문장은 전체 지출 흐름, 두 번째 문장은 "
+                    + "카테고리나 평일·주말 패턴, 필요하면 마지막 문장은 실천 팁을 작성하세요. "
+                    + "사용 목적을 단정하지 말고 '그런 경향이 보여요'처럼 표현하세요. "
+                    + "입력에 없는 거래 메모, 계좌, 카드 정보는 추측하거나 언급하지 마세요.";
     private static final String CHAT_FALLBACK_RESPONSE =
             "현재는 소비 내역을 바탕으로 한 결혼 예산 추천을 도와드릴 수 있어요.";
     private static final String UNKNOWN_RESPONSE =
@@ -195,9 +204,43 @@ public class AiServiceImpl implements AiService {
         }
     }
 
+    @Override
+    public AiSpendingReportSummaryModelResponseDTO summarizeSpendingReport(
+            AiSpendingReportSummaryContext context
+    ) {
+        String model = getEnvironmentValue("OPENAI_MODEL", DEFAULT_MODEL);
+        try {
+            StructuredResponseCreateParams<AiSpendingReportSummaryModelResponseDTO> params =
+                    ResponseCreateParams.builder()
+                            .model(model)
+                            .input(buildSpendingReportSummaryInput(context))
+                            .instructions(SPENDING_REPORT_SUMMARY_INSTRUCTION)
+                            .reasoning(MINIMAL_REASONING)
+                            .maxOutputTokens(STRUCTURED_MAX_OUTPUT_TOKENS)
+                            .text(AiSpendingReportSummaryModelResponseDTO.class)
+                            .build();
+            StructuredResponse<AiSpendingReportSummaryModelResponseDTO> response =
+                    openAIClientProvider.getObject().responses().create(params);
+            AiSpendingReportSummaryModelResponseDTO result = extractStructuredOutput(response);
+            if (result == null || isBlank(result.getSummary())) {
+                return new AiSpendingReportSummaryModelResponseDTO(null);
+            }
+            return result;
+        } catch (RuntimeException exception) {
+            log.error(
+                    "OpenAI spending report summary failed: exceptionType={}",
+                    exception.getClass().getName(),
+                    exception);
+            return new AiSpendingReportSummaryModelResponseDTO(null);
+        }
+    }
+
     private AiAction resolveAction(AiIntent intent) {
         if (intent == AiIntent.WEDDING_BUDGET_RECOMMENDATION) {
             return AiAction.START_WEDDING_BUDGET_FLOW;
+        }
+        if (intent == AiIntent.SPENDING_REPORT) {
+            return AiAction.GENERATE_SPENDING_REPORT;
         }
         return null;
     }
@@ -230,6 +273,18 @@ public class AiServiceImpl implements AiService {
                 + "\naffordableTotalBudget=" + context.getAffordableTotalBudget()
                 + "\nmonthsUntilWedding=" + context.getMonthsUntilWedding()
                 + "\nregion=" + context.getRegion();
+    }
+
+    private String buildSpendingReportSummaryInput(AiSpendingReportSummaryContext context) {
+        return "totalExpense=" + context.getTotalExpense()
+                + "\naverageMonthlyExpense=" + context.getAverageMonthlyExpense()
+                + "\ntransactionCount=" + context.getTransactionCount()
+                + "\ntopCategoryName=" + context.getTopCategoryName()
+                + "\ntopCategoryRatio=" + context.getTopCategoryRatio()
+                + "\nrecentTrendRate=" + context.getRecentTrendRate()
+                + "\npeakDayName=" + context.getPeakDayName()
+                + "\nweekendToWeekdayRatio=" + context.getWeekendToWeekdayRatio()
+                + "\ntopWeekendCategoryName=" + context.getTopWeekendCategoryName();
     }
 
     private <T> T extractStructuredOutput(StructuredResponse<T> response) {
