@@ -86,7 +86,10 @@ public class WeddingBudgetRecommendationServiceImpl
                 monthsUntilWedding
         );
 
-        List<CategoryStatistic> statistics = loadStatistics(request.getRegion());
+        List<CategoryStatistic> statistics = loadStatistics(
+                request.getRegion(),
+                request.getWeddingDate().getMonthValue()
+        );
         Long lowerTotal = sumLower(statistics);
         Long medianTotal = sumMedian(statistics);
         Long upperTotal = sumUpper(statistics);
@@ -230,9 +233,13 @@ public class WeddingBudgetRecommendationServiceImpl
         );
     }
 
-    private List<CategoryStatistic> loadStatistics(String region) {
+    private List<CategoryStatistic> loadStatistics(String region, Integer weddingMonth) {
         return STATISTIC_CATEGORIES.stream()
-                .map(category -> goalStatisticsService.findGoalStatistics(region, category))
+                .map(category -> goalStatisticsService.findGoalStatistics(
+                        region,
+                        category,
+                        weddingMonth
+                ))
                 .map(this::toCategoryStatistic)
                 .collect(Collectors.toList());
     }
@@ -514,8 +521,8 @@ public class WeddingBudgetRecommendationServiceImpl
                 ),
                 reasonDetail(
                         "항목 배분과 예비비",
-                        "예식장·스튜디오·드레스·메이크업은 지역 통계의 항목별 비중을 "
-                                + "같은 기준으로 적용해 핵심 예산 "
+                        "예식 예정 월의 시기별 가중치를 예식장과 스드메에 각각 적용한 뒤, "
+                                + "지역 통계의 항목별 비중으로 핵심 예산 "
                                 + formatAmount(allocatedCoreBudget)
                                 + "을 1만원 단위로 배분하고, 핵심 예산의 약 7%인 "
                                 + formatAmount(reserve) + "을 예비비로 남겼어요."
