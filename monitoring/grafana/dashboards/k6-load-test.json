@@ -88,6 +88,16 @@
       "targets": [{ "expr": "avg(k6_checks_rate{test_run_id=~\"$test_run_id\"})", "legendFormat": "check success", "refId": "A" }],
       "title": "Check Success Rate",
       "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 20 },
+      "id": 9,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "sum(increase(k6_dropped_iterations_total{test_run_id=~\"$test_run_id\"}[$__range]))", "legendFormat": "dropped", "refId": "A" }],
+      "title": "Dropped Iterations",
+      "type": "stat"
     }
   ],
   "refresh": "5s",

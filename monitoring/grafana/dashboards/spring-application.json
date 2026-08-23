@@ -104,6 +104,36 @@
       "targets": [{ "expr": "sum by (action) (rate(jvm_gc_pause_seconds_count{job=~\"$job\"}[$__rate_interval]))", "legendFormat": "{{action}}", "refId": "A" }],
       "title": "GC Pauses per Second",
       "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 28 },
+      "id": 11,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "max(max_over_time(hikaricp_connections_pending{job=~\"$job\"}[$__range]))", "legendFormat": "max pending", "refId": "A" }],
+      "title": "Hikari Pending Max",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 28 },
+      "id": 12,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "sum(increase(monthly_expense_cache_total{job=~\"$job\",result=\"hit\"}[$__range])) / clamp_min(sum(increase(monthly_expense_cache_total{job=~\"$job\",result=~\"hit|miss\"}[$__range])), 1)", "legendFormat": "hit ratio", "refId": "A" }],
+      "title": "Monthly Cache Hit Ratio",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 28 },
+      "id": 13,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "sum(increase(monthly_expense_db_aggregate_queries_total{job=~\"$job\"}[$__range]))", "legendFormat": "queries", "refId": "A" }],
+      "title": "Monthly DB Aggregate Queries",
+      "type": "stat"
     }
   ],
   "refresh": "5s",

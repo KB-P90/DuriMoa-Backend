@@ -11,11 +11,13 @@ import com.project.domain.calendar.domain.ServiceRecord;
 import com.project.domain.calendar.dto.request.RecordRequestDTO;
 import com.project.domain.calendar.dto.response.*;
 import com.project.domain.calendar.mapper.CalendarMapper;
+import com.project.domain.monthly.service.MonthlyExpenseCacheService;
 import com.project.domain.transaction.service.TransactionSyncAsyncService;
 import com.project.domain.transaction.service.TransactionSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -32,6 +34,7 @@ public class CalendarServiceImpl implements CalendarService {
     final private CalendarMapper mapper;
     final private TransactionSyncService transactionSyncService;
     final private TransactionSyncAsyncService transactionSyncAsyncService;
+    final private MonthlyExpenseCacheService monthlyExpenseCacheService;
 
     @Override
     public Object getMonthly(Long userId, YearMonth month, CalendarType type) {
@@ -152,15 +155,20 @@ public class CalendarServiceImpl implements CalendarService {
     }
 
     @Override
+    @Transactional
     public RecordResponseDTO create(Long userId, RecordRequestDTO recordDTO) {
 
         ServiceRecord record = recordDTO.toVO(userId);
         mapper.create(record);
+        monthlyExpenseCacheService.evictAfterCommit(
+                userId,
+                YearMonth.from(record.getRecordDate()));
 
         return RecordResponseDTO.of(record.getId());
     }
 
     @Override
+    @Transactional
     public RecordResponseDTO update(Long userId, Long recordId, RecordRequestDTO recordDTO) {
 
         ServiceRecord existingRecord = mapper.findById(recordId);
@@ -187,17 +195,35 @@ public class CalendarServiceImpl implements CalendarService {
         }
 
         mapper.update(record);
+        YearMonth existingYearMonth = YearMonth.from(existingRecord.getRecordDate());
+        YearMonth updatedYearMonth = YearMonth.from(record.getRecordDate());
+        monthlyExpenseCacheService.evictAfterCommit(userId, existingYearMonth);
+        if (!updatedYearMonth.equals(existingYearMonth)) {
+            monthlyExpenseCacheService.evictAfterCommit(userId, updatedYearMonth);
+        }
 
         return RecordResponseDTO.of(record.getId());
     }
 
     @Override
+    @Transactional
     public RecordResponseDTO delete(Long userId, Long recordId) {
+        ServiceRecord existingRecord = mapper.findById(recordId);
+        if (existingRecord == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        if (!existingRecord.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
         int result = mapper.delete(userId, recordId);
 
         if (result == 0) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
+        monthlyExpenseCacheService.evictAfterCommit(
+                userId,
+                YearMonth.from(existingRecord.getRecordDate()));
 
         return RecordResponseDTO.of(recordId);
     }

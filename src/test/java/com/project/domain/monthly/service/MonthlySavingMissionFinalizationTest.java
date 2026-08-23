@@ -20,7 +20,9 @@ class MonthlySavingMissionFinalizationTest {
 
     @Test
     void finalizeSavingMissionsEvaluatesInProgressAndExpiresChallenges() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(
+                monthlyMapper,
+                Mockito.mock(MonthlyExpenseCacheService.class));
         YearMonth missionMonth = YearMonth.of(2026, 8);
         LocalDate startDate = LocalDate.of(2026, 8, 1);
         LocalDate endDate = LocalDate.of(2026, 9, 1);

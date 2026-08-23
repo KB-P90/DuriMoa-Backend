@@ -9,6 +9,7 @@ import com.project.common.exception.ErrorCode;
 import com.project.domain.calendar.domain.ServiceRecord;
 import com.project.domain.codef.dto.*;
 import com.project.domain.codef.service.CodefService;
+import com.project.domain.monthly.service.MonthlyExpenseCacheService;
 import com.project.domain.transaction.domain.AccountRecord;
 import com.project.domain.transaction.domain.CardRecord;
 import com.project.domain.transaction.dto.TransactionSyncResponseDTO;
@@ -51,6 +52,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     private final TransactionSyncMapper transactionSyncMapper;
     private final ObjectMapper objectMapper;
     private final TransactionCategoryClassifier categoryClassifier;
+    private final MonthlyExpenseCacheService monthlyExpenseCacheService;
 
     @Override
     public boolean needSync(Long userId) {
@@ -109,6 +111,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         log.info("사용자 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}, lastSyncAt: {}",
                 userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount, currentSyncAt);
 
+        monthlyExpenseCacheService.evictAllAfterCommit(userId);
         return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size());
     }
 

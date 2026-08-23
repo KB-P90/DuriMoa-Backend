@@ -13,3 +13,8 @@ jwt.refresh-token-expiration=1209600000
 # Redis Configuration
 redis.host=localhost
 redis.port=6379
+
+# Monthly Expense Cache
+cache.monthly-expense.enabled=true
+cache.monthly-expense.current-month-ttl-seconds=300
+cache.monthly-expense.past-month-ttl-seconds=86400

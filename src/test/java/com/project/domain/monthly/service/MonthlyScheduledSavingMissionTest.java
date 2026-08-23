@@ -21,6 +21,9 @@ class MonthlyScheduledSavingMissionTest {
     @Mock
     private MonthlyMapper monthlyMapper;
 
+    @Mock
+    private MonthlyExpenseCacheService monthlyExpenseCacheService;
+
     @InjectMocks
     private MonthlyServiceImpl monthlyService;
 

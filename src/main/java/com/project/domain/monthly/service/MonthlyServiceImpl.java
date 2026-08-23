@@ -13,6 +13,7 @@ import com.project.domain.monthly.dto.ExpenseFeedbackCreateRequestDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackCreateResponseDTO;
 import com.project.domain.monthly.dto.ExpenseFeedbackEntityDTO;
 import com.project.domain.monthly.dto.MonthlyExpenseResponseDTO;
+import com.project.domain.monthly.dto.MonthlyExpenseSummaryCacheDTO;
 import com.project.domain.monthly.dto.RawCategoryExpenseDTO;
 import com.project.domain.monthly.dto.RecommendedMissionDTO;
 import com.project.domain.monthly.dto.SavingMissionDTO;
@@ -46,6 +47,7 @@ import java.util.Map;
 public class MonthlyServiceImpl implements MonthlyService {
 
     private final MonthlyMapper monthlyMapper;
+    private final MonthlyExpenseCacheService monthlyExpenseCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -114,13 +116,11 @@ public class MonthlyServiceImpl implements MonthlyService {
             return null;
         }
 
-        List<RawCategoryExpenseDTO> rawExpenses = monthlyMapper.selectCategoryExpensesByUserAndMonth(targetUserId, year, month);
-        if (rawExpenses == null) {
-            rawExpenses = Collections.emptyList();
-        }
-
-        Long monthlyIncomeBase = monthlyMapper.selectMonthlyIncomeBase(
-                targetUserId, year, month);
+        MonthlyExpenseSummaryCacheDTO monthlySummary = findMonthlyExpenseSummary(
+                targetUserId,
+                YearMonth.of(year, month));
+        List<RawCategoryExpenseDTO> rawExpenses = monthlySummary.getCategoryExpenses();
+        Long monthlyIncomeBase = monthlySummary.getMonthlyIncomeBase();
 
         List<ExpenseCategoryDTO> expenseCategories = new ArrayList<>();
         long categoryId = 1L;
@@ -156,6 +156,35 @@ public class MonthlyServiceImpl implements MonthlyService {
                 .profileImageUrl(userSummary.getProfileImageUrl())
                 .expenseCategories(expenseCategories)
                 .build();
+    }
+
+    private MonthlyExpenseSummaryCacheDTO findMonthlyExpenseSummary(
+            Long userId,
+            YearMonth yearMonth) {
+        return monthlyExpenseCacheService.find(userId, yearMonth)
+                .orElseGet(() -> {
+                    monthlyExpenseCacheService.recordDatabaseAggregateQueries(2);
+                    List<RawCategoryExpenseDTO> rawExpenses =
+                            monthlyMapper.selectCategoryExpensesByUserAndMonth(
+                                    userId,
+                                    yearMonth.getYear(),
+                                    yearMonth.getMonthValue());
+                    if (rawExpenses == null) {
+                        rawExpenses = Collections.emptyList();
+                    }
+
+                    Long monthlyIncomeBase = monthlyMapper.selectMonthlyIncomeBase(
+                            userId,
+                            yearMonth.getYear(),
+                            yearMonth.getMonthValue());
+                    MonthlyExpenseSummaryCacheDTO summary =
+                            MonthlyExpenseSummaryCacheDTO.builder()
+                                    .monthlyIncomeBase(monthlyIncomeBase)
+                                    .categoryExpenses(rawExpenses)
+                                    .build();
+                    monthlyExpenseCacheService.save(userId, yearMonth, summary);
+                    return summary;
+                });
     }
 
     private String resolveCategoryName(String categoryCode) {

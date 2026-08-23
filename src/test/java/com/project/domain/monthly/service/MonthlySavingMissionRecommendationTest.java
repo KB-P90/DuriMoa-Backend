@@ -22,7 +22,9 @@ class MonthlySavingMissionRecommendationTest {
 
     @Test
     void generateSavingMissionRecommendationsUsesStatisticsForTitleAndSavingAmount() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(
+                monthlyMapper,
+                Mockito.mock(MonthlyExpenseCacheService.class));
         Mockito.when(monthlyMapper.selectCategoryExpenseAnalysis(
                         Mockito.eq(1L), Mockito.any(), Mockito.any()))
                 .thenReturn(List.of(
@@ -59,7 +61,9 @@ class MonthlySavingMissionRecommendationTest {
 
     @Test
     void generateSavingMissionRecommendationsCreatesNoMissionAtOrBelowStatistics() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(
+                monthlyMapper,
+                Mockito.mock(MonthlyExpenseCacheService.class));
         Mockito.when(monthlyMapper.selectCategoryExpenseAnalysis(
                         Mockito.eq(1L), Mockito.any(), Mockito.any()))
                 .thenReturn(List.of(analysis("ETC", 100000L, 5)));
