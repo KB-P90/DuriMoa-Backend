@@ -1,10 +1,8 @@
 package com.project.domain.calendar.mapper;
 
 import com.project.domain.calendar.domain.ServiceRecord;
-import com.project.domain.calendar.dto.response.CalendarDayDTO;
 import com.project.domain.calendar.dto.response.DailyRecordDTO;
 import com.project.domain.calendar.dto.response.MonthlyRecordAggregateDTO;
-import com.project.domain.calendar.dto.response.MonthlyPersonalSummaryDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,13 +11,7 @@ import java.util.List;
 
 @Mapper
 public interface CalendarMapper {
-    MonthlyPersonalSummaryDTO selectMonthlyPersonalSummary(
-            @Param("userId") Long userId,
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end
-    );
-
-    List<CalendarDayDTO> selectMonthlyPersonalCalendar(
+    List<MonthlyRecordAggregateDTO> selectMonthlyPersonalAggregates(
             @Param("userId") Long userId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end

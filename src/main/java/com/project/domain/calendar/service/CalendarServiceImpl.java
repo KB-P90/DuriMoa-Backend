@@ -50,11 +50,16 @@ public class CalendarServiceImpl implements CalendarService {
         LocalDate start = month.atDay(1);
         LocalDate end = month.atEndOfMonth();
 
-        // 월 요약
-        MonthlyPersonalSummaryDTO summary = mapper.selectMonthlyPersonalSummary(userId, start, end);
+        List<MonthlyRecordAggregateDTO> aggregates =
+                mapper.selectMonthlyPersonalAggregates(userId, start, end);
 
-        // 달력 조회
-        List<CalendarDayDTO> calendar = buildCalendar(start, end, mapper.selectMonthlyPersonalCalendar(userId, start, end));
+        MonthlyPersonalSummaryDTO summary = MonthlyPersonalSummaryDTO.builder()
+                .income(sumAmount(aggregates, MonthlyRecordAggregateDTO::getIncome))
+                .expense(sumAmount(aggregates, MonthlyRecordAggregateDTO::getExpense))
+                .saving(sumAmount(aggregates, MonthlyRecordAggregateDTO::getSaving))
+                .build();
+
+        List<CalendarDayDTO> calendar = buildCalendarFromAggregates(start, end, aggregates);
 
         return new MonthlyPersonalResponseDTO(summary, calendar);
     }
@@ -101,33 +106,6 @@ public class CalendarServiceImpl implements CalendarService {
                                 .hasExpense(Boolean.TRUE.equals(aggregate.getHasExpense()))
                                 .hasSaving(Boolean.TRUE.equals(aggregate.getHasSaving()))
                                 .build()
-                ));
-
-        List<CalendarDayDTO> calendar = new ArrayList<>();
-
-        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            CalendarDayDTO dto = map.get(d);
-
-            if (dto == null) {
-                dto = new CalendarDayDTO();
-                dto.setDate(d);
-                dto.setHasIncome(false);
-                dto.setHasExpense(false);
-                dto.setHasSaving(false);
-            }
-
-            calendar.add(dto);
-        }
-
-        return calendar;
-    }
-
-    // 거래 내역 없어서 비어있는 날짜 있으면 데이터 추가
-    private List<CalendarDayDTO> buildCalendar(LocalDate start, LocalDate end, List<CalendarDayDTO> result) {
-        Map<LocalDate, CalendarDayDTO> map = result.stream()
-                .collect(Collectors.toMap(
-                        CalendarDayDTO::getDate,
-                        Function.identity()
                 ));
 
         List<CalendarDayDTO> calendar = new ArrayList<>();

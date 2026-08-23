@@ -5,24 +5,16 @@
 
 <mapper namespace="com.project.domain.calendar.mapper.CalendarMapper">
 
-    <select id="selectMonthlyPersonalSummary"
-            resultType="com.project.domain.calendar.dto.response.MonthlyPersonalSummaryDTO">
-        SELECT
-            COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS income,
-            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
-            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
-        FROM service_record
-        WHERE user_id = #{userId}
-          AND record_date BETWEEN #{start} AND #{end}
-    </select>
-
-    <select id="selectMonthlyPersonalCalendar"
-            resultType="com.project.domain.calendar.dto.response.CalendarDayDTO">
+    <select id="selectMonthlyPersonalAggregates"
+            resultType="com.project.domain.calendar.dto.response.MonthlyRecordAggregateDTO">
         SELECT
             record_date AS date,
             MAX(CASE WHEN type='INCOME' THEN 1 ELSE 0 END) AS hasIncome,
             MAX(CASE WHEN type='EXPENSE' THEN 1 ELSE 0 END) AS hasExpense,
-            MAX(CASE WHEN type='SAVING' THEN 1 ELSE 0 END) AS hasSaving
+            MAX(CASE WHEN type='SAVING' THEN 1 ELSE 0 END) AS hasSaving,
+            COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END), 0) AS income,
+            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount ELSE 0 END), 0) AS saving
         FROM service_record
         WHERE user_id = #{userId}
           AND record_date BETWEEN #{start} AND #{end}

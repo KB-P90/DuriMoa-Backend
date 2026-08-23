@@ -18,6 +18,7 @@ public class MonthlyRecordAggregateDTO {
     private Boolean hasIncome;
     private Boolean hasExpense;
     private Boolean hasSaving;
+    private Long income;
     private Long expense;
     private Long saving;
 }
