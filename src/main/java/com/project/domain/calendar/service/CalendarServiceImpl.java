@@ -67,13 +67,59 @@ public class CalendarServiceImpl implements CalendarService {
         // 결혼 카테고리
         List<String> categories = getWeddingCategories();
 
-        // 월 요약
-        MonthlyWeddingSummaryDTO summary = mapper.selectMonthlyWeddingSummary(userId, start, end, categories);
+        List<MonthlyRecordAggregateDTO> aggregates =
+                mapper.selectMonthlyWeddingAggregates(userId, start, end, categories);
 
-        // 달력 조회
-        List<CalendarDayDTO> calendar = buildCalendar(start, end, mapper.selectMonthlyWeddingCalendar(userId, start, end, categories));
+        MonthlyWeddingSummaryDTO summary = MonthlyWeddingSummaryDTO.builder()
+                .goalAmount(mapper.selectWeddingGoalAmount(userId))
+                .expense(sumAmount(aggregates, MonthlyRecordAggregateDTO::getExpense))
+                .saving(sumAmount(aggregates, MonthlyRecordAggregateDTO::getSaving))
+                .build();
+
+        List<CalendarDayDTO> calendar = buildCalendarFromAggregates(start, end, aggregates);
 
         return new MonthlyWeddingResponseDTO(summary, calendar);
+    }
+
+    private Long sumAmount(List<MonthlyRecordAggregateDTO> aggregates,
+                           Function<MonthlyRecordAggregateDTO, Long> amountGetter) {
+        return aggregates.stream()
+                .map(amountGetter)
+                .filter(amount -> amount != null)
+                .mapToLong(Long::longValue)
+                .sum();
+    }
+
+    private List<CalendarDayDTO> buildCalendarFromAggregates(LocalDate start, LocalDate end,
+                                                             List<MonthlyRecordAggregateDTO> result) {
+        Map<LocalDate, CalendarDayDTO> map = result.stream()
+                .collect(Collectors.toMap(
+                        MonthlyRecordAggregateDTO::getDate,
+                        aggregate -> CalendarDayDTO.builder()
+                                .date(aggregate.getDate())
+                                .hasIncome(Boolean.TRUE.equals(aggregate.getHasIncome()))
+                                .hasExpense(Boolean.TRUE.equals(aggregate.getHasExpense()))
+                                .hasSaving(Boolean.TRUE.equals(aggregate.getHasSaving()))
+                                .build()
+                ));
+
+        List<CalendarDayDTO> calendar = new ArrayList<>();
+
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            CalendarDayDTO dto = map.get(d);
+
+            if (dto == null) {
+                dto = new CalendarDayDTO();
+                dto.setDate(d);
+                dto.setHasIncome(false);
+                dto.setHasExpense(false);
+                dto.setHasSaving(false);
+            }
+
+            calendar.add(dto);
+        }
+
+        return calendar;
     }
 
     // 거래 내역 없어서 비어있는 날짜 있으면 데이터 추가

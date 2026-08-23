@@ -30,63 +30,31 @@
         ORDER BY record_date
     </select>
 
-    <select id="selectMonthlyWeddingSummary"
-            resultType="com.project.domain.calendar.dto.response.MonthlyWeddingSummaryDTO">
-        SELECT
-            (
-                SELECT g.total_budget
-                FROM goal g
-                JOIN couple c ON c.id = g.couple_id
-                WHERE g.is_main = TRUE
-                AND c.status = 'CONNECTED'
-                AND (
-                    c.groom_id = #{userId}
-                    OR c.bride_id = #{userId}
-                )
-            ) AS goalAmount,
-            COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense,
-            COALESCE(SUM(CASE WHEN type = 'SAVING' THEN amount END), 0) AS saving
-        FROM service_record sr
-        WHERE sr.user_id IN (
-            SELECT #{userId}
-            UNION
-            SELECT
-                CASE
-                    WHEN c.groom_id = #{userId} THEN c.bride_id
-                    ELSE c.groom_id
-                END
-            FROM couple c
-            WHERE c.status = 'CONNECTED'
-                AND (c.groom_id = #{userId}
-                    OR c.bride_id = #{userId})
-        )
-        AND sr.record_date BETWEEN #{start} AND #{end}
-        AND (
-            CASE
-                WHEN sr.changed_category IS NOT NULL
-                THEN sr.changed_category
-                ELSE sr.category
-            END
-        ) IN
-        <foreach collection="categories"
-                 item="category"
-                 open="("
-                 separator=","
-                 close=")">
-            #{category}
-        </foreach>
+    <select id="selectWeddingGoalAmount" resultType="java.lang.Long">
+        SELECT g.total_budget
+        FROM goal g
+        INNER JOIN couple c
+            ON c.id = g.couple_id
+        WHERE g.is_main = TRUE
+          AND c.status = 'CONNECTED'
+          AND (
+              c.groom_id = #{userId}
+              OR c.bride_id = #{userId}
+          )
     </select>
 
-    <select id="selectMonthlyWeddingCalendar"
-            resultType="com.project.domain.calendar.dto.response.CalendarDayDTO">
+    <select id="selectMonthlyWeddingAggregates"
+            resultType="com.project.domain.calendar.dto.response.MonthlyRecordAggregateDTO">
         SELECT
             sr.record_date AS date,
             MAX(CASE WHEN sr.type='INCOME' THEN 1 ELSE 0 END) AS hasIncome,
             MAX(CASE WHEN sr.type='EXPENSE' THEN 1 ELSE 0 END) AS hasExpense,
-            MAX(CASE WHEN sr.type='SAVING' THEN 1 ELSE 0 END) AS hasSaving
+            MAX(CASE WHEN sr.type='SAVING' THEN 1 ELSE 0 END) AS hasSaving,
+            COALESCE(SUM(CASE WHEN sr.type = 'EXPENSE' THEN sr.amount ELSE 0 END), 0) AS expense,
+            COALESCE(SUM(CASE WHEN sr.type = 'SAVING' THEN sr.amount ELSE 0 END), 0) AS saving
         FROM service_record sr
-        WHERE sr.user_id IN (
-            SELECT #{userId}
+        INNER JOIN (
+            SELECT #{userId} AS user_id
             UNION
             SELECT
                 CASE
@@ -97,15 +65,10 @@
             WHERE c.status='CONNECTED'
                 AND (c.groom_id=#{userId}
                     OR c.bride_id=#{userId})
-        )
-        AND sr.record_date BETWEEN #{start} AND #{end}
-        AND (
-            CASE
-                WHEN sr.changed_category IS NOT NULL
-                THEN sr.changed_category
-                ELSE sr.category
-            END
-        ) IN
+        ) target_user
+            ON target_user.user_id = sr.user_id
+        WHERE sr.record_date BETWEEN #{start} AND #{end}
+          AND COALESCE(sr.changed_category, sr.category) IN
         <foreach collection="categories"
                  item="category"
                  open="("
@@ -172,27 +135,24 @@
         FROM service_record sr
         INNER JOIN user u
             ON sr.user_id = u.id
-        WHERE sr.record_date = #{date}
-            AND sr.user_id IN (
-                SELECT #{userId}
-                UNION
-                SELECT
+        INNER JOIN (
+            SELECT #{userId} AS user_id
+            UNION
+            SELECT
                 CASE
-                WHEN c.groom_id = #{userId} THEN c.bride_id
-                ELSE c.groom_id
+                    WHEN c.groom_id = #{userId} THEN c.bride_id
+                    ELSE c.groom_id
                 END
-                FROM couple c
-                WHERE c.status='CONNECTED'
-                AND (c.groom_id=#{userId}
-                OR c.bride_id=#{userId})
-        )
-        AND (
-        CASE
-        WHEN sr.changed_category IS NOT NULL
-        THEN sr.changed_category
-        ELSE sr.category
-        END
-        ) IN
+            FROM couple c
+            WHERE c.status='CONNECTED'
+              AND (
+                  c.groom_id=#{userId}
+                  OR c.bride_id=#{userId}
+              )
+        ) target_user
+            ON target_user.user_id = sr.user_id
+        WHERE sr.record_date = #{date}
+          AND COALESCE(sr.changed_category, sr.category) IN
         <foreach collection="categories"
                  item="category"
                  open="("

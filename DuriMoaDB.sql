@@ -413,7 +413,9 @@ CREATE TABLE `service_record`
     `updated_at`        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
     PRIMARY KEY (`id`),
-    KEY `idx_account_user_id` (`user_id`),
+    KEY `idx_service_record_user_id` (`user_id`),
+    KEY `idx_service_record_user_date_type` (`user_id`, `record_date`, `type`),
+    KEY `idx_service_record_user_date_updated_at` (`user_id`, `record_date`, `updated_at`),
     CONSTRAINT `fk_service_record_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE,
