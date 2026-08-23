@@ -512,7 +512,7 @@ CREATE TABLE `expense_feedback`
     `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
-
+    KEY `idx_expense_feedback_receiver_year_month` (`receiver_id`, `year`, `month`),
     UNIQUE KEY `uk_expense_feedback_writer_year_month` (`writer_id`, `year`, `month`),
 
     CONSTRAINT `fk_expense_feedback_writer`
