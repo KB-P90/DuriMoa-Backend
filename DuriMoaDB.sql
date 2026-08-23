@@ -27,7 +27,11 @@ DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `codef_access_token`;
 DROP TABLE IF EXISTS `expense_feedback`;
--- DROP TABLE IF EXISTS `expense_avg`;
+DROP TABLE IF EXISTS `expense_statistics`;
+
+-- 기존 테이블 남아있는 경우 삭제
+DROP TABLE IF EXISTS `last_update`;
+DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -549,36 +553,3 @@ CREATE TABLE expense_statistics
                                       category_code
         )
 );
-
-/*
-
-CREATE TABLE expense_avg (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-
-    category VARCHAR(50) NOT NULL
-        COMMENT '지출 카테고리 코드',
-
-    avg_amount DECIMAL(15, 2) NOT NULL
-        COMMENT '2030세대 카테고리별 월평균 지출 금액',
-
-    sample_count INT NULL
-        COMMENT '평균 산출에 사용된 표본 수',
-
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT chk_expense_avg_amount
-        CHECK (avg_amount >= 0),
-
-    CONSTRAINT chk_expense_avg_sample_count
-        CHECK (sample_count IS NULL OR sample_count >= 0),
-
-    UNIQUE KEY uk_expense_avg_category (category)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
-  COMMENT = '2030세대 카테고리별 월평균 지출';
-
-*/
