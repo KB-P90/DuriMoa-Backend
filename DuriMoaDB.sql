@@ -27,6 +27,7 @@ DROP TABLE IF EXISTS `wedding_statistics`;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `codef_access_token`;
 DROP TABLE IF EXISTS `expense_feedback`;
+DROP TABLE IF EXISTS `expense_statistics`;
 -- DROP TABLE IF EXISTS `expense_avg`;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -413,7 +414,7 @@ CREATE TABLE `service_record`
     `updated_at`        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
     PRIMARY KEY (`id`),
-    KEY `idx_account_user_id` (`user_id`),
+    KEY `idx_service_record_user_type_date` (`user_id`, `type`, `record_date`),
     CONSTRAINT `fk_service_record_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
             ON UPDATE CASCADE ON DELETE CASCADE,
@@ -506,7 +507,7 @@ CREATE TABLE `expense_feedback`
     `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     PRIMARY KEY (`id`),
-
+    KEY `idx_expense_feedback_receiver_year_month` (`receiver_id`, `year`, `month`),
     UNIQUE KEY `uk_expense_feedback_writer_year_month` (`writer_id`, `year`, `month`),
 
     CONSTRAINT `fk_expense_feedback_writer`
