@@ -23,16 +23,21 @@ public class GoalStatisticsController {
 
     private final GoalStatisticsService goalStatisticsService;
 
-    @ApiOperation(value = "결혼 통계 정보 조회", notes = "지역과 카테고리로 결혼 비용 분위값을 조회합니다.")
+    @ApiOperation(
+            value = "결혼 통계 정보 조회",
+            notes = "지역과 카테고리로 조회한 결혼 비용 분위값에 예식 예정 월의 가격 가중치를 적용합니다."
+    )
     @GetMapping("/stat")
     public ResponseEntity<ApiResponse<GoalStatisticsResponseDTO>> getGoalStatistics(
             @ApiParam(value = "지역", example = "서울(강남)", required = true)
             @RequestParam("region") String region,
             @ApiParam(value = "카테고리", example = "예식장", required = true)
-            @RequestParam("category") String category
+            @RequestParam("category") String category,
+            @ApiParam(value = "예식 예정 월(1~12)", example = "10", required = true)
+            @RequestParam("weddingMonth") Integer weddingMonth
     ) {
         GoalStatisticsResponseDTO response =
-                goalStatisticsService.findGoalStatistics(region, category);
+                goalStatisticsService.findGoalStatistics(region, category, weddingMonth);
         return ResponseEntity.ok(
                 ApiResponse.success("결혼 통계 정보 조회에 성공했습니다.", response)
         );
@@ -41,15 +46,18 @@ public class GoalStatisticsController {
     @ApiOperation(
             value = "유형별 예상 결혼 예산 조회",
             notes = "지역별 예식장, 스튜디오, 드레스, 메이크업 통계를 합산하여 "
-                    + "알뜰형, 균형형, 플렉스형 예상 금액을 조회합니다."
+                    + "예식 예정 월의 가격 가중치가 적용된 알뜰형, 균형형, "
+                    + "플렉스형 예상 금액을 조회합니다."
     )
     @GetMapping("/stat/estimate")
     public ResponseEntity<ApiResponse<GoalBudgetEstimateResponseDTO>> getGoalBudgetEstimate(
             @ApiParam(value = "지역", example = "서울(강남)", required = true)
-            @RequestParam("region") String region
+            @RequestParam("region") String region,
+            @ApiParam(value = "예식 예정 월(1~12)", example = "10", required = true)
+            @RequestParam("weddingMonth") Integer weddingMonth
     ) {
         GoalBudgetEstimateResponseDTO response =
-                goalStatisticsService.findGoalBudgetEstimate(region);
+                goalStatisticsService.findGoalBudgetEstimate(region, weddingMonth);
         return ResponseEntity.ok(
                 ApiResponse.success("유형별 예상 결혼 예산 조회에 성공했습니다.", response)
         );
