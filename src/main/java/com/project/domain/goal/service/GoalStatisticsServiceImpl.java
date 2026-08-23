@@ -10,6 +10,7 @@ import com.project.domain.goal.dto.GoalBudgetTypeEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalRegionEstimateResponseDTO;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.mapper.GoalStatisticsMapper;
+import java.time.Month;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -45,12 +46,18 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
     );
 
     private final GoalStatisticsMapper goalStatisticsMapper;
+    private final WeddingMonthlyCostWeightCalculator weddingMonthlyCostWeightCalculator;
 
     @Override
     @Transactional(readOnly = true)
-    public GoalStatisticsResponseDTO findGoalStatistics(String region, String category) {
+    public GoalStatisticsResponseDTO findGoalStatistics(
+            String region,
+            String category,
+            Integer weddingMonth
+    ) {
         String normalizedRegion = normalizeRequired(region, "지역을 입력해 주세요.");
         String normalizedCategory = normalizeRequired(category, "카테고리를 입력해 주세요.");
+        Month normalizedWeddingMonth = normalizeWeddingMonth(weddingMonth);
 
         if (!ESTIMATE_CATEGORIES.contains(normalizedCategory)) {
             return buildEmptyStatistics(normalizedRegion, normalizedCategory);
@@ -64,7 +71,23 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
                     "조건에 해당하는 결혼 통계 정보를 찾을 수 없습니다."
             );
         }
-        return GoalStatisticsResponseDTO.from(statistics);
+        return buildAdjustedStatistics(statistics, normalizedWeddingMonth);
+    }
+
+    private GoalStatisticsResponseDTO buildAdjustedStatistics(
+            GoalStatisticsVO statistics,
+            Month weddingMonth
+    ) {
+        String category = statistics.getCategory();
+        return GoalStatisticsResponseDTO.builder()
+                .region(statistics.getRegion())
+                .category(category)
+                .upper10(adjustAmount(category, weddingMonth, statistics.getHigh10()))
+                .upper25(adjustAmount(category, weddingMonth, statistics.getHigh25()))
+                .median(adjustAmount(category, weddingMonth, statistics.getMid50()))
+                .lower25(adjustAmount(category, weddingMonth, statistics.getLow25()))
+                .lower10(adjustAmount(category, weddingMonth, statistics.getLow10()))
+                .build();
     }
 
     private GoalStatisticsResponseDTO buildEmptyStatistics(String region, String category) {
@@ -81,8 +104,12 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
 
     @Override
     @Transactional(readOnly = true)
-    public GoalBudgetEstimateResponseDTO findGoalBudgetEstimate(String region) {
+    public GoalBudgetEstimateResponseDTO findGoalBudgetEstimate(
+            String region,
+            Integer weddingMonth
+    ) {
         String normalizedRegion = normalizeRequired(region, "지역을 입력해 주세요.");
+        Month normalizedWeddingMonth = normalizeWeddingMonth(weddingMonth);
         List<GoalStatisticsVO> statistics =
                 goalStatisticsMapper.selectGoalStatisticsForEstimate(
                         normalizedRegion,
@@ -90,9 +117,21 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
                 );
         validateEstimateStatistics(statistics);
 
-        Long economyTotal = sumAmounts(statistics, GoalStatisticsVO::getLow25);
-        Long balancedTotal = sumAmounts(statistics, GoalStatisticsVO::getMid50);
-        Long flexTotal = sumAmounts(statistics, GoalStatisticsVO::getHigh25);
+        Long economyTotal = sumAdjustedAmounts(
+                statistics,
+                GoalStatisticsVO::getLow25,
+                normalizedWeddingMonth
+        );
+        Long balancedTotal = sumAdjustedAmounts(
+                statistics,
+                GoalStatisticsVO::getMid50,
+                normalizedWeddingMonth
+        );
+        Long flexTotal = sumAdjustedAmounts(
+                statistics,
+                GoalStatisticsVO::getHigh25,
+                normalizedWeddingMonth
+        );
 
         return GoalBudgetEstimateResponseDTO.builder()
                 .region(normalizedRegion)
@@ -175,6 +214,28 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
                 .reduce(0L, Math::addExact);
     }
 
+    private Long sumAdjustedAmounts(
+            List<GoalStatisticsVO> statistics,
+            Function<GoalStatisticsVO, Long> amountExtractor,
+            Month weddingMonth
+    ) {
+        return statistics.stream()
+                .map(statistic -> adjustAmount(
+                        statistic.getCategory(),
+                        weddingMonth,
+                        amountExtractor.apply(statistic)
+                ))
+                .reduce(0L, Math::addExact);
+    }
+
+    private Long adjustAmount(String category, Month weddingMonth, Long amount) {
+        return weddingMonthlyCostWeightCalculator.adjustAmount(
+                category,
+                weddingMonth,
+                amount
+        );
+    }
+
     private GoalBudgetTypeEstimateResponseDTO buildEstimate(String type, Long totalAmount) {
         return GoalBudgetTypeEstimateResponseDTO.builder()
                 .type(type)
@@ -194,5 +255,15 @@ public class GoalStatisticsServiceImpl implements GoalStatisticsService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, errorMessage);
         }
         return value.trim();
+    }
+
+    private Month normalizeWeddingMonth(Integer weddingMonth) {
+        if (weddingMonth == null || weddingMonth < 1 || weddingMonth > 12) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "예식 예정 월은 1부터 12 사이여야 합니다."
+            );
+        }
+        return Month.of(weddingMonth);
     }
 }

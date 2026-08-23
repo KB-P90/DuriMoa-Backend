@@ -6,9 +6,16 @@ import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 
 public interface GoalStatisticsService {
 
-    GoalStatisticsResponseDTO findGoalStatistics(String region, String category);
+    GoalStatisticsResponseDTO findGoalStatistics(
+            String region,
+            String category,
+            Integer weddingMonth
+    );
 
-    GoalBudgetEstimateResponseDTO findGoalBudgetEstimate(String region);
+    GoalBudgetEstimateResponseDTO findGoalBudgetEstimate(
+            String region,
+            Integer weddingMonth
+    );
 
     GoalAllRegionsEstimateResponseDTO findAllRegionsGoalBudgetEstimate();
 }

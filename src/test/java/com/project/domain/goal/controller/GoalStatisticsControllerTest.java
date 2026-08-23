@@ -19,6 +19,7 @@ import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -45,31 +46,49 @@ class GoalStatisticsControllerTest {
         GoalStatisticsResponseDTO statistics = GoalStatisticsResponseDTO.builder()
                 .region("서울(강남)")
                 .category("예식장")
-                .upper10(13_000_000L)
-                .upper25(9_200_000L)
-                .median(7_500_000L)
-                .lower25(4_400_000L)
-                .lower10(2_120_000L)
+                .upper10(11_260_000L)
+                .upper25(7_970_000L)
+                .median(6_490_000L)
+                .lower25(3_810_000L)
+                .lower10(1_840_000L)
                 .build();
-        when(goalStatisticsService.findGoalStatistics("서울(강남)", "예식장"))
+        when(goalStatisticsService.findGoalStatistics("서울(강남)", "예식장", 10))
                 .thenReturn(statistics);
 
         MvcResult result = mockMvc.perform(get("/api/goal/stat")
+                        .accept(MediaType.APPLICATION_JSON)
                         .param("region", "서울(강남)")
-                        .param("category", "예식장"))
+                        .param("category", "예식장")
+                        .param("weddingMonth", "10"))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);
 
         assertEquals(true, response.get("success").asBoolean());
         assertEquals("결혼 통계 정보 조회에 성공했습니다.", response.get("message").asText());
-        assertEquals(13_000_000L, response.at("/data/upper10").asLong());
+        assertEquals(11_260_000L, response.at("/data/upper10").asLong());
         assertEquals(true, response.at("/data/unit").isMissingNode());
     }
 
     @Test
     void getGoalStatisticsReturnsBadRequestForMissingRegion() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/goal/stat")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .param("category", "예식장")
+                        .param("weddingMonth", "10"))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+        JsonNode response = readResponse(result);
+
+        assertEquals(false, response.get("success").asBoolean());
+        assertEquals("필수 요청 파라미터가 누락되었습니다.", response.get("message").asText());
+    }
+
+    @Test
+    void getGoalStatisticsReturnsBadRequestForMissingWeddingMonth() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/goal/stat")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .param("region", "서울(강남)")
                         .param("category", "예식장"))
                 .andExpect(status().isBadRequest())
                 .andReturn();
@@ -86,23 +105,25 @@ class GoalStatisticsControllerTest {
                 .estimates(Arrays.asList(
                         GoalBudgetTypeEstimateResponseDTO.builder()
                                 .type("알뜰형")
-                                .totalAmount(23_200_000L)
+                                .totalAmount(20_970_000L)
                                 .build(),
                         GoalBudgetTypeEstimateResponseDTO.builder()
                                 .type("균형형")
-                                .totalAmount(28_500_000L)
+                                .totalAmount(25_770_000L)
                                 .build(),
                         GoalBudgetTypeEstimateResponseDTO.builder()
                                 .type("플렉스형")
-                                .totalAmount(35_000_000L)
+                                .totalAmount(31_660_000L)
                                 .build()
                 ))
                 .build();
-        when(goalStatisticsService.findGoalBudgetEstimate("서울(강남)"))
+        when(goalStatisticsService.findGoalBudgetEstimate("서울(강남)", 10))
                 .thenReturn(estimate);
 
         MvcResult result = mockMvc.perform(get("/api/goal/stat/estimate")
-                        .param("region", "서울(강남)"))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .param("region", "서울(강남)")
+                        .param("weddingMonth", "10"))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);
@@ -113,12 +134,12 @@ class GoalStatisticsControllerTest {
                 response.get("message").asText()
         );
         assertEquals("알뜰형", response.at("/data/estimates/0/type").asText());
-        assertEquals(23_200_000L, response.at("/data/estimates/0/totalAmount").asLong());
-        assertEquals(35_000_000L, response.at("/data/estimates/2/totalAmount").asLong());
+        assertEquals(20_970_000L, response.at("/data/estimates/0/totalAmount").asLong());
+        assertEquals(31_660_000L, response.at("/data/estimates/2/totalAmount").asLong());
     }
 
     @Test
-    void getAllRegionsGoalBudgetEstimateReturnsCommonResponse() throws Exception {
+    void getAllRegionsGoalBudgetEstimateReturnsUnadjustedCommonResponse() throws Exception {
         GoalAllRegionsEstimateResponseDTO estimate = GoalAllRegionsEstimateResponseDTO.builder()
                 .regions(Arrays.asList(
                         GoalRegionEstimateResponseDTO.builder()
@@ -133,7 +154,8 @@ class GoalStatisticsControllerTest {
                 .build();
         when(goalStatisticsService.findAllRegionsGoalBudgetEstimate()).thenReturn(estimate);
 
-        MvcResult result = mockMvc.perform(get("/api/goal/stat/all-regions"))
+        MvcResult result = mockMvc.perform(get("/api/goal/stat/all-regions")
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = readResponse(result);
