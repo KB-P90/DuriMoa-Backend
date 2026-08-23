@@ -49,7 +49,10 @@ public class AiController {
     }
 
     @PostMapping("/wedding-budget/recommendation")
-    @ApiOperation(value = "소비 내역 기반 AI 결혼 예산 추천")
+    @ApiOperation(
+            value = "소비 내역 기반 AI 결혼 예산 추천",
+            notes = "결혼 예정 월에 따라 예식장과 스드메의 시기별 가격 가중치를 구분해 적용합니다."
+    )
     public ResponseEntity<ApiResponse<WeddingBudgetRecommendationResponseDTO>>
             recommendWeddingBudget(
                     @ApiIgnore @AuthenticationPrincipal Long userId,
