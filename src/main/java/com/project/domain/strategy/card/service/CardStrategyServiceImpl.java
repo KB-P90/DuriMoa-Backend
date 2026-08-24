@@ -13,11 +13,14 @@ import com.project.domain.strategy.card.model.CardBenefitCalculation;
 import com.project.domain.strategy.card.model.CardBenefitCalculator;
 import com.project.domain.strategy.card.model.CardBenefitCatalog;
 import com.project.domain.strategy.card.model.CardBenefitRule;
+import com.project.domain.strategy.card.model.CardProductMatcher;
 import com.project.domain.strategy.card.model.CardProductRecommendStatus;
+import com.project.domain.strategy.card.model.CardRecommendationCategory;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardOwnerRecord;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardPerformanceRecord;
 import com.project.domain.strategy.card.model.CardStrategyRecord.CardProductRecord;
 import com.project.domain.strategy.card.model.CardStrategyRecord.UserCardRecord;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,6 +46,11 @@ public class CardStrategyServiceImpl implements CardStrategyService {
             "사용처가 입력되지 않아 전 가맹점 또는 기본 혜택만 확정 계산했습니다. "
                     + "예상 혜택은 카드사 승인, 제외 업종, 취소·환불 반영 시 달라질 수 있습니다.";
 
+    // 카테고리 기반 추천에서 계산 범위와 한계를 안내하는 문구입니다.
+    private static final String CATEGORY_BENEFIT_NOTICE =
+            "입력한 카테고리에 적용 가능한 혜택만 기준으로 계산했습니다. "
+                    + "예상 혜택은 카드사 승인, 제외 업종, 취소·환불 반영 시 달라질 수 있습니다.";
+
     // 현재 스키마에 판매 상태 컬럼이 없어 상세 응답에 사용하는 기본 상태입니다.
     private static final String UNKNOWN_SALE_STATUS = "UNKNOWN";
 
@@ -56,13 +64,16 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     // 카드 혜택 계산을 담당하는 순수 계산 객체입니다.
     private final CardBenefitCalculator cardBenefitCalculator;
 
+    // 사용자 카드명과 수집 카드 상품을 연결하는 정규화 매처입니다.
+    private final CardProductMatcher cardProductMatcher;
+
     // 월 실적 기준 기간과 상품 확인 기준일 판단에 사용하는 시계입니다.
     private final Clock clock;
 
     // 운영 환경에서 사용하는 서비스 생성자입니다.
     @Autowired
     public CardStrategyServiceImpl(CardStrategyMapper cardStrategyMapper) {
-        this(cardStrategyMapper, new CardBenefitCalculator(), Clock.systemDefaultZone());
+        this(cardStrategyMapper, new CardBenefitCalculator(), new CardProductMatcher(), Clock.systemDefaultZone());
     }
 
     // 테스트에서 기준일과 계산 객체를 고정하기 위한 생성자입니다.
@@ -71,8 +82,18 @@ public class CardStrategyServiceImpl implements CardStrategyService {
             CardBenefitCalculator cardBenefitCalculator,
             Clock clock
     ) {
+        this(cardStrategyMapper, cardBenefitCalculator, new CardProductMatcher(), clock);
+    }
+
+    CardStrategyServiceImpl(
+            CardStrategyMapper cardStrategyMapper,
+            CardBenefitCalculator cardBenefitCalculator,
+            CardProductMatcher cardProductMatcher,
+            Clock clock
+    ) {
         this.cardStrategyMapper = cardStrategyMapper;
         this.cardBenefitCalculator = cardBenefitCalculator;
+        this.cardProductMatcher = cardProductMatcher;
         this.clock = clock;
     }
 
@@ -80,7 +101,15 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     @Override
     @Transactional(readOnly = true)
     public CardRecommendationResponseDTO recommendCards(Long authenticatedUserId, Long paymentAmount) {
+        return recommendCards(authenticatedUserId, paymentAmount, null);
+    }
+
+    // 결제 예정 금액과 선택 카테고리 기준으로 활성 커플의 카드 추천 결과를 조회합니다.
+    @Override
+    @Transactional(readOnly = true)
+    public CardRecommendationResponseDTO recommendCards(Long authenticatedUserId, Long paymentAmount, String categoryText) {
         validateAuthenticatedUser(authenticatedUserId);
+        CardRecommendationCategory category = CardRecommendationCategory.from(categoryText);
         List<CardOwnerRecord> owners = findActiveCoupleMembers(authenticatedUserId);
         // 활성 커플 구성원의 카드 조회에 사용할 사용자 ID 목록입니다.
         List<Long> ownerIds = owners.stream()
@@ -91,6 +120,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         if (userCards == null) {
             userCards = Collections.emptyList();
         }
+        userCards = attachMatchedCardProducts(userCards);
         // 카드별 현재 월 인정 실적을 담은 조회 결과입니다.
         Map<Long, Long> performanceAmountByCardKey = findPerformanceAmountByCardKey(userCards);
         // 상품 조건 확인일 상태 판단에 사용하는 오늘 날짜입니다.
@@ -98,7 +128,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
 
         // 정렬 기준을 적용한 전체 카드 추천 후보 목록입니다.
         List<CardRecommendationCandidate> candidates = userCards.stream()
-                .map(card -> buildCandidate(authenticatedUserId, paymentAmount, performanceAmountByCardKey, today, card))
+                .map(card -> buildCandidate(authenticatedUserId, paymentAmount, category, performanceAmountByCardKey, today, card))
                 .sorted(recommendationComparator())
                 .collect(Collectors.toList());
 
@@ -106,18 +136,15 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         List<CardRecommendationOwnerResponseDTO> ownerResponses = owners.stream()
                 .map(owner -> buildOwnerResponse(authenticatedUserId, owner, candidates))
                 .collect(Collectors.toList());
-        // 추천 가능 카드 중 예상 혜택이 가장 큰 전체 최적 카드입니다.
-        BestCardResponseDTO bestCard = candidates.stream()
-                .filter(CardRecommendationCandidate::getRecommendable)
-                .findFirst()
-                .map(this::buildBestCardResponse)
-                .orElse(null);
+        BestCardResponseDTO bestCard = buildBestCard(paymentAmount, category, today, candidates);
 
         return CardRecommendationResponseDTO.builder()
                 .paymentAmount(paymentAmount)
+                .category(category == null ? null : category.getCode())
+                .categoryName(category == null ? null : category.getDisplayName())
                 .bestCard(bestCard)
                 .owners(ownerResponses)
-                .benefitNotice(BENEFIT_NOTICE)
+                .benefitNotice(resolveBenefitNotice(category))
                 .build();
     }
 
@@ -138,7 +165,30 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         if (cardDetail == null) {
             throw resourceNotFound("카드 정보를 찾을 수 없습니다.");
         }
+        attachMatchedCardProduct(cardDetail);
 
+        return buildCardDetailResponse(cardDetail);
+    }
+
+    // 카드 상품 식별자로 추천 카드 상품 상세 정보를 조회합니다.
+    @Override
+    @Transactional(readOnly = true)
+    public CardDetailResponseDTO getCardProductDetail(Long authenticatedUserId, Long cardProductId) {
+        validateAuthenticatedUser(authenticatedUserId);
+        if (cardProductId == null || cardProductId <= 0) {
+            throw resourceNotFound("추천 카드 상품 정보를 찾을 수 없습니다.");
+        }
+
+        CardProductRecord cardDetail = cardStrategyMapper.selectCardProductDetailByProductId(cardProductId);
+        if (cardDetail == null) {
+            throw resourceNotFound("추천 카드 상품 정보를 찾을 수 없습니다.");
+        }
+
+        return buildCardDetailResponse(cardDetail);
+    }
+
+    // 카드 상품 조회 결과를 상세 응답으로 변환합니다.
+    private CardDetailResponseDTO buildCardDetailResponse(CardProductRecord cardDetail) {
         // 카드 상세 화면에 표시할 정규화된 혜택 규칙 목록입니다.
         List<CardBenefitRule> benefitRules = CardBenefitCatalog.parse(
                 cardDetail.getBenefit(),
@@ -192,6 +242,83 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         return new CustomException(ErrorCode.RESOURCE_NOT_FOUND, message);
     }
 
+    // 연결되지 않은 사용자 보유 카드에 가장 유사한 수집 카드 상품 정보를 보강합니다.
+    private List<UserCardRecord> attachMatchedCardProducts(List<UserCardRecord> userCards) {
+        if (userCards == null || userCards.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (userCards.stream().noneMatch(this::needsProductMatch)) {
+            return userCards;
+        }
+
+        List<CardProductRecord> cardProducts = cardStrategyMapper.selectAllCardProductsForMatching();
+        if (cardProducts == null || cardProducts.isEmpty()) {
+            return userCards;
+        }
+        userCards.stream()
+                .filter(this::needsProductMatch)
+                .forEach(card -> attachMatchedCardProduct(card, cardProducts));
+        return userCards;
+    }
+
+    // 연결되지 않은 카드 상세 조회 결과에 가장 유사한 수집 카드 상품 정보를 보강합니다.
+    private void attachMatchedCardProduct(CardProductRecord cardDetail) {
+        if (cardDetail == null || cardDetail.getCardProductId() != null) {
+            return;
+        }
+        List<CardProductRecord> cardProducts = cardStrategyMapper.selectAllCardProductsForMatching();
+        if (cardProducts == null || cardProducts.isEmpty()) {
+            return;
+        }
+        CardProductRecord matchedProduct = cardProductMatcher.findBestMatchingProduct(
+                cardDetail.getCompany(),
+                cardDetail.getCardName(),
+                cardProducts
+        );
+        if (matchedProduct == null) {
+            return;
+        }
+        applyMatchedProduct(cardDetail, matchedProduct);
+    }
+
+    private Boolean needsProductMatch(UserCardRecord card) {
+        return card != null && card.getCardProductId() == null;
+    }
+
+    private void attachMatchedCardProduct(UserCardRecord card, List<CardProductRecord> cardProducts) {
+        CardProductRecord matchedProduct = cardProductMatcher.findBestMatchingProduct(
+                card.getCompany(),
+                card.getCardName(),
+                cardProducts
+        );
+        if (matchedProduct == null) {
+            return;
+        }
+        applyMatchedProduct(card, matchedProduct);
+    }
+
+    private void applyMatchedProduct(UserCardRecord card, CardProductRecord matchedProduct) {
+        card.setCardProductId(matchedProduct.getCardProductId());
+        card.setCompany(blankToDefault(matchedProduct.getCompany(), card.getCompany()));
+        card.setCardName(blankToDefault(card.getCardName(), matchedProduct.getCardName()));
+        card.setAnnualFee(matchedProduct.getAnnualFee());
+        card.setImage(matchedProduct.getImage());
+        card.setBenefit(matchedProduct.getBenefit());
+        card.setConditionText(matchedProduct.getConditionText());
+        card.setConditionCheckedAt(matchedProduct.getConditionCheckedAt());
+    }
+
+    private void applyMatchedProduct(CardProductRecord cardDetail, CardProductRecord matchedProduct) {
+        cardDetail.setCardProductId(matchedProduct.getCardProductId());
+        cardDetail.setCompany(blankToDefault(matchedProduct.getCompany(), cardDetail.getCompany()));
+        cardDetail.setCardName(blankToDefault(cardDetail.getCardName(), matchedProduct.getCardName()));
+        cardDetail.setAnnualFee(matchedProduct.getAnnualFee());
+        cardDetail.setImage(matchedProduct.getImage());
+        cardDetail.setBenefit(matchedProduct.getBenefit());
+        cardDetail.setConditionText(matchedProduct.getConditionText());
+        cardDetail.setConditionCheckedAt(matchedProduct.getConditionCheckedAt());
+    }
+
     // 카드별 현재 월 인정 실적을 조회해 카드 식별자 기준 Map으로 변환합니다.
     private Map<Long, Long> findPerformanceAmountByCardKey(List<UserCardRecord> userCards) {
         if (userCards == null || userCards.isEmpty()) {
@@ -232,30 +359,32 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     private CardRecommendationCandidate buildCandidate(
             Long authenticatedUserId,
             Long paymentAmount,
+            CardRecommendationCategory category,
             Map<Long, Long> performanceAmountByCardKey,
             LocalDate today,
             UserCardRecord card
     ) {
         // 카드 상품 혜택 JSON과 조건 문구에서 추출한 계산 규칙입니다.
         List<CardBenefitRule> benefitRules = CardBenefitCatalog.parse(card.getBenefit(), card.getConditionText());
-        // 결제 사용처가 없는 추천에서는 전 가맹점 또는 기본 혜택만 확정 계산합니다.
-        List<CardBenefitRule> amountOnlyBenefitRules = CardBenefitCatalog.filterAmountOnlyApplicableRules(benefitRules);
+        // 입력 카테고리에서 적용 가능한 혜택만 확정 계산합니다.
+        List<CardBenefitRule> applicableBenefitRules = CardBenefitCatalog.filterCategoryApplicableRules(benefitRules, category);
         // 취소·환불 차감 후 카드별 현재 월 인정 실적입니다.
         Long currentPerformanceAmount = performanceAmountByCardKey.getOrDefault(card.getCardId(), 0L);
         // 결제 예정 금액 기준 예상 혜택과 다음 구간 계산 결과입니다.
         CardBenefitCalculation calculation = cardBenefitCalculator.calculate(
                 paymentAmount,
                 currentPerformanceAmount,
-                amountOnlyBenefitRules
+                applicableBenefitRules
         );
         // 상품 확인일과 혜택 데이터 기준 추천 가능 상태입니다.
         // 판매·추천 가능 상태 판단에 사용하는 상품 조건 확인 시점입니다.
         LocalDateTime conditionCheckedAt = parseConditionCheckedAt(card.getConditionCheckedAt());
-        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decideForAmountOnly(
+        CardProductRecommendStatus recommendStatus = decideRecommendStatus(
                 today,
                 conditionCheckedAt,
-                CardBenefitCatalog.hasCalculableBenefit(benefitRules),
-                CardBenefitCatalog.hasCalculableBenefit(amountOnlyBenefitRules)
+                category,
+                benefitRules,
+                applicableBenefitRules
         );
         // 추천 대상에서 제외된 상품은 순위 계산 혜택을 0원으로 처리합니다.
         Long expectedBenefitAmount = Boolean.TRUE.equals(recommendStatus.isRecommendable())
@@ -284,7 +413,7 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .conditionSummary(card.getConditionText())
                 .recommendable(recommendStatus.isRecommendable())
                 .recommendableStatus(recommendStatus.getCode())
-                .recommendationNotice(recommendStatus.isRecommendable() ? BENEFIT_NOTICE : recommendStatus.getNotice())
+                .recommendationNotice(recommendStatus.isRecommendable() ? resolveBenefitNotice(category) : recommendStatus.getNotice())
                 .conditionCheckedAt(formatDateTime(conditionCheckedAt))
                 .build();
     }
@@ -341,18 +470,169 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .build();
     }
 
+    // 응답 상단에 표시할 추천 카드를 구성합니다.
+    private BestCardResponseDTO buildBestCard(
+            Long paymentAmount,
+            CardRecommendationCategory category,
+            LocalDate today,
+            List<CardRecommendationCandidate> candidates
+    ) {
+        if (category != null) {
+            return findCategoryBestProductCard(paymentAmount, category, today);
+        }
+
+        // 카테고리 미입력 시 기존과 동일하게 보유 카드 중 예상 혜택이 가장 큰 카드를 선택합니다.
+        return candidates.stream()
+                .filter(CardRecommendationCandidate::getRecommendable)
+                .findFirst()
+                .map(this::buildBestCardResponse)
+                .orElse(null);
+    }
+
     // 후보 정보를 전체 최적 카드 응답으로 변환합니다.
     private BestCardResponseDTO buildBestCardResponse(CardRecommendationCandidate candidate) {
         return BestCardResponseDTO.builder()
                 .cardId(candidate.getCardId())
+                .cardProductId(candidate.getCardProductId())
                 .ownerType(candidate.getOwnerType())
                 .ownerName(candidate.getOwnerName())
                 .company(candidate.getCompany())
                 .cardName(candidate.getCardName())
                 .image(candidate.getImage())
+                .annualFee(candidate.getAnnualFee())
                 .expectedBenefitAmount(candidate.getExpectedBenefitAmount())
                 .benefitRate(candidate.getBenefitRate())
+                .monthlyBenefitLimit(candidate.getMonthlyBenefitLimit())
+                .conditionSummary(candidate.getConditionSummary())
                 .recommendableStatus(candidate.getRecommendableStatus())
+                .recommendationNotice(candidate.getRecommendationNotice())
+                .build();
+    }
+
+    // 선택 카테고리에 맞는 카드 상품 중 혜택률이 가장 높은 상품을 찾습니다.
+    private BestCardResponseDTO findCategoryBestProductCard(
+            Long paymentAmount,
+            CardRecommendationCategory category,
+            LocalDate today
+    ) {
+        BestCardResponseDTO crawledBestCard = findBestProductCard(
+                paymentAmount,
+                category,
+                today,
+                cardStrategyMapper.selectCardProducts()
+        );
+        if (crawledBestCard != null) {
+            return crawledBestCard;
+        }
+
+        return findBestProductCard(
+                paymentAmount,
+                category,
+                today,
+                cardStrategyMapper.selectFallbackCardProducts()
+        );
+    }
+
+    // 지정된 카드 상품 후보 중 선택 카테고리에 가장 적합한 상품 추천 응답을 만듭니다.
+    private BestCardResponseDTO findBestProductCard(
+            Long paymentAmount,
+            CardRecommendationCategory category,
+            LocalDate today,
+            List<CardProductRecord> cardProducts
+    ) {
+        if (cardProducts == null || cardProducts.isEmpty()) {
+            return null;
+        }
+
+        return cardProducts.stream()
+                .map(cardProduct -> buildProductCandidate(paymentAmount, category, today, cardProduct))
+                .filter(candidate -> Boolean.TRUE.equals(candidate.getRecommendable()))
+                .max(productRecommendationComparator())
+                .map(candidate -> buildBestCardResponse(candidate, category))
+                .orElse(null);
+    }
+
+    // 카드 상품 조회 결과를 상단 추천 후보로 변환합니다.
+    private CardProductRecommendationCandidate buildProductCandidate(
+            Long paymentAmount,
+            CardRecommendationCategory category,
+            LocalDate today,
+            CardProductRecord cardProduct
+    ) {
+        List<CardBenefitRule> benefitRules = CardBenefitCatalog.parse(
+                cardProduct.getBenefit(),
+                cardProduct.getConditionText()
+        );
+        List<CardBenefitRule> categoryBenefitRules = CardBenefitCatalog.filterCategoryApplicableRules(
+                benefitRules,
+                category
+        );
+        LocalDateTime conditionCheckedAt = parseConditionCheckedAt(cardProduct.getConditionCheckedAt());
+        CardProductRecommendStatus recommendStatus = CardProductRecommendStatus.decideForCategory(
+                today,
+                conditionCheckedAt,
+                CardBenefitCatalog.hasCalculableBenefit(benefitRules),
+                CardBenefitCatalog.hasCalculableBenefit(categoryBenefitRules)
+        );
+        CardBenefitCalculation calculation = findHighestRateCalculation(paymentAmount, categoryBenefitRules);
+        Long expectedBenefitAmount = Boolean.TRUE.equals(recommendStatus.isRecommendable())
+                ? calculation.getExpectedBenefitAmount()
+                : 0L;
+
+        return CardProductRecommendationCandidate.builder()
+                .cardProductId(cardProduct.getCardProductId())
+                .company(cardProduct.getCompany())
+                .cardName(cardProduct.getCardName())
+                .annualFee(cardProduct.getAnnualFee())
+                .image(cardProduct.getImage())
+                .expectedBenefitAmount(expectedBenefitAmount)
+                .benefitRate(calculation.getAppliedBenefitRate())
+                .monthlyBenefitLimit(calculation.getMonthlyBenefitLimit())
+                .benefitTitle(calculation.getAppliedBenefitTitle())
+                .conditionSummary(cardProduct.getConditionText())
+                .recommendable(recommendStatus.isRecommendable())
+                .recommendableStatus(recommendStatus.getCode())
+                .recommendationNotice(recommendStatus.isRecommendable() ? CATEGORY_BENEFIT_NOTICE : recommendStatus.getNotice())
+                .conditionCheckedAt(formatDateTime(conditionCheckedAt))
+                .build();
+    }
+
+    // 상단 상품 추천은 혜택률을 우선하므로 규칙별 계산 결과 중 혜택률이 가장 높은 결과를 고릅니다.
+    private CardBenefitCalculation findHighestRateCalculation(Long paymentAmount, List<CardBenefitRule> benefitRules) {
+        if (benefitRules == null || benefitRules.isEmpty()) {
+            return CardBenefitCalculation.empty(paymentAmount, 0L);
+        }
+        return benefitRules.stream()
+                .map(rule -> cardBenefitCalculator.calculate(paymentAmount, 0L, Collections.singletonList(rule)))
+                .filter(calculation -> calculation.getAppliedBenefitRate() != null
+                        || nullToZero(calculation.getExpectedBenefitAmount()) > 0L)
+                .max(Comparator
+                        .comparing((CardBenefitCalculation calculation) -> nullToZero(calculation.getAppliedBenefitRate()))
+                        .thenComparing(calculation -> nullToZero(calculation.getExpectedBenefitAmount()))
+                        .thenComparing(calculation -> nullToZero(calculation.getMonthlyBenefitLimit())))
+                .orElseGet(() -> CardBenefitCalculation.empty(paymentAmount, 0L));
+    }
+
+    // 상단 카드 상품 후보 정보를 추천 응답으로 변환합니다.
+    private BestCardResponseDTO buildBestCardResponse(
+            CardProductRecommendationCandidate candidate,
+            CardRecommendationCategory category
+    ) {
+        return BestCardResponseDTO.builder()
+                .cardProductId(candidate.getCardProductId())
+                .category(category.getCode())
+                .categoryName(category.getDisplayName())
+                .company(candidate.getCompany())
+                .cardName(candidate.getCardName())
+                .image(candidate.getImage())
+                .annualFee(candidate.getAnnualFee())
+                .expectedBenefitAmount(candidate.getExpectedBenefitAmount())
+                .benefitRate(candidate.getBenefitRate())
+                .benefitTitle(candidate.getBenefitTitle())
+                .monthlyBenefitLimit(candidate.getMonthlyBenefitLimit())
+                .conditionSummary(candidate.getConditionSummary())
+                .recommendableStatus(candidate.getRecommendableStatus())
+                .recommendationNotice(candidate.getRecommendationNotice())
                 .build();
     }
 
@@ -376,6 +656,38 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .collect(Collectors.toList());
     }
 
+    // 입력 카테고리 유무에 따라 추천 가능 상태를 판단합니다.
+    private CardProductRecommendStatus decideRecommendStatus(
+            LocalDate today,
+            LocalDateTime conditionCheckedAt,
+            CardRecommendationCategory category,
+            List<CardBenefitRule> benefitRules,
+            List<CardBenefitRule> applicableBenefitRules
+    ) {
+        if (category == null) {
+            return CardProductRecommendStatus.decideForAmountOnly(
+                    today,
+                    conditionCheckedAt,
+                    CardBenefitCatalog.hasCalculableBenefit(benefitRules),
+                    CardBenefitCatalog.hasCalculableBenefit(applicableBenefitRules)
+            );
+        }
+        return CardProductRecommendStatus.decideForCategory(
+                today,
+                conditionCheckedAt,
+                CardBenefitCatalog.hasCalculableBenefit(benefitRules),
+                CardBenefitCatalog.hasCalculableBenefit(applicableBenefitRules)
+        );
+    }
+
+    // 카테고리 입력 여부에 맞는 공통 안내 문구를 반환합니다.
+    private String resolveBenefitNotice(CardRecommendationCategory category) {
+        if (category == null) {
+            return BENEFIT_NOTICE;
+        }
+        return CATEGORY_BENEFIT_NOTICE;
+    }
+
     // 추천 목록의 결정적인 정렬 기준을 제공합니다.
     private Comparator<CardRecommendationCandidate> recommendationComparator() {
         return Comparator
@@ -385,6 +697,20 @@ public class CardStrategyServiceImpl implements CardStrategyService {
                 .thenComparing(candidate -> safeText(candidate.getCompany()))
                 .thenComparing(candidate -> safeText(candidate.getCardName()))
                 .thenComparing(CardRecommendationCandidate::getCardId);
+    }
+
+    // 상단 카드 상품 추천의 결정적인 정렬 기준을 제공합니다.
+    private Comparator<CardProductRecommendationCandidate> productRecommendationComparator() {
+        return Comparator
+                .comparing(
+                        (CardProductRecommendationCandidate candidate) -> nullToZero(candidate.getBenefitRate()),
+                        Comparator.reverseOrder()
+                )
+                .thenComparing(CardProductRecommendationCandidate::getExpectedBenefitAmount, Comparator.reverseOrder())
+                .thenComparing(candidate -> nullToZero(candidate.getMonthlyBenefitLimit()), Comparator.reverseOrder())
+                .thenComparing(candidate -> safeText(candidate.getCompany()))
+                .thenComparing(candidate -> safeText(candidate.getCardName()))
+                .thenComparing(CardProductRecommendationCandidate::getCardProductId);
     }
 
     // LocalDateTime 값을 API 포맷 문자열로 변환합니다.
@@ -412,6 +738,11 @@ public class CardStrategyServiceImpl implements CardStrategyService {
         return value == null ? 0L : value;
     }
 
+    // 비어 있는 비율 값을 0으로 바꿉니다.
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
     // 정렬용 비어 있는 금액 값을 가장 뒤로 보냅니다.
     private Long nullToMax(Long value) {
         return value == null ? Long.MAX_VALUE : value;
@@ -420,5 +751,12 @@ public class CardStrategyServiceImpl implements CardStrategyService {
     // 정렬용 비어 있는 문자열 값을 빈 문자열로 바꿉니다.
     private String safeText(String value) {
         return value == null ? "" : value;
+    }
+
+    private String blankToDefault(String value, String defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return value;
     }
 }

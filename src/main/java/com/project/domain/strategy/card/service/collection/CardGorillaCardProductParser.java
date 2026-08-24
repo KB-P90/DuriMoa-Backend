@@ -581,6 +581,8 @@ public class CardGorillaCardProductParser {
         addCategoryIfMatched(categories, normalizedText, "TRANSPORT", "대중교통", "버스", "지하철", "택시", "교통");
         addCategoryIfMatched(categories, normalizedText, "FUEL", "주유", "충전소", "LPG");
         addCategoryIfMatched(categories, normalizedText, "MART", "마트", "이마트", "홈플러스", "롯데마트");
+        addCategoryIfMatched(categories, normalizedText, "FURNITURE", "가구", "혼수", "가전", "전자제품", "하이마트",
+                "전자랜드", "LG전자", "삼성스토어", "오늘의집", "이케아", "IKEA", "인테리어");
         addCategoryIfMatched(categories, normalizedText, "CONVENIENCE_STORE", "편의점", "CU", "GS25", "세븐일레븐");
         addCategoryIfMatched(categories, normalizedText, "ONLINE_SHOPPING", "온라인", "쇼핑", "쿠팡", "네이버페이", "11번가", "G마켓");
         addCategoryIfMatched(categories, normalizedText, "DELIVERY", "배달", "배민", "요기요", "쿠팡이츠");

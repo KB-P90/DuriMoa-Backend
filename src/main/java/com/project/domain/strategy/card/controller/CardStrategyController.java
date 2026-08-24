@@ -14,6 +14,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +29,7 @@ import springfox.documentation.annotations.ApiIgnore;
 @Api(tags = "Card Strategy", description = "카드 추천 및 상세 조회 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/strategy/card")
+@RequestMapping(value = "/api/strategy/card", produces = MediaType.APPLICATION_JSON_VALUE)
 public class CardStrategyController {
 
     // 카드 추천과 상세 조회 비즈니스 로직을 담당하는 서비스입니다.
@@ -37,15 +38,20 @@ public class CardStrategyController {
     // 카드고릴라 상품 수집과 DB 반영을 담당하는 서비스입니다.
     private final CardGorillaCardProductCollectionService cardGorillaCardProductCollectionService;
 
-    // 결제 예정 금액 기준으로 본인·상대방 카드 추천 결과를 조회합니다.
-    @ApiOperation(value = "카드 추천 조회", notes = "결제 예정 금액 기준으로 활성 커플의 보유 카드를 비교합니다.")
+    // 결제 예정 금액과 선택 카테고리 기준으로 본인·상대방 카드 추천 결과를 조회합니다.
+    @ApiOperation(value = "카드 추천 조회", notes = "결제 예정 금액과 카테고리 기준으로 활성 커플의 보유 카드를 비교합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<CardRecommendationResponseDTO>> recommendCards(
             @RequestParam(value = "amount", required = false) String amount,
+            @RequestParam(value = "category", required = false) String category,
             @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
     ) {
         Long paymentAmount = CardPaymentAmountValidator.validate(amount);
-        CardRecommendationResponseDTO response = cardStrategyService.recommendCards(authenticatedUserId, paymentAmount);
+        CardRecommendationResponseDTO response = cardStrategyService.recommendCards(
+                authenticatedUserId,
+                paymentAmount,
+                category
+        );
         return ResponseEntity.ok(ApiResponse.success("카드 추천 조회에 성공했습니다.", response));
     }
 
@@ -59,6 +65,18 @@ public class CardStrategyController {
         Long cardId = parseCardId(cardIdText);
         CardDetailResponseDTO response = cardStrategyService.getCardDetail(authenticatedUserId, cardId);
         return ResponseEntity.ok(ApiResponse.success("카드 상세 조회에 성공했습니다.", response));
+    }
+
+    // 카드 상품 식별자로 추천 카드 상품 상세 정보를 조회합니다.
+    @ApiOperation(value = "추천 카드 상품 상세 조회", notes = "카드 상품 식별자 기준으로 추천 카드 상품 상세 정보를 조회합니다.")
+    @GetMapping("/products/{cardProductId}")
+    public ResponseEntity<ApiResponse<CardDetailResponseDTO>> getCardProductDetail(
+            @PathVariable("cardProductId") String cardProductIdText,
+            @ApiIgnore @AuthenticationPrincipal Long authenticatedUserId
+    ) {
+        Long cardProductId = parseCardProductId(cardProductIdText);
+        CardDetailResponseDTO response = cardStrategyService.getCardProductDetail(authenticatedUserId, cardProductId);
+        return ResponseEntity.ok(ApiResponse.success("추천 카드 상품 상세 조회에 성공했습니다.", response));
     }
 
     // 카드고릴라 신용카드와 체크카드 상품을 수집해 카드 추천 DB에 반영합니다.
@@ -80,6 +98,14 @@ public class CardStrategyController {
         return parsePositiveLong(
                 cardIdText,
                 new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "카드 정보를 찾을 수 없습니다.")
+        );
+    }
+
+    // 추천 상품 상세 조회의 카드 상품 식별자를 양수 Long으로 변환합니다.
+    private Long parseCardProductId(String cardProductIdText) {
+        return parsePositiveLong(
+                cardProductIdText,
+                new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "추천 카드 상품 정보를 찾을 수 없습니다.")
         );
     }
 

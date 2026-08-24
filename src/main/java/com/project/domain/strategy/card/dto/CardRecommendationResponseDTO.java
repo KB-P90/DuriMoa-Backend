@@ -13,7 +13,15 @@ public class CardRecommendationResponseDTO {
     @JsonProperty("payment_amount")
     private final Long paymentAmount;
 
-    // 전체 카드 중 예상 혜택이 가장 큰 카드입니다.
+    // 사용자가 입력한 카드 추천 카테고리 코드입니다.
+    @JsonProperty("category")
+    private final String category;
+
+    // 사용자가 입력한 카드 추천 카테고리 표시명입니다.
+    @JsonProperty("category_name")
+    private final String categoryName;
+
+    // 화면 상단에 표시할 추천 카드입니다.
     @JsonProperty("best_card")
     private final BestCardResponseDTO bestCard;
 

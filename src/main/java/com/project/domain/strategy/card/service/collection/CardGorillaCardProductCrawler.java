@@ -36,10 +36,10 @@ public class CardGorillaCardProductCrawler {
     private static final String CARD_DETAIL_PAGE_URL_PREFIX = "https://www.card-gorilla.com/card/detail/";
 
     // 한 번에 과도한 요청이 발생하지 않도록 제한하는 기본 수집 개수입니다.
-    private static final Integer DEFAULT_MAX_COUNT = 30;
+    private static final Integer DEFAULT_MAX_COUNT = 100;
 
     // 운영 호출에서 허용하는 최대 수집 개수입니다.
-    private static final Integer MAX_COUNT_LIMIT = 100;
+    private static final Integer MAX_COUNT_LIMIT = 200;
 
     // 외부 페이지 요청 타임아웃입니다.
     private static final Integer REQUEST_TIMEOUT_MILLIS = 10_000;

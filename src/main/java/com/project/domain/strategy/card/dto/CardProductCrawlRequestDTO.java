@@ -21,7 +21,7 @@ public class CardProductCrawlRequestDTO {
     // 한 번에 수집할 최대 카드 상품 수입니다.
     @JsonProperty("max_count")
     @JsonAlias("maxCount")
-    @ApiModelProperty(value = "수집할 최대 카드 상품 수", example = "30")
+    @ApiModelProperty(value = "수집할 최대 카드 상품 수", example = "100")
     private Integer maxCount;
 
     // 수집할 카드 유형입니다. ALL이면 신용카드와 체크카드를 함께 수집합니다.
