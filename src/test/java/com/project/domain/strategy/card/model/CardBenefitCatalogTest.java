@@ -51,4 +51,24 @@ class CardBenefitCatalogTest {
         Assertions.assertTrue(CardBenefitCatalog.isAmountOnlyApplicable(amountOnlyRules.get(0)));
         Assertions.assertFalse(CardBenefitCatalog.isAmountOnlyApplicable(rules.get(0)));
     }
+
+    // 선택 카테고리 추천에서는 해당 카테고리 혜택과 전 가맹점 혜택만 계산 대상으로 분류합니다.
+    @Test
+    void filterCategoryApplicableRulesKeepsMatchingAndUniversalBenefits() {
+        String benefitJson = "{\"benefits\":["
+                + "{\"benefit_name\":\"여행 할인\",\"categories\":[\"TRAVEL\"],\"benefit_rate\":0.2},"
+                + "{\"benefit_name\":\"홈플러스 할인\",\"categories\":[\"MART\"],\"benefit_rate\":0.05},"
+                + "{\"benefit_name\":\"전 가맹점 적립\",\"categories\":[\"ALL\"],\"benefit_rate\":0.01}"
+                + "]}";
+
+        List<CardBenefitRule> rules = CardBenefitCatalog.parse(benefitJson, "전월 30만원 이상");
+        List<CardBenefitRule> furnitureRules = CardBenefitCatalog.filterCategoryApplicableRules(
+                rules,
+                CardRecommendationCategory.FURNITURE
+        );
+
+        Assertions.assertEquals(2, furnitureRules.size());
+        Assertions.assertEquals("홈플러스 할인", furnitureRules.get(0).getTitle());
+        Assertions.assertEquals("전 가맹점 적립", furnitureRules.get(1).getTitle());
+    }
 }

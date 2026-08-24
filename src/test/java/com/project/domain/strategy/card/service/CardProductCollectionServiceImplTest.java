@@ -32,6 +32,7 @@ class CardProductCollectionServiceImplTest {
         Assertions.assertEquals("신한", captor.getValue().getCompany());
         Assertions.assertEquals("신한 Mr.Life", captor.getValue().getName());
         Assertions.assertEquals("[\"생활 1% 할인\"]", captor.getValue().getBenefit());
+        Mockito.verify(writer).linkUserCardsToBestProducts();
     }
 
     // 검증 실패 상품은 기존 정상 상품 저장을 방해하지 않고 실패 목록에 남깁니다.
@@ -49,6 +50,7 @@ class CardProductCollectionServiceImplTest {
         Assertions.assertEquals(1, result.getFailureCount());
         Assertions.assertEquals("현대 현대 ZERO", result.getFailedProducts().get(0));
         Mockito.verify(writer, Mockito.times(1)).upsertProduct(Mockito.any(CardProductSource.class));
+        Mockito.verify(writer).linkUserCardsToBestProducts();
     }
 
     // 한 상품의 DB 작업이 실패해도 다음 상품 수집은 계속 진행합니다.
@@ -70,6 +72,40 @@ class CardProductCollectionServiceImplTest {
         Assertions.assertEquals(1, result.getFailureCount());
         Assertions.assertEquals("KB국민 KB 웨딩", result.getFailedProducts().get(0));
         Mockito.verify(writer, Mockito.times(2)).upsertProduct(Mockito.any(CardProductSource.class));
+        Mockito.verify(writer).linkUserCardsToBestProducts();
+    }
+
+    // 정상 저장된 상품이 없으면 사용자 카드 매칭을 실행하지 않습니다.
+    @Test
+    void collectProductsDoesNotLinkWhenNoProductSucceeded() {
+        CardProductCatalogWriter writer = Mockito.mock(CardProductCatalogWriter.class);
+        CardProductCollectionServiceImpl service = new CardProductCollectionServiceImpl(writer);
+
+        CardProductCollectionResultDTO result = service.collectProducts(Arrays.asList(
+                product("현대", "현대 ZERO", -1)
+        ));
+
+        Assertions.assertEquals(0, result.getSuccessCount());
+        Assertions.assertEquals(1, result.getFailureCount());
+        Mockito.verify(writer, Mockito.never()).linkUserCardsToBestProducts();
+    }
+
+    // 사용자 카드 매칭 실패는 상품 수집 실패로 집계하지 않고 로그만 남깁니다.
+    @Test
+    void collectProductsDoesNotCountLinkFailureAsProductFailure() {
+        CardProductCatalogWriter writer = Mockito.mock(CardProductCatalogWriter.class);
+        CardProductCollectionServiceImpl service = new CardProductCollectionServiceImpl(writer);
+        Mockito.doThrow(new RuntimeException("link failed"))
+                .when(writer)
+                .linkUserCardsToBestProducts();
+
+        CardProductCollectionResultDTO result = service.collectProducts(Arrays.asList(
+                product("KB국민", "KB 웨딩", 10_000)
+        ));
+
+        Assertions.assertEquals(1, result.getSuccessCount());
+        Assertions.assertEquals(0, result.getFailureCount());
+        Assertions.assertTrue(result.getFailedProducts().isEmpty());
     }
 
     // 카드 상품 수집 테스트 데이터를 만듭니다.

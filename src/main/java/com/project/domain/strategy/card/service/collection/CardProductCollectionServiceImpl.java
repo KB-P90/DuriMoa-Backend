@@ -47,6 +47,13 @@ public class CardProductCollectionServiceImpl implements CardProductCollectionSe
                 log.warn("Card product collection failed. product={}", productName, exception);
             }
         }
+        if (successCount > 0) {
+            try {
+                cardProductCatalogWriter.linkUserCardsToBestProducts();
+            } catch (Exception exception) {
+                log.warn("Card product matching failed after collection.", exception);
+            }
+        }
 
         return CardProductCollectionResultDTO.builder()
                 .requestedCount(safeProducts.size())

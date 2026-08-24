@@ -101,6 +101,22 @@ public final class CardBenefitCatalog {
                 .collect(Collectors.toList());
     }
 
+    // 선택 카테고리에서 적용 가능한 혜택 규칙만 반환합니다. 전 가맹점·기본 혜택은 모든 카테고리에 포함합니다.
+    public static List<CardBenefitRule> filterCategoryApplicableRules(
+            List<CardBenefitRule> rules,
+            CardRecommendationCategory category
+    ) {
+        if (category == null) {
+            return filterAmountOnlyApplicableRules(rules);
+        }
+        if (rules == null || rules.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return rules.stream()
+                .filter(rule -> isCategoryApplicable(rule, category))
+                .collect(Collectors.toList());
+    }
+
     // 사용처 입력 없이도 해당 혜택을 확정 계산할 수 있는지 확인합니다.
     public static Boolean isAmountOnlyApplicable(CardBenefitRule rule) {
         if (rule == null || Boolean.TRUE.equals(rule.getExcluded()) || !Boolean.TRUE.equals(rule.hasBenefitValue())) {
@@ -111,6 +127,25 @@ public final class CardBenefitCatalog {
             return categories.stream().anyMatch(CardBenefitCatalog::isUniversalScopeText);
         }
         return hasUniversalKeyword(rule.getTitle()) || hasUniversalKeyword(rule.getDescription());
+    }
+
+    // 선택 카테고리에서 해당 혜택을 계산 대상으로 볼 수 있는지 확인합니다.
+    public static Boolean isCategoryApplicable(CardBenefitRule rule, CardRecommendationCategory category) {
+        if (category == null) {
+            return isAmountOnlyApplicable(rule);
+        }
+        if (rule == null || Boolean.TRUE.equals(rule.getExcluded()) || !Boolean.TRUE.equals(rule.hasBenefitValue())) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(isAmountOnlyApplicable(rule))) {
+            return true;
+        }
+
+        Boolean categoryMatched = rule.safeCategories().stream()
+                .anyMatch(category::matchesBenefitScope);
+        return categoryMatched
+                || category.matchesBenefitScope(rule.getTitle())
+                || category.matchesBenefitScope(rule.getDescription());
     }
 
     // 배열 형태의 혜택 항목을 규칙 목록으로 변환합니다.

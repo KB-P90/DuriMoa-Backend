@@ -27,36 +27,17 @@
             c.user_id AS user_id,
             u.name AS owner_name,
             u.role AS owner_role,
-            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
-            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
-            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
-            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
-            COALESCE(linked_cp.image, matched_cp.image) AS image,
-            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
-            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
-            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            linked_cp.id AS card_product_id,
+            COALESCE(linked_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name) AS card_name,
+            COALESCE(linked_cp.annual_fee, 0) AS annual_fee,
+            linked_cp.image AS image,
+            JSON_UNQUOTE(JSON_EXTRACT(linked_cp.benefit, '$')) AS benefit,
+            linked_cp.`condition` AS condition_text,
+            DATE_FORMAT(linked_cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
         INNER JOIN `user` u
             ON u.id = c.user_id
-        LEFT JOIN card_product matched_cp
-            ON matched_cp.id = (
-                SELECT
-                    cp2.id
-                FROM card_product cp2
-                WHERE (
-                    REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
-                        = REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                    OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', ''), '%')
-                    OR REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
-                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
-                )
-                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(cp2.name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-                      = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-                ORDER BY cp2.updated_at DESC, cp2.id DESC
-                LIMIT 1
-            )
-           AND c.card_product_id IS NULL
         LEFT JOIN card_product linked_cp
             ON linked_cp.id = c.card_product_id
         WHERE c.user_id IN
@@ -65,8 +46,8 @@
         </foreach>
         ORDER BY
             c.user_id ASC,
-            COALESCE(linked_cp.company, matched_cp.company, c.company) ASC,
-            COALESCE(c.card_name, linked_cp.name, matched_cp.name) ASC,
+            COALESCE(linked_cp.company, c.company) ASC,
+            COALESCE(c.card_name, linked_cp.name) ASC,
             c.id ASC
     </select>
 
@@ -98,37 +79,109 @@
     <select id="selectCardDetailByCardId" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
         SELECT
             c.id AS card_id,
-            COALESCE(linked_cp.id, matched_cp.id) AS card_product_id,
-            COALESCE(linked_cp.company, matched_cp.company, c.company) AS company,
-            COALESCE(c.card_name, linked_cp.name, matched_cp.name) AS card_name,
-            COALESCE(linked_cp.image, matched_cp.image) AS image,
-            COALESCE(linked_cp.annual_fee, matched_cp.annual_fee, 0) AS annual_fee,
-            JSON_UNQUOTE(JSON_EXTRACT(COALESCE(linked_cp.benefit, matched_cp.benefit), '$')) AS benefit,
-            COALESCE(linked_cp.`condition`, matched_cp.`condition`) AS condition_text,
-            DATE_FORMAT(COALESCE(linked_cp.updated_at, matched_cp.updated_at), '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+            linked_cp.id AS card_product_id,
+            COALESCE(linked_cp.company, c.company) AS company,
+            COALESCE(c.card_name, linked_cp.name) AS card_name,
+            linked_cp.image AS image,
+            COALESCE(linked_cp.annual_fee, 0) AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(linked_cp.benefit, '$')) AS benefit,
+            linked_cp.`condition` AS condition_text,
+            DATE_FORMAT(linked_cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
         FROM card c
-        LEFT JOIN card_product matched_cp
-            ON matched_cp.id = (
-                SELECT
-                    cp2.id
-                FROM card_product cp2
-                WHERE (
-                    REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
-                        = REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                    OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', ''), '%')
-                    OR REPLACE(REPLACE(LOWER(COALESCE(cp2.company, '')), ' ', ''), '카드', '')
-                        LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
-                )
-                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(cp2.name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-                      = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-                ORDER BY cp2.updated_at DESC, cp2.id DESC
-                LIMIT 1
-            )
-           AND c.card_product_id IS NULL
         LEFT JOIN card_product linked_cp
             ON linked_cp.id = c.card_product_id
         WHERE c.id = #{cardId}
+    </select>
+
+    <select id="selectCardProductDetailByProductId" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
+        SELECT
+            NULL AS card_id,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            cp.name AS card_name,
+            cp.image AS image,
+            cp.annual_fee AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+        FROM card_product cp
+        WHERE cp.id = #{cardProductId}
+    </select>
+
+    <select id="selectCardProducts" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
+        SELECT
+            NULL AS card_id,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            cp.name AS card_name,
+            cp.image AS image,
+            cp.annual_fee AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+        FROM card_product cp
+        WHERE JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$.source_site')) = 'CARD_GORILLA'
+        ORDER BY
+            cp.updated_at DESC,
+            cp.id DESC
+    </select>
+
+    <select id="selectFallbackCardProducts" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
+        SELECT
+            NULL AS card_id,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            cp.name AS card_name,
+            cp.image AS image,
+            cp.annual_fee AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+        FROM card_product cp
+        WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$.source_site')), '') != 'CARD_GORILLA'
+        ORDER BY
+            cp.updated_at DESC,
+            cp.id DESC
+    </select>
+
+    <select id="selectAllCardProductsForMatching" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$CardProductRecord">
+        SELECT
+            NULL AS card_id,
+            cp.id AS card_product_id,
+            cp.company AS company,
+            cp.name AS card_name,
+            cp.image AS image,
+            cp.annual_fee AS annual_fee,
+            JSON_UNQUOTE(JSON_EXTRACT(cp.benefit, '$')) AS benefit,
+            cp.`condition` AS condition_text,
+            DATE_FORMAT(cp.updated_at, '%Y-%m-%d %H:%i:%s') AS condition_checked_at
+        FROM card_product cp
+        ORDER BY
+            cp.updated_at DESC,
+            cp.id DESC
+    </select>
+
+    <select id="selectUnlinkedUserCardsForMatching" resultType="com.project.domain.strategy.card.model.CardStrategyRecord$UserCardRecord">
+        SELECT
+            c.id AS card_id,
+            c.user_id AS user_id,
+            u.name AS owner_name,
+            u.role AS owner_role,
+            NULL AS card_product_id,
+            c.company AS company,
+            c.card_name AS card_name,
+            0 AS annual_fee,
+            NULL AS image,
+            NULL AS benefit,
+            NULL AS condition_text,
+            NULL AS condition_checked_at
+        FROM card c
+        INNER JOIN `user` u
+            ON u.id = c.user_id
+        WHERE c.card_product_id IS NULL
+          AND c.card_name IS NOT NULL
+          AND TRIM(c.card_name) != ''
+        ORDER BY c.id ASC
     </select>
 
     <select id="existsCardAccessInActiveCouple" resultType="java.lang.Integer">
@@ -180,22 +233,10 @@
           AND name = #{source.name}
     </update>
 
-    <update id="updateUserCardsProductIdByCompanyAndName">
-        UPDATE card c
-        INNER JOIN card_product cp
-            ON cp.company = #{source.company}
-           AND cp.name = #{source.name}
-        SET c.card_product_id = cp.id
-        WHERE c.card_product_id IS NULL
-          AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(c.card_name, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-              = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(#{source.name}, '')), ' ', ''), '카드', ''), '-', ''), '_', ''), '.', ''), '/', ''), '[', ''), ']', '')
-          AND (
-              REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                  = REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', '')
-              OR REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', '')
-                  LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', ''), '%')
-              OR REPLACE(REPLACE(LOWER(COALESCE(#{source.company}, '')), ' ', ''), '카드', '')
-                  LIKE CONCAT('%', REPLACE(REPLACE(LOWER(COALESCE(c.company, '')), ' ', ''), '카드', ''), '%')
-          )
+    <update id="updateUserCardProductId">
+        UPDATE card
+        SET card_product_id = #{cardProductId}
+        WHERE id = #{cardId}
+          AND card_product_id IS NULL
     </update>
 </mapper>

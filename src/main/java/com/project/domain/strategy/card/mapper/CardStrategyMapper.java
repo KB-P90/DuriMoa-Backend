@@ -29,6 +29,21 @@ public interface CardStrategyMapper {
     // 사용자 카드 식별자로 카드 상품 상세 정보를 조회합니다.
     CardProductRecord selectCardDetailByCardId(@Param("cardId") Long cardId);
 
+    // 카드 상품 식별자로 카드 상품 상세 정보를 조회합니다.
+    CardProductRecord selectCardProductDetailByProductId(@Param("cardProductId") Long cardProductId);
+
+    // 카드고릴라에서 수집된 카드 상품 추천 후보를 조회합니다.
+    List<CardProductRecord> selectCardProducts();
+
+    // 카드고릴라 추천 후보가 없을 때 사용할 임시 카드 상품 후보를 조회합니다.
+    List<CardProductRecord> selectFallbackCardProducts();
+
+    // 사용자 보유 카드와 수집 상품 매칭에 사용할 전체 카드 상품을 조회합니다.
+    List<CardProductRecord> selectAllCardProductsForMatching();
+
+    // 수집 후 카드 상품과 연결할 수 있는 미연결 사용자 보유 카드를 조회합니다.
+    List<UserCardRecord> selectUnlinkedUserCardsForMatching();
+
     // 인증 사용자의 활성 커플 안에서 접근 가능한 카드인지 확인합니다.
     Integer existsCardAccessInActiveCouple(
             @Param("userId") Long userId,
@@ -47,6 +62,9 @@ public interface CardStrategyMapper {
     // 기존 카드 상품 정보를 카드사와 상품명 기준으로 갱신합니다.
     Integer updateCardProductByCompanyAndName(@Param("source") CardProductSource source);
 
-    // 수집된 카드 상품과 동일한 사용자 보유 카드에 card_product_id를 연결합니다.
-    Integer updateUserCardsProductIdByCompanyAndName(@Param("source") CardProductSource source);
+    // 사용자 보유 카드에 가장 유사한 카드 상품 ID를 연결합니다.
+    Integer updateUserCardProductId(
+            @Param("cardId") Long cardId,
+            @Param("cardProductId") Long cardProductId
+    );
 }
