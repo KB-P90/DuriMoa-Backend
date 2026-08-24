@@ -33,7 +33,7 @@ public class FcmSender {
         try {
             FirebaseMessaging.getInstance().send(message);
         } catch (FirebaseMessagingException e) {
-            log.warn("FCM 푸시 발송에 실패했습니다. token={}, error={}", fcmToken, e.getMessage());
+            log.warn("FCM 푸시 발송에 실패했습니다. token=[REDACTED], error={}", e.getMessage());
         }
     }
 }

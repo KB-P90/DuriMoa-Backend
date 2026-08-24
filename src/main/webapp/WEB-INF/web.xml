@@ -34,6 +34,17 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
+    <!-- Issue and propagate X-Request-ID before metrics and security filters. -->
+    <filter>
+        <filter-name>requestIdFilter</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+        <async-supported>true</async-supported>
+    </filter>
+    <filter-mapping>
+        <filter-name>requestIdFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <!-- HTTP metrics must wrap Spring Security to include rejected requests. -->
     <filter>
         <filter-name>httpRequestMetricsFilter</filter-name>

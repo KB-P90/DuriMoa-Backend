@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO">
+<Configuration status="INFO" packages="com.project.common.logging">
     <Properties>
         <Property name="logDir">${env:DURIMOA_LOG_DIR:-logs}</Property>
         <Property name="logPattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level [requestId=%X{requestId}] %logger{36} - %msg%n</Property>
@@ -18,27 +18,27 @@
             </Policies>
             <DefaultRolloverStrategy max="14"/>
         </RollingFile>
+        <Rewrite name="Sanitized">
+            <SensitiveDataRewritePolicy/>
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="ApplicationFile"/>
+        </Rewrite>
     </Appenders>
     <Loggers>
         <Logger name="com.project" level="DEBUG" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="ApplicationFile"/>
+            <AppenderRef ref="Sanitized"/>
         </Logger>
-        <Logger name="jdbc.sqlonly" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="ApplicationFile"/>
+        <Logger name="jdbc.sqlonly" level="OFF" additivity="false">
+            <AppenderRef ref="Sanitized"/>
         </Logger>
-        <Logger name="jdbc.sqltiming" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="ApplicationFile"/>
+        <Logger name="jdbc.sqltiming" level="WARN" additivity="false">
+            <AppenderRef ref="Sanitized"/>
         </Logger>
-        <Logger name="jdbc.resultsettable" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="ApplicationFile"/>
+        <Logger name="jdbc.resultsettable" level="OFF" additivity="false">
+            <AppenderRef ref="Sanitized"/>
         </Logger>
         <Root level="INFO">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="ApplicationFile"/>
+            <AppenderRef ref="Sanitized"/>
         </Root>
     </Loggers>
 </Configuration>

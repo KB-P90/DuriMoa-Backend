@@ -1,42 +1,62 @@
 loki.source.file "durimoa_backend" {
-  targets = [
-    {
-      __path__    = "/var/log/durimoa/*.log",
-      job         = "durimoa-backend",
-      service     = "durimoa-backend",
-      environment = sys.env("DURIMOA_ENVIRONMENT"),
-    },
-  ]
-  forward_to = [loki.process.durimoa_backend.receiver]
+	targets = [
+		{
+			__path__    = "/var/log/durimoa/*.log",
+			job         = "durimoa-backend",
+			service     = "durimoa-backend",
+			environment = sys.env("DURIMOA_ENVIRONMENT"),
+		},
+	]
+	forward_to = [loki.process.durimoa_backend.receiver]
 
-  file_match {
-    enabled     = true
-    sync_period = "5s"
-  }
+	file_match {
+		enabled     = true
+		sync_period = "5s"
+	}
 }
 
 loki.process "durimoa_backend" {
-  stage.regex {
-    expression = "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[[^]]+\\] (?P<level>[A-Z]+)"
-  }
+	stage.replace {
+		expression = "(?i)(?:Bearer\\s+)?eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"
+		replace    = "[REDACTED_JWT]"
+	}
 
-  stage.timestamp {
-    source = "timestamp"
-    format = "2006-01-02 15:04:05.000"
-    location = "Asia/Seoul"
-  }
+	stage.replace {
+		expression = "01[016789][- ]?[0-9]{3,4}[- ]?[0-9]{4}"
+		replace    = "[REDACTED_PHONE]"
+	}
 
-  stage.labels {
-    values = {
-      level = "",
-    }
-  }
+	stage.replace {
+		expression = "(?i)(password|currentPassword|authorization|accessToken|refreshToken|signupToken|fcmToken|token|connectedId)[[:space:]]*[:=][[:space:]]*[^,[:space:]}]+"
+		replace    = "[REDACTED_SENSITIVE_FIELD]"
+	}
 
-  forward_to = [loki.write.local.receiver]
+	stage.replace {
+		expression = "(?i)(account|accountNumber|number)[[:space:]]*[:=][[:space:]]*[0-9][0-9-]{6,20}[0-9]"
+		replace    = "[REDACTED_ACCOUNT]"
+	}
+
+	stage.regex {
+		expression = "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[[^]]+\\] (?P<level>[A-Z]+)"
+	}
+
+	stage.timestamp {
+		source   = "timestamp"
+		format   = "2006-01-02 15:04:05.000"
+		location = "Asia/Seoul"
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	forward_to = [loki.write.local.receiver]
 }
 
 loki.write "local" {
-  endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
-  }
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
 }
