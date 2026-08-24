@@ -6,9 +6,11 @@ import com.project.common.exception.ErrorCode;
 import com.project.domain.ai.dto.AiChatRequestDTO;
 import com.project.domain.ai.dto.AiChatResponseDTO;
 import com.project.domain.ai.dto.AiConnectionTestResponseDTO;
+import com.project.domain.ai.dto.SpendingReportResponseDTO;
 import com.project.domain.ai.dto.WeddingBudgetRecommendationRequestDTO;
 import com.project.domain.ai.dto.WeddingBudgetRecommendationResponseDTO;
 import com.project.domain.ai.service.AiService;
+import com.project.domain.ai.service.SpendingReportService;
 import com.project.domain.ai.service.WeddingBudgetRecommendationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -18,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +34,7 @@ public class AiController {
 
     private final AiService aiService;
     private final WeddingBudgetRecommendationService weddingBudgetRecommendationService;
+    private final SpendingReportService spendingReportService;
 
     @PostMapping("/test")
     @ApiOperation(value = "OpenAI 연결 테스트")
@@ -46,6 +50,20 @@ public class AiController {
     ) {
         AiChatResponseDTO result = aiService.chat(requestDTO.getMessage());
         return ResponseEntity.ok(ApiResponse.success("AI 응답을 생성했습니다.", result));
+    }
+
+    @GetMapping("/spending-report")
+    @ApiOperation(
+            value = "가입 이후 개인 소비 리포트",
+            notes = "회원가입일부터 요청 시점까지 개인 지출의 흐름, 카테고리, 요일 패턴을 분석합니다."
+    )
+    public ResponseEntity<ApiResponse<SpendingReportResponseDTO>> getSpendingReport(
+            @ApiIgnore @AuthenticationPrincipal Long userId,
+            @ApiIgnore Authentication authentication
+    ) {
+        Long authenticatedUserId = resolveAuthenticatedUserId(userId, authentication);
+        SpendingReportResponseDTO result = spendingReportService.generate(authenticatedUserId);
+        return ResponseEntity.ok(ApiResponse.success("개인 소비 리포트를 생성했습니다.", result));
     }
 
     @PostMapping("/wedding-budget/recommendation")

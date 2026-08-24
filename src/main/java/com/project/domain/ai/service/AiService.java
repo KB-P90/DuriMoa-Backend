@@ -3,6 +3,8 @@ package com.project.domain.ai.service;
 import com.project.domain.ai.dto.AiChatResponseDTO;
 import com.project.domain.ai.dto.AiBudgetTypeModelResponseDTO;
 import com.project.domain.ai.dto.AiConnectionTestResponseDTO;
+import com.project.domain.ai.dto.AiSpendingReportSummaryModelResponseDTO;
+import com.project.domain.ai.model.AiSpendingReportSummaryContext;
 import com.project.domain.ai.model.AiWeddingBudgetSelectionContext;
 
 public interface AiService {
@@ -13,5 +15,9 @@ public interface AiService {
 
     AiBudgetTypeModelResponseDTO selectWeddingBudgetType(
             AiWeddingBudgetSelectionContext context
+    );
+
+    AiSpendingReportSummaryModelResponseDTO summarizeSpendingReport(
+            AiSpendingReportSummaryContext context
     );
 }

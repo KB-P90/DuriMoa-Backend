@@ -121,6 +121,31 @@ class AiServiceImplTest {
     }
 
     @Test
+    void chatMapsSpendingReportIntentToGenerateAction() {
+        ObjectProvider<OpenAIClient> clientProvider = Mockito.mock(ObjectProvider.class);
+        OpenAIClient client = Mockito.mock(OpenAIClient.class);
+        ResponseService responseService = Mockito.mock(ResponseService.class);
+        StructuredResponse<AiIntentModelResponseDTO> response = structuredResponse(
+                new AiIntentModelResponseDTO(
+                        AiIntent.SPENDING_REPORT,
+                        "가입 이후 소비를 분석해드릴게요."
+                )
+        );
+
+        Mockito.when(clientProvider.getObject()).thenReturn(client);
+        Mockito.when(client.responses()).thenReturn(responseService);
+        Mockito.doReturn(response)
+                .when(responseService)
+                .create(Mockito.any(StructuredResponseCreateParams.class));
+
+        AiServiceImpl service = new AiServiceImpl(clientProvider);
+        AiChatResponseDTO result = service.chat("가입한 뒤 소비 리포트 보여줘");
+
+        Assertions.assertEquals(AiIntent.SPENDING_REPORT, result.getIntent());
+        Assertions.assertEquals(AiAction.GENERATE_SPENDING_REPORT, result.getAction());
+    }
+
+    @Test
     void chatReturnsUnknownFallbackWhenOpenAIFails() {
         ObjectProvider<OpenAIClient> clientProvider = Mockito.mock(ObjectProvider.class);
         OpenAIClient client = Mockito.mock(OpenAIClient.class);

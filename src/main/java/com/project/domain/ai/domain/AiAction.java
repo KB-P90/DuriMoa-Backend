@@ -1,5 +1,6 @@
 package com.project.domain.ai.domain;
 
 public enum AiAction {
-    START_WEDDING_BUDGET_FLOW
+    START_WEDDING_BUDGET_FLOW,
+    GENERATE_SPENDING_REPORT
 }
