@@ -3,6 +3,7 @@ package com.project.domain.ai.service;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.project.domain.ai.domain.AiAnalysisScope;
@@ -16,6 +17,7 @@ import com.project.domain.ai.model.AiMonthlyFinanceRecord;
 import com.project.domain.goal.dto.GoalStatisticsResponseDTO;
 import com.project.domain.goal.service.GoalStatisticsService;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +70,7 @@ class WeddingBudgetRecommendationServiceImplTest {
                         new AiMonthlyFinanceRecord("2026-06", 8_000_000L, 4_090_000L, 2_150_000L),
                         new AiMonthlyFinanceRecord("2026-07", 7_800_000L, 4_130_000L, 2_050_000L)
                 ));
-        stubStatistics();
+        stubStatistics(6);
         when(aiService.selectWeddingBudgetType(any())).thenReturn(
                 new AiBudgetTypeModelResponseDTO(
                         AiBudgetType.BALANCED,
@@ -79,7 +81,7 @@ class WeddingBudgetRecommendationServiceImplTest {
         WeddingBudgetRecommendationResponseDTO result = service.recommend(
                 1L,
                 new WeddingBudgetRecommendationRequestDTO(
-                        LocalDate.now().plusMonths(10),
+                        nextWeddingDate(Month.JUNE),
                         "서울(강남)"
                 )
         );
@@ -104,14 +106,74 @@ class WeddingBudgetRecommendationServiceImplTest {
         );
     }
 
-    private void stubStatistics() {
-        when(goalStatisticsService.findGoalStatistics(eq("서울(강남)"), eq("예식장")))
+    @Test
+    void forwardsWeddingMonthToGoalStatisticsService() {
+        when(aiRecommendationMapper.selectAnalysisMembers(1L)).thenReturn(List.of(
+                new AiAnalysisMemberRecord(1L, 10_000_000L)
+        ));
+        when(aiRecommendationMapper.selectMonthlyFinances(anyList(), any(), any()))
+                .thenReturn(List.of(
+                        new AiMonthlyFinanceRecord("2026-05", 8_100_000L, 4_020_000L, 2_150_000L),
+                        new AiMonthlyFinanceRecord("2026-06", 8_000_000L, 4_090_000L, 2_150_000L),
+                        new AiMonthlyFinanceRecord("2026-07", 7_800_000L, 4_130_000L, 2_050_000L)
+                ));
+        stubStatistics(10);
+        when(aiService.selectWeddingBudgetType(any())).thenReturn(
+                new AiBudgetTypeModelResponseDTO(
+                        AiBudgetType.BALANCED,
+                        "10월 예식 비용을 반영한 균형형 추천이에요."
+                )
+        );
+
+        WeddingBudgetRecommendationResponseDTO result = service.recommend(
+                1L,
+                new WeddingBudgetRecommendationRequestDTO(
+                        nextWeddingDate(Month.OCTOBER),
+                        "서울(강남)"
+                )
+        );
+
+        Assertions.assertEquals(15_000_000L, result.getItems().getVenue());
+        verify(goalStatisticsService).findGoalStatistics("서울(강남)", "예식장", 10);
+        verify(goalStatisticsService).findGoalStatistics("서울(강남)", "스튜디오", 10);
+        verify(goalStatisticsService).findGoalStatistics("서울(강남)", "드레스", 10);
+        verify(goalStatisticsService).findGoalStatistics("서울(강남)", "메이크업", 10);
+        Assertions.assertTrue(
+                result.getReasonDetails().get(4).getDescription().contains("시기별 가중치")
+        );
+    }
+
+    private LocalDate nextWeddingDate(Month month) {
+        return LocalDate.now()
+                .plusYears(1L)
+                .withMonth(month.getValue())
+                .withDayOfMonth(15);
+    }
+
+    private void stubStatistics(Integer weddingMonth) {
+        when(goalStatisticsService.findGoalStatistics(
+                eq("서울(강남)"),
+                eq("예식장"),
+                eq(weddingMonth)
+        ))
                 .thenReturn(statistic("예식장", 10_000_000L, 15_000_000L, 20_000_000L));
-        when(goalStatisticsService.findGoalStatistics(eq("서울(강남)"), eq("스튜디오")))
+        when(goalStatisticsService.findGoalStatistics(
+                eq("서울(강남)"),
+                eq("스튜디오"),
+                eq(weddingMonth)
+        ))
                 .thenReturn(statistic("스튜디오", 1_500_000L, 2_500_000L, 4_000_000L));
-        when(goalStatisticsService.findGoalStatistics(eq("서울(강남)"), eq("드레스")))
+        when(goalStatisticsService.findGoalStatistics(
+                eq("서울(강남)"),
+                eq("드레스"),
+                eq(weddingMonth)
+        ))
                 .thenReturn(statistic("드레스", 1_200_000L, 2_000_000L, 3_500_000L));
-        when(goalStatisticsService.findGoalStatistics(eq("서울(강남)"), eq("메이크업")))
+        when(goalStatisticsService.findGoalStatistics(
+                eq("서울(강남)"),
+                eq("메이크업"),
+                eq(weddingMonth)
+        ))
                 .thenReturn(statistic("메이크업", 800_000L, 1_200_000L, 1_800_000L));
     }
 
