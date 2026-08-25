@@ -5,6 +5,7 @@ import com.project.domain.monthly.dto.CategoryExpenseStatisticsDTO;
 import com.project.domain.monthly.dto.SavingMissionEntityDTO;
 import com.project.domain.monthly.dto.SavingMissionRecommendationRequestDTO;
 import com.project.domain.monthly.mapper.MonthlyMapper;
+import com.project.domain.notification.service.NotificationService;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,9 +21,12 @@ class MonthlySavingMissionRecommendationTest {
     @Mock
     private MonthlyMapper monthlyMapper;
 
+    @Mock
+    private NotificationService notificationService;
+
     @Test
     void generateSavingMissionRecommendationsUsesStatisticsForTitleAndSavingAmount() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper, notificationService);
         Mockito.when(monthlyMapper.selectCategoryExpenseAnalysis(
                         Mockito.eq(1L), Mockito.any(), Mockito.any()))
                 .thenReturn(List.of(
@@ -59,7 +63,7 @@ class MonthlySavingMissionRecommendationTest {
 
     @Test
     void generateSavingMissionRecommendationsCreatesNoMissionAtOrBelowStatistics() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper, notificationService);
         Mockito.when(monthlyMapper.selectCategoryExpenseAnalysis(
                         Mockito.eq(1L), Mockito.any(), Mockito.any()))
                 .thenReturn(List.of(analysis("ETC", 100000L, 5)));

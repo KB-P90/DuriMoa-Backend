@@ -12,7 +12,8 @@ public enum NotificationType {
     GOAL_REJECTED("결혼 시안이 반려되었습니다."),
     COUPLE_REQUESTED("커플 연결을 요청받았습니다."),
     COUPLE_ACCEPTED("커플 연결 요청이 수락되었습니다."),
-    COUPLE_DISCONNECTED("커플 연결이 해제되었습니다.");
+    COUPLE_DISCONNECTED("커플 연결이 해제되었습니다."),
+    SAVING_MISSION_EXPENSE_ALERT("도전중인 절약 미션 카테고리에 지출이 발생했습니다.");
 
     private final String description;
 

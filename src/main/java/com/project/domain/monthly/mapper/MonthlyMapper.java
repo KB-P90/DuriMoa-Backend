@@ -34,6 +34,8 @@ public interface MonthlyMapper {
 
     List<SavingMissionDTO> selectMonthlySavingMissions(@Param("userId") Long userId, @Param("year") Integer year, @Param("month") Integer month);
 
+    List<SavingMissionDTO> selectInProgressSavingMissions(@Param("userId") Long userId);
+
     int updateSavingMissionStatusToInProgress(@Param("userId") Long userId, @Param("missionId") Long missionId);
 
     List<Long> selectActiveUserIds();

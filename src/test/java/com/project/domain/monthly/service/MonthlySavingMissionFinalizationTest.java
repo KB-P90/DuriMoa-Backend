@@ -2,6 +2,7 @@ package com.project.domain.monthly.service;
 
 import com.project.common.enums.MissionStatus;
 import com.project.domain.monthly.mapper.MonthlyMapper;
+import com.project.domain.notification.service.NotificationService;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import org.junit.jupiter.api.Assertions;
@@ -18,9 +19,12 @@ class MonthlySavingMissionFinalizationTest {
     @Mock
     private MonthlyMapper monthlyMapper;
 
+    @Mock
+    private NotificationService notificationService;
+
     @Test
     void finalizeSavingMissionsEvaluatesInProgressAndExpiresChallenges() {
-        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper);
+        MonthlyServiceImpl monthlyService = new MonthlyServiceImpl(monthlyMapper, notificationService);
         YearMonth missionMonth = YearMonth.of(2026, 8);
         LocalDate startDate = LocalDate.of(2026, 8, 1);
         LocalDate endDate = LocalDate.of(2026, 9, 1);

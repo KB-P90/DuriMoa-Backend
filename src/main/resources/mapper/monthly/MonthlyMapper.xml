@@ -158,6 +158,20 @@
         ORDER BY id ASC
     </select>
 
+    <select id="selectInProgressSavingMissions" resultMap="SavingMissionResultMap">
+        SELECT
+            id AS mission_id,
+            category AS category_code,
+            title,
+            expected_saving AS expected_saving_amount,
+            status,
+            FALSE AS is_selectable
+        FROM saving_missions
+        WHERE user_id = #{userId}
+          AND status = '도전중'
+        ORDER BY id ASC
+    </select>
+
     <update id="updateSavingMissionStatusToInProgress">
         UPDATE saving_missions
         SET status = '도전중'

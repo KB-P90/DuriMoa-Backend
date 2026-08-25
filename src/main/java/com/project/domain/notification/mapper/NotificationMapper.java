@@ -63,4 +63,10 @@ public interface NotificationMapper {
     );
 
     Integer insertNotification(NotificationVO notification);
+
+    Integer countNotificationsSentToday(
+            @Param("userId") Long userId,
+            @Param("type") NotificationType type,
+            @Param("targetId") Long targetId
+    );
 }

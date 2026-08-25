@@ -1,5 +1,6 @@
 package com.project.domain.notification.service;
 
+import com.project.domain.notification.domain.NotificationType;
 import com.project.domain.notification.dto.NotificationCreateRequestDTO;
 import com.project.domain.notification.dto.NotificationDeleteBatchRequestDTO;
 import com.project.domain.notification.dto.NotificationDeleteBatchResponseDTO;
@@ -76,4 +77,9 @@ public interface NotificationService {
      * 사용자가 해당 알림 종류를 비활성화한 경우 저장하지 않고 null을 반환합니다.
      */
     Long createNotification(NotificationCreateRequestDTO request);
+
+    /**
+     * 오늘 이미 동일한 유저·종류·대상으로 발송된 알림이 있는지 확인합니다.
+     */
+    boolean existsNotificationToday(Long userId, NotificationType type, Long targetId);
 }

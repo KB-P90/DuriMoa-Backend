@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,7 +98,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         }
 
         // 이번 sync에서 새로 생성된 데이터를 서비스 데이터로 변환
-        processNewServiceRecords(userId, previousLastSyncAt);
+        List<ServiceRecord> newExpenseRecords = processNewServiceRecords(userId, previousLastSyncAt);
 
         // 전체 원본 거래 동기화 & 서비스 데이터 변환 모두 성공 시 checkpoint 갱신
         if (previousLastSyncAt == null) {
@@ -109,7 +110,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         log.info("사용자 거래 동기화 완료 - userId: {}, accounts: {}, cards: {}, fetched: {}, saved: {}, duplicate: {}, lastSyncAt: {}",
                 userId, accounts.size(), cards.size(), fetchedCount, savedCount, duplicateCount, currentSyncAt);
 
-        return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size());
+        return buildResponse(fetchedCount, savedCount, duplicateCount, accounts.size(), cards.size(), newExpenseRecords);
     }
 
     // 계좌 입출금 내역 받아와서 저장
@@ -213,7 +214,7 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
     }
 
     // 카드/계좌 거래 내역을 서비스 레코드로 변환해서 저장
-    private void processNewServiceRecords(Long userId, LocalDateTime lastSyncAt) {
+    private List<ServiceRecord> processNewServiceRecords(Long userId, LocalDateTime lastSyncAt) {
         List<CardRecord> newCards = transactionSyncMapper.findNewCardRecords(userId, lastSyncAt);
 
         List<AccountRecord> newAccounts = transactionSyncMapper.findNewAccountRecords(userId, lastSyncAt);
@@ -221,18 +222,28 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
         log.info("신규 원본 거래 서비스 변환 시작 - userId: {}, cards: {}, accounts: {}",
                 userId, newCards.size(), newAccounts.size());
 
+        List<ServiceRecord> newExpenseRecords = new ArrayList<>();
+
         for (CardRecord cardRecord : newCards) {
-            processCardRecord(userId, cardRecord);
+            addIfNewExpense(newExpenseRecords, processCardRecord(userId, cardRecord));
         }
 
         for (AccountRecord accountRecord : newAccounts) {
-            processAccountRecord(userId, accountRecord);
+            addIfNewExpense(newExpenseRecords, processAccountRecord(userId, accountRecord));
+        }
+
+        return newExpenseRecords;
+    }
+
+    private void addIfNewExpense(List<ServiceRecord> newExpenseRecords, ServiceRecord record) {
+        if (record != null && record.getType() == RecordType.EXPENSE) {
+            newExpenseRecords.add(record);
         }
     }
 
-    private void processCardRecord(Long userId, CardRecord cardRecord) {
+    private ServiceRecord processCardRecord(Long userId, CardRecord cardRecord) {
         // 전체 취소(1), 거절(3)인 경우 서비스 레코드 생성 안 함
-        if ("1".equals(cardRecord.getCancelStatus()) || "3".equals(cardRecord.getCancelStatus())) return;
+        if ("1".equals(cardRecord.getCancelStatus()) || "3".equals(cardRecord.getCancelStatus())) return null;
 
         AccountRecord matchedAccountRecord = transactionSyncMapper.findMatchingAccountRecord(userId, cardRecord);
 
@@ -251,36 +262,45 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
             if (existing != null) {
                 transactionSyncMapper.attachCardRecord(existing.getId(), cardRecord.getId());
 
-                return;
+                return null;
             }
 
-            transactionSyncMapper.insertServiceRecord(toServiceRecord(userId, cardRecord, matchedAccountRecord));
+            ServiceRecord newRecord = toServiceRecord(userId, cardRecord, matchedAccountRecord);
+            transactionSyncMapper.insertServiceRecord(newRecord);
 
-            return;
+            return newRecord;
         }
 
         ServiceRecord existing = transactionSyncMapper.findByCardRecordId(cardRecord.getId());
 
         if (existing == null) {
-            transactionSyncMapper.insertServiceRecord(toServiceRecord(userId, cardRecord, null));
+            ServiceRecord newRecord = toServiceRecord(userId, cardRecord, null);
+            transactionSyncMapper.insertServiceRecord(newRecord);
+
+            return newRecord;
         }
+
+        return null;
     }
 
-    private void processAccountRecord(Long userId, AccountRecord accountRecord) {
+    private ServiceRecord processAccountRecord(Long userId, AccountRecord accountRecord) {
         // 입금은 우선 그대로 서비스 레코드로 변환
         if (isIncome(accountRecord)) {
             String descriptionType = normalize(accountRecord.getDescription2());
 
             // 이자는 변환하지 않음
-            if (descriptionType.contains("이자")) return;
+            if (descriptionType.contains("이자")) return null;
 
             // 체크카드 관련 입금은 취소/환불 가능성이 있어 우선 변환하지 않음
-            if (descriptionType.contains("체크카드")) return;
+            if (descriptionType.contains("체크카드")) return null;
 
             if (transactionSyncMapper.findByAccountRecordId(accountRecord.getId()) == null) {
-                transactionSyncMapper.insertServiceRecord(toIncomeServiceRecord(userId, accountRecord));
+                ServiceRecord newRecord = toIncomeServiceRecord(userId, accountRecord);
+                transactionSyncMapper.insertServiceRecord(newRecord);
+
+                return newRecord;
             }
-            return;
+            return null;
         }
 
         CardRecord matchedCardRecord = transactionSyncMapper.findMatchingCardRecord(userId, accountRecord);
@@ -296,19 +316,24 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
 
         if (matchedCardRecord != null) {
             // 이미 취소된 카드 거래에 대응하는 계좌 출금 내역이라면 서비스 레코드 생성 안 함
-            if ("1".equals(matchedCardRecord.getCancelStatus()) || "3".equals(matchedCardRecord.getCancelStatus())) return;
+            if ("1".equals(matchedCardRecord.getCancelStatus()) || "3".equals(matchedCardRecord.getCancelStatus())) return null;
 
             ServiceRecord existing = transactionSyncMapper.findByCardRecordId(matchedCardRecord.getId());
 
             if (existing != null) {
                 transactionSyncMapper.attachAccountRecord(existing.getId(), accountRecord.getId());
-                return;
+                return null;
             }
         }
 
         if (transactionSyncMapper.findByAccountRecordId(accountRecord.getId()) == null) {
-            transactionSyncMapper.insertServiceRecord(toExpenseServiceRecord(userId, accountRecord));
+            ServiceRecord newRecord = toExpenseServiceRecord(userId, accountRecord);
+            transactionSyncMapper.insertServiceRecord(newRecord);
+
+            return newRecord;
         }
+
+        return null;
     }
 
     private CodefInstitution validateInstitution(String company, String expectedBusinessType) {
@@ -545,12 +570,24 @@ public class TransactionSyncServiceImpl implements TransactionSyncService {
             int accountCount,
             int cardCount
     ) {
+        return buildResponse(fetchedCount, savedCount, duplicateCount, accountCount, cardCount, List.of());
+    }
+
+    private TransactionSyncResponseDTO buildResponse(
+            int fetchedCount,
+            int savedCount,
+            int duplicateCount,
+            int accountCount,
+            int cardCount,
+            List<ServiceRecord> newExpenseRecords
+    ) {
         return TransactionSyncResponseDTO.builder()
                 .fetchedCount(fetchedCount)
                 .savedCount(savedCount)
                 .duplicateCount(duplicateCount)
                 .accountCount(accountCount)
                 .cardCount(cardCount)
+                .newExpenseRecords(newExpenseRecords)
                 .build();
     }
 }
