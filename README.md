@@ -1,109 +1,36 @@
-# Backend
+# 예비부부 공동 자산 관리 서비스 : 두리모아 BE
+🏆 KB IT's Your Life 프로젝트 최우수상 수상
 
-KB 두리모아 서비스 백엔드 서버입니다.
+프로젝트 기간 : 2026.07 ~ 2026.08 (2개월)  
 
+
+## 프로젝트 소개
+<img width="960" height="536" alt="image" src="https://github.com/user-attachments/assets/9aa7e34a-b507-48a6-9e7e-e95e9ae1a29e" />
+
+## 핵심 기능
+<img width="960" height="536" alt="image" src="https://github.com/user-attachments/assets/8ce9297a-0fa5-43c7-95b2-f68fc1b8f4ed" />
+<img width="960" height="536" alt="28" src="https://github.com/user-attachments/assets/1edc94b4-8a11-4599-8909-e96b1705a2fd" />
+
+
+
+## 시스템 아키텍처
+<img width="960" height="536" alt="image" src="https://github.com/user-attachments/assets/1f6b660b-838c-489b-8847-6c30b0882e58" />
 
 ## 🛠 기술스택
 
-| 구분 | 기술                                                                  |
-|------|---------------------------------------------------------------------|
-| **Backend** | Java 17, Spring Framework, Spring MVC, MyBatis, Spring Security, Gradle |
-| **Database** | MySQL, Redis                                                        |
-| **Server** | Apache Tomcat                                                       |
-| **API Documentation** | Swagger                                                             |
-| **Test** | JUnit, Mockito                                                      |
+
+| 구분 | 기술 |
+|------|------|
+| **Backend** | Java 17, Spring 5.3 |
+| **Database** | MyBatis, MySQL, Redis |
+| **Server** | Apache Tomcat |
+| **Infra** | AWS, Docker, Docker Compose |
+| **CI/CD** | GitHub Actions |
+| **Test** | JUnit 5, Mockito |
+| **Monitoring & Logging** | Grafana, Loki, Alloy |
 
 
-## 📂 프로젝트 구조
-
-```text
-src/
-├── main/
-│   ├── java/
-│   │   └── com/
-│   │       └── project/
-│   │           ├── common/
-│   │           │   ├── config/
-│   │           │   ├── exception/
-│   │           │   ├── response/
-│   │           │   └── util/
-│   │           └── domain/
-│   │               ├── member/
-│   │               │   ├── controller/
-│   │               │   ├── service/
-│   │               │   ├── mapper/
-│   │               │   └── dto/
-│   │               ├── account/
-│   │               ├── budget/
-│   │               └── mission/
-│   ├── resources/
-│   │   ├── mapper/
-│   │   │   ├── member/
-│   │   │   │   └── MemberMapper.xml
-│   │   │   ├── account/
-│   │   │   └── budget/
-│   │   ├── log4j2.xml
-│   │   └── database.properties
-│   └── webapp/
-│       └── WEB-INF/
-│           ├── spring/
-│           │   ├── root-context.xml
-│           │   └── appServlet/
-│           │       └── servlet-context.xml
-│           ├── views/
-│           └── web.xml
-└── test/
-    └── java/
-    
-```
-    
-## ⚙️ 주요 설정 파일
-
-| 파일                    | 설명 |
-|-----------------------|---|
-| `build.gradle`        | 의존성 및 빌드 설정 |
-| `web.xml`             | DispatcherServlet, Filter, Listener 설정 |
-| `root-context.xml`    | DB, MyBatis, Service, 공통 Bean 설정 |
-| `servlet-context.xml` | Controller, ViewResolver, 정적 리소스 설정 |
-| `database.properties` | 데이터베이스 접속 정보 |
-| `mybatis-config.xml`  | MyBatis 공통 설정 |
-| `Mapper.xml`          | SQL 작성 및 Mapper 메서드 연결 |
-| `log4j2.xml`          | 애플리케이션 로그 설정 |
-
-
-## 🗃 MyBatis 작성 규칙
-
-- Mapper 인터페이스와 Mapper XML의 이름을 동일하게 작성한다.
-- Mapper XML의 `namespace`는 Mapper 인터페이스의 전체 경로로 작성한다.
-- Mapper 메서드명과 SQL 태그의 `id`를 동일하게 작성한다.
-- SQL의 `SELECT *` 사용을 지양한다.
-- 컬럼명과 DTO 필드명이 다른 경우 `resultMap`을 사용한다.
-- 여러 개의 파라미터를 전달할 때는 `@Param`을 사용한다.
-- 동적 쿼리는 필요한 경우에만 사용한다.
-- 복잡한 SQL은 주석으로 목적을 설명한다.
-- 개인정보와 계좌번호는 로그에 출력하지 않는다.
-
-## 📝 네이밍 규칙
-
-### Java
-
-- Controller: `MemberController`
-- Service 인터페이스: `MemberService`
-- Service 구현체: `MemberServiceImpl`
-- Mapper 인터페이스: `MemberMapper`
-- Request DTO: `MemberCreateRequestDTO`
-- Response DTO: `MemberResponseDTO`
-- Exception: `MemberNotFoundException`
-
-### MyBatis
-
-- Mapper XML: `MemberMapper.xml`
-- 조회: `selectMember`, `findMemberById`
-- 등록: `insertMember`
-- 수정: `updateMember`
-- 삭제: `deleteMember`
-- 존재 여부: `existsMemberByEmail`
-- 개수 조회: `countMembers`
+<br>
 
 ## 👥 팀원 및 역할분담
 
@@ -115,21 +42,23 @@ src/
         <img src="https://avatars.githubusercontent.com/HwangSeo" width="100" height="100"/><br/>
         <b>황서진</b>
       </a><br/>
-      월별 지출 관리, 온보딩
+      BE 리더<br/> 
+        CI/CD
     </td>
     <td width="180">
       <a href="https://github.com/happysongtan">
         <img src="https://avatars.githubusercontent.com/happysongtan" width="100" height="100"/><br/>
         <b>강태규</b>
       </a><br/>
-      알림, 공동 예산 관리
+      자산 현황<br/>
+      알림 
     </td>
     <td width="180">
       <a href="https://github.com/1juyoung">
         <img src="https://avatars.githubusercontent.com/1juyoung" width="100" height="100"/><br/>
         <b>김주영</b>
       </a><br/>
-      마이페이지 
+      마이페이지
     </td>
   </tr>
   <tr align="center">
@@ -138,22 +67,26 @@ src/
         <img src="https://avatars.githubusercontent.com/kht9938" width="100" height="100"/><br/>
         <b>김현태</b>
       </a><br/>
-      로그인/회원가입, 결혼 목표 설정 
+       로그인/회원가입<br/>
+        목표 설정 
     </td>
     <td width="180">
       <a href="https://github.com/parkgijumg-hue">
         <img src="https://avatars.githubusercontent.com/parkgijumg-hue" width="100" height="100"/><br/>
         <b>박기정</b>
       </a><br/>
-      홈, 카드 전략 추천 
+      홈 <br/> 
+      카드 전략
     </td>
     <td width="180">
       <a href="https://github.com/KoHo512">
         <img src="https://avatars.githubusercontent.com/KoHo512" width="100" height="100"/><br/>
         <b>정여원</b>
       </a><br/>
-      캘린더
+      온보딩<br/>
+      월별 지출 관리
     </td>
   </tr>
 </table>
 </div>
+
